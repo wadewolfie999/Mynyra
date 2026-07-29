@@ -27,6 +27,7 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
 - Bounded broker-neutral Phase 22 implementation is complete and accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Broker-dependent implementation and live trading remain Blocked / NO-GO.
 - `WORKSTREAM_ARCHITECTURE.md` defines the conceptually accepted project-level Workstreams I-VII domain map. Domain inclusion or strategic activity does not authorize implementation.
 - Workstream II must not imply that a broker has been selected. Broker selection requires an explicit operator decision in Phase 23.
+- OANDA is ON HOLD under the 2026-07-29 operator directive. Lawful service to an Iranian citizen residing in Tehran, without VPN or identity circumvention, is now a mandatory candidate evidence gate. FIBO Group cTrader is a provisional validation lead, not a selected provider.
 - Workstream III must not imply that a documentation platform has been selected. Platform selection requires an explicit operator decision in Phase 25.
 - Nobitex is omitted from active Phase 22 scope. Phase 22 research must remain broker-neutral and must not select a broker, prop firm, program, account, or MT5 bridge topology.
 - MT5/prop-account readiness is a downstream compatibility target for Phase 22 broker-neutral contracts. It does not select a broker or prop firm and does not authorize MT5 connectivity, account access, credentials, or broker-dependent implementation.
@@ -37,7 +38,7 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
 `TradeBot Workstream Architecture v1.0` in `WORKSTREAM_ARCHITECTURE.md` is the current project-level map:
 
 - Workstream I — Broker-Neutral Execution Foundation: Complete — Accepted through Phase 22.
-- Workstream II — Broker Integration Program: next active strategic area for evidence/evaluation coordination only; Phase 23 remains the next formal phase and implementation is not authorized.
+- Workstream II — Broker Integration Program: Iran-compatible provider evidence search active under `PLAN-20260729-iran-compatible-provider-search`; OANDA ON HOLD; Phase 23 remains the next formal phase and implementation is not authorized.
 - Workstream III — Documentation & Knowledge Architecture: parallel/future unless separately activated.
 - Workstream IV — ML Optimization & Strategy Research: parallel/future unless separately activated.
 - Workstream V — Core Platform Enhancement: parallel/future unless separately activated.
@@ -54,7 +55,7 @@ This table is the canonical phase state for Workstreams I-III. `PROJECT_STATE.md
 | --- | --- | --- | --- |
 | I — Broker-Neutral Execution Foundation | Phase 21: Infrastructure Alignment | Complete — Approved | Internal TradeBot integration architecture and boundary alignment. ADR 0003 is Accepted; Phase 21 planning artifacts are approved. |
 | I — Broker-Neutral Execution Foundation | Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness | Complete — Accepted | `PLAN-20260624-workstream-i-broker-neutral-completion` closed the provider-neutral contracts, deterministic simulation, execution/risk alignment, persistence, replay, tests, and documentation boundary. No broker or prop firm selection, connection method, connectivity, credentials, account access, real or sandbox orders, broker-dependent implementation, or live trading is authorized. |
-| II — Broker Integration Program | Phase 23: Broker Selection | Not Started (formal phase); pre-phase strategic evidence preparation active | Identify and evaluate the Most Optimized Broker (M.O.B.) through documentation and evidence lanes. No broker is selected without an explicit Wade decision; no implementation, connection, credentials, account action, or orders are authorized. |
+| II — Broker Integration Program | Phase 23: Broker Selection | Not Started (formal phase); Iran-compatible pre-phase evidence preparation active | OANDA is ON HOLD. Identify and evaluate a lawful Iran-compatible replacement through documentation and evidence lanes. No broker is selected without an explicit Wade decision; no provider contact, implementation, connection, credentials, account action, or orders are authorized. |
 | II — Broker Integration Program | Phase 24: Connection Protocol | Blocked | Define the TradeBot-to-selected-M.O.B. account connection protocol only after Phase 23 selection and separate operator approval of connection scope. |
 | III — Documentation & Knowledge Architecture | Phase 25: Documentation Platform Evaluation & Selection | Not Started | Evaluate and select the documentation platform. No platform is selected. |
 | III — Documentation & Knowledge Architecture | Phase 26: Core Documentation Architecture & Drafting | Blocked | Build the core documentation structure and draft canonical documentation only after Phase 25 selection and operator approval of the documentation architecture. |
@@ -144,12 +145,12 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 ### Phase 23: Workstream II Broker Selection
 
 - Purpose: identify and evaluate the Most Optimized Broker (M.O.B.).
-- Entry conditions: Phase 22 sequence is respected; current work is limited to strategic evidence preparation until Wade formally opens and accepts the Phase 23 decision scope.
+- Entry conditions: Phase 22 sequence is respected; current work is limited to strategic evidence preparation until Wade formally opens and accepts the Phase 23 decision scope. The 2026-07-29 directive places OANDA ON HOLD and requires lawful Iran-resident eligibility as a candidate gate.
 - Operating rhythm: Strategy 2 — Parallel Evidence Lanes With Wade Checkpoints. Wade owns authority, scope, gates, broker selection, and acceptance; Bigi owns technical evidence, adapter-fit audit, failure-mode checklist, and demo/live semantics analysis; ChatGPT/review assistant supports prompt structure, output review, and governance-drift detection.
-- Scope: documentation, evaluation evidence, and an explicit Wade selection decision; no connection implementation. Workstream II keeps separate Demo/Sandbox environment setup and Live Account readiness paths, both preparation-only under the current gate.
+- Scope: documentation, evaluation evidence, and an explicit Wade selection decision; no connection implementation. `WORKSTREAM_II_IRAN_COMPATIBLE_PROVIDER_PIVOT.md` is the active evidence package. Workstream II keeps separate Demo/Sandbox environment setup and Live Account readiness paths, both preparation-only under the current gate.
 - Stop/go gate: evaluation evidence must not imply that a broker has already been selected.
 - Governance overlay: Strategy 3 gate labels may be added later; no full Kanban system is authorized now.
-- Status: Not Started as a formal phase; pre-phase strategic/evaluation evidence preparation is active, no broker is selected, and implementation is not authorized.
+- Status: Not Started as a formal phase; Iran-compatible pre-phase evidence preparation is active, OANDA is ON HOLD, no broker is selected, and implementation is not authorized.
 
 ### Phase 24: Workstream II Connection Protocol
 
@@ -201,4 +202,4 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 
 ## Next Roadmap Action
 
-The next major step is to assemble the bounded pre-Phase-23 evidence package under Strategy 2 and stop at a Wade checkpoint for an explicit broker-selection/evaluation decision. Phase 23 remains the next formal phase and Phase 24 remains blocked. MT5 connectivity, broker connection, credentials, account access, broker-dependent implementation, real or sandbox orders, live deployment, live trading, and risk-limit changes remain unauthorized until separately approved.
+The next major step is to obtain written Iran-resident, demo, XAUUSD, and automation-interface confirmation for the leading validation candidate and stop at a Wade checkpoint. OANDA remains ON HOLD; no replacement is selected. Phase 23 remains the next formal phase and Phase 24 remains blocked. Provider contact beyond the operator's support inquiry, account creation, connectivity, credentials, broker-dependent implementation, real or sandbox orders, live deployment, live trading, and risk-limit changes remain unauthorized until separately approved.
