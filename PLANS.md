@@ -94,7 +94,7 @@ Plan approval, phase approval, and ADR acceptance are distinct. None independent
 
 `docs/WORKSTREAM_ARCHITECTURE.md` is the current project-level domain and coordination map. Plans must identify the affected workstream and the governing roadmap phase, if any, without treating a workstream label or strategic activity as implementation approval.
 
-Workstream II currently permits only strategic evidence preparation under Strategy 2 — Parallel Evidence Lanes With Wade Checkpoints. Wade owns authority, scope, gates, broker selection, and acceptance. Bigi owns technical evidence, adapter-fit audit, failure-mode checklist, and demo/live semantics analysis. ChatGPT/review assistant supports prompt structure, output review, and governance-drift detection. Phase 23 remains the next formal broker-selection/evaluation phase; Phase 24 implementation and all connection, credential, account, sandbox-order, and live actions remain blocked.
+Workstream II currently permits only strategic evidence preparation under Strategy 2 — Parallel Evidence Lanes With Wade Checkpoints. Wade owns authority, scope, gates, broker selection, and acceptance. Bigi owns technical evidence, adapter-fit audit, failure-mode checklist, and demo/live semantics analysis. ChatGPT/review assistant supports prompt structure, output review, and governance-drift detection. The 2026-07-29 operator directive places OANDA on hold and authorizes a lawful Iran-compatible replacement-provider search under `PLAN-20260729-iran-compatible-provider-search`. Phase 23 remains the next formal broker-selection/evaluation phase; Phase 24 implementation and all connection, credential, account, sandbox-order, and live actions remain blocked.
 
 Strategy 3 gate labels may be added later as a governance overlay. Do not infer or implement a full Kanban system from this planning rule.
 
@@ -191,6 +191,125 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 
 ## Final Outcome
 ```
+
+# Active Approved Research Plan: Workstream II Iran-Compatible Provider Search
+
+- Plan ID: `PLAN-20260729-iran-compatible-provider-search`
+- Status: In Progress — Research/Documentation Only
+- Owner: Wade
+- Implementer: Codex and approved research actors
+- Review authority: Wade
+- Related workstream/phase: Workstream II; bounded pre-Phase-23 evidence preparation
+- Created: 2026-07-29
+- Updated: 2026-07-29
+
+## Objective
+
+Record the OANDA critical blocker and hold, then build a current evidence base for a lawful Iran-compatible replacement capable of a demo-only XAUUSD automation milestone.
+
+Success requires a provider comparison with explicit Iran-resident eligibility, demo, instrument, automation, deterministic-replay, security, and risk gates, followed by a Wade checkpoint. It does not require or permit provider selection or account action.
+
+## Context
+
+OANDA's available registration path did not provide a lawful route for an Iranian citizen residing in Tehran. OANDA Support may clarify that state later. The operator has prohibited VPN-based residence substitution, false details, or third-party identity use and has authorized a pivot to Iran-compatible foundations.
+
+## Scope
+
+- Record OANDA as ON HOLD.
+- Research current first-party eligibility, demo, XAUUSD, and automation evidence.
+- Define mandatory written-support questions and candidate gates.
+- Rank candidates only for further validation, not selection.
+- Synchronize current-state, roadmap, backlog, and documentation-index wording.
+
+## Out Of Scope
+
+- Provider selection or formal Phase 23 activation.
+- Account creation, login, identity-document submission, or funding.
+- Credentials, tokens, endpoints, connectivity, provider code, or dependencies.
+- Demo, sandbox, or real orders.
+- Core-engine, risk-limit, order-routing, or live-trading changes.
+
+## Preconditions
+
+- Wade's OANDA hold and Iran-compatible pivot directive is controlling.
+- The operator explicitly authorized research and repository documentation.
+- `main` was inspected at `6bdc548`; no open PRs or issues were returned.
+- Phase 23 remains formally Not Started and Phase 24 remains Blocked.
+
+## Assumptions
+
+- Provider country rules, legal entities, platform availability, and sanctions posture can change.
+- A Persian-language site, accessible registration form, or omission from a restriction list is not conclusive eligibility evidence.
+- Written provider confirmation is required before any account action.
+
+## Invariants
+
+- Use true Iranian citizenship and Tehran residence.
+- No VPN-location substitution, false address, third-party identity, or concealed documents.
+- Demo-only research never implies live readiness.
+- Provider-native data remains below `BrokerGateway`.
+- Deterministic audit/replay, fail-closed behavior, and existing risk gates remain intact.
+
+## Files Expected To Change
+
+- `PLANS.md`
+- `docs/PROJECT_STATE.md`
+- `docs/ROADMAP.md`
+- `docs/RESIDUAL_GAPS_BACKLOG.md`
+- `docs/README.md`
+- `docs/WORKSTREAM_II_IRAN_COMPATIBLE_PROVIDER_PIVOT.md`
+
+No source, test, build, configuration, credential, account, data, or generated file is in scope.
+
+## Implementation Steps
+
+1. Reconcile current `main` authority and the prior conditional OANDA lane.
+2. Screen candidates using current first-party eligibility, demo, XAUUSD, and automation evidence.
+3. Record verified facts, inferences, unresolved items, exclusions, and support questions.
+4. Synchronize authority-facing documentation without opening Phase 23 or Phase 24.
+5. Run connector-backed content, scope, and non-authorization checks.
+6. Stop at the written-support and Wade-selection checkpoint.
+
+## Verification
+
+- Confirm only the six expected Markdown files change.
+- Confirm OANDA is ON HOLD in all active state references.
+- Confirm Iran-resident lawful eligibility is a mandatory evidence gate.
+- Confirm no provider is described as selected.
+- Confirm Phase 23 remains formally Not Started and Phase 24 remains Blocked.
+- Confirm no account, credential, connectivity, order, provider-code, risk, or live authorization appears.
+- Local CMake/CTest and `git diff --check` are not required for source behavior; connector-backed content checks must be reported because this execution has no local checkout.
+
+## Risks
+
+- Provider marketing or translated pages may conflict with the controlling legal entity's current terms.
+- Iran eligibility may change quickly or differ between demo, live, API, nationality, residence, and payment access.
+- Offshore regulation and operational recourse may be materially weaker than OANDA's.
+- Platform/API availability may not include the candidate's demo account or exact XAUUSD symbol.
+- Research ranking could be misread as selection unless gates remain explicit.
+
+## Rollback
+
+Revert only this documentation package. OANDA remains blocked by real-world eligibility evidence regardless of rollback. No external account, credential, connection, order, or runtime state exists to unwind.
+
+## Progress Log
+
+- 2026-07-29: Wade placed OANDA integration ON HOLD and directed an Iran-compatible replacement search.
+- 2026-07-29: Operator authorized both research and repository documentation.
+- 2026-07-29: Initial first-party screen identified FIBO Group cTrader as the strongest provisional validation candidate; no provider was selected.
+- 2026-07-29: Current-state, roadmap, backlog, planning, and documentation-index updates prepared.
+
+## Deviations
+
+No provider was contacted and no account path was exercised. Written Iran-resident and API confirmation remains unresolved.
+
+## Completion Evidence
+
+The initial evidence package is complete when merged and cross-document checks pass. The plan remains In Progress until written provider evidence is reviewed at a Wade checkpoint.
+
+## Final Outcome
+
+Pending. Provider selection, Phase 24, account creation, credentials, connectivity, implementation, orders, and live trading remain Blocked / NO-GO.
 
 # Completed Plan: Workstream I Broker-Neutral Completion
 

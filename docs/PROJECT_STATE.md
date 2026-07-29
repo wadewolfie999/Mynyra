@@ -5,7 +5,7 @@
 - Purpose: authoritative current-state summary for TradeBot.
 - Authority level: current-state evidence below active approved plans and above the roadmap; the project workstream map is defined in `WORKSTREAM_ARCHITECTURE.md`, and phase definitions and statuses are delegated to `ROADMAP.md`.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and handoff recipients.
-- Last documentation/state audit: 2026-07-03 in `/Users/vaheedgorgeen/TradeBot`.
+- Last documentation/state audit: 2026-07-29 against GitHub `main`.
 - Last CMake/CTest verification evidence: 2026-06-25.
 
 This document represents current state only. Historical execution belongs in Git commits, pull requests, issues, ADRs, and handoffs.
@@ -22,11 +22,11 @@ This document represents current state only. Historical execution belongs in Git
 `WORKSTREAM_ARCHITECTURE.md` defines the current Workstreams I-VII project map; `ROADMAP.md` is the deterministic phase authority. Current summary:
 
 - Workstream I — Broker-Neutral Execution Foundation: Complete — Accepted through Phase 22.
-- Workstream II — Broker Integration Program: next active strategic area for evidence/evaluation coordination only; not implementation-authorized.
+- Workstream II — Broker Integration Program: Iran-compatible replacement-provider evidence search active under `PLAN-20260729-iran-compatible-provider-search`; OANDA ON HOLD; not implementation-authorized.
 - Workstreams III–VII: parallel/future domains unless separately activated.
 - Phase 21: Complete — Approved; ADR 0003 is Accepted.
 - Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness; Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`.
-- Phase 23: next formal broker-selection/evaluation phase; Not Started, with bounded pre-phase strategic evidence preparation active and no broker selected.
+- Phase 23: next formal broker-selection/evaluation phase; Not Started, with bounded Iran-compatible pre-phase evidence preparation active and no broker selected.
 - Phase 24: Blocked pending Phase 23 selection and operator-approved connection scope.
 - Phase 25: Not Started; no documentation platform is selected.
 - Phase 26: Blocked pending Phase 25 selection and operator-approved documentation architecture.
@@ -48,12 +48,12 @@ This document represents current state only. Historical execution belongs in Git
 ## In-Progress Work
 
 - Repository governance and Codex skill-system maintenance.
-- Workstream II strategic evidence preparation under Strategy 2 — Parallel Evidence Lanes With Wade Checkpoints. This is documentation/evaluation activity only.
+- Workstream II strategic evidence preparation under Strategy 2 — Parallel Evidence Lanes With Wade Checkpoints. The active package is `WORKSTREAM_II_IRAN_COMPATIBLE_PROVIDER_PIVOT.md`: OANDA is ON HOLD and FIBO Group cTrader is only the leading provisional validation candidate. This is documentation/evaluation activity only.
 
 ## Blocked Or Constrained Work
 
 - Phase 22 is closed at the accepted broker-neutral Workstream I boundary. Any external, broker-specific, platform-specific, credential, account, order-routing, or connectivity assumption remains Blocked / NO-GO.
-- Workstream II's Demo/Sandbox environment setup path and Live Account readiness path are preparation-only. Broker connection, external broker calls, credentials, account or prop-account actions, real or sandbox order routing, live deployment, live trading, and formal Phase 23 activation remain unauthorized.
+- OANDA account and integration work is ON HOLD pending a lawful Iran-resident eligibility path from OANDA Support. The Iran-compatible replacement search may use public evidence and draft support questions only. Provider contact, account creation, broker connection, external calls, credentials, account or prop-account actions, real or sandbox order routing, live deployment, live trading, and formal Phase 23 activation remain unauthorized.
 - Phase 24 is blocked until Phase 23 selects a broker and the operator approves connection scope.
 - Phase 26 is blocked until Phase 25 selects a documentation platform and the operator approves documentation architecture.
 - GitHub-dependent sync remains constrained by intermittent or costly global connectivity.
@@ -103,8 +103,8 @@ Results:
 
 ## Next Safe Action
 
-Assemble documentation-only pre-Phase-23 evidence lanes: technical evidence, adapter-fit audit, failure-mode checklist, and demo/live semantics analysis. Stop at a Wade checkpoint before broker selection or any new scope. Do not connect or log in to MT5, call a broker, access or create an account, use credentials, start implementation, route real or sandbox orders, enable live trading, or alter risk defaults.
+Obtain written Iran-resident, demo, XAUUSD, and API eligibility evidence for the Priority 1 validation candidate using the questionnaire in `WORKSTREAM_II_IRAN_COMPATIBLE_PROVIDER_PIVOT.md`, then stop at a Wade checkpoint. Do not treat a signup page or marketing statement as approval; do not create an account, use credentials, connect, implement, route sandbox or real orders, enable live trading, or alter risk defaults.
 
 ## Next Professional Halting Point
 
-Stop after the scoped evidence package and Wade checkpoint. Broker selection, Phase 24, broker-dependent implementation, and live trading remain explicitly Blocked / NO-GO without separate approval. Do not skip phases, delete generated artifacts, or perform connectivity, credential, account, real-order, sandbox-order, or live operations.
+Stop after written eligibility/API evidence and the Wade checkpoint. A validation priority is not broker selection. Phase 23 selection, Phase 24, broker-dependent implementation, and live trading remain explicitly Blocked / NO-GO without separate approval. Do not skip phases or perform connectivity, credential, account, real-order, sandbox-order, or live operations.
