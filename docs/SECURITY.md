@@ -60,13 +60,24 @@ Verified credential env names:
 - Store access token, refresh token, scope, token type, and expiry atomically in
   Keychain service `TradeBot.cTraderOpenApi.tokens.accounts`.
 - Authorization codes are memory-only and must be discarded after one exchange
-  attempt or timeout. Account IDs are response-derived and memory-only for the
-  read-only proof.
+  attempt or timeout. `ctidTraderAccountId` is response-derived and volatile
+  process-memory-only: never write, display, hash, encode, or otherwise place it
+  in logs, evidence, reports, checkpoint artifacts, configuration, or tracked
+  files.
 - Fully redact client IDs/secrets, authorization URLs and callback queries,
   codes, state, tokens, headers, account IDs/logins, balances, and raw payloads.
   Prefix/suffix or hash redaction is not allowed for these fields.
 - Never ask an operator to paste a cTrader credential, code, token, or account
   identifier into Codex, ChatGPT, a tracked file, fixture, log, or report.
+- A future Gate 6A checkpoint may contain only broker-title field
+  presence/value, demo/live status, optional API-supplied visible account
+  metadata, bounded findings, and a non-reusable local candidate label that is
+  not derived from the API identifier. If those safe fields cannot distinguish
+  exactly one intended demo account, stop without exposing the identifier.
+- A separately authorized Gate 6B must retrieve a fresh account list,
+  reproduce the approved safe-field selection deterministically, keep the
+  fresh identifier only in volatile process memory, and use it solely for that
+  session's account-authentication request.
 - The only future runtime message endpoint is
   `demo.ctraderapi.com:5035`. Live account entries are excluded candidates;
   attempting to authenticate one or reaching a live endpoint is a terminal

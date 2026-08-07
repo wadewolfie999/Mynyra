@@ -47,7 +47,7 @@ The controlling field descriptions are also published in cTrader's official
 
 | Value | Wire field/type | Internal type | Conversion | Validation/failure rule |
 | --- | --- | --- | --- | --- |
-| `ProtoOACtidTraderAccount.ctidTraderAccountId` | `uint64`, required | Ephemeral provider account ID | Require `0 < raw <= INT64_MAX`, then checked cast only when an `int64` request field requires it. | Gate 6A discovery and Gate 6B authentication proof. Never use `traderLogin`. |
+| `ProtoOACtidTraderAccount.ctidTraderAccountId` | `uint64`, required | Ephemeral, volatile process-memory-only provider account ID | Require `0 < raw <= INT64_MAX`, then checked cast only when an `int64` request field requires it. | Gate 6A may retain it only in memory and never expose or persist it. Gate 6B must obtain a fresh value and use it solely for that session's account-auth request. Never use `traderLogin`. |
 | `ProtoOACtidTraderAccount.isLive` | `bool`, optional | Presence-aware eligibility predicate | Eligibility requires presence and `false`; test generated proto2 presence before reading. | Gate 6A/6B. A present `true` account is excluded, not globally fatal. |
 | `ProtoOACtidTraderAccount.traderLogin` | `int64`, optional | None in runtime identity | No numeric conversion; optional human confirmation only. | Never an API ID and never persisted/logged. |
 | `ProtoOALightSymbol.symbolId` / `ProtoOASymbol.symbolId` | `int64`, required | Ephemeral provider symbol ID | Retain signed value and require positive exact equality between light/full/spot messages. | Gate 7 runtime metadata. Never hardcode. |

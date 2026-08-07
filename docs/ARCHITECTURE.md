@@ -116,8 +116,11 @@ The future boundary must:
 - connect only to immutable `demo.ctraderapi.com:5035` using Protobuf over
   strict TLS/TCP with no live/configurable fallback;
 - use Gate 6A only to discover response-derived demo candidates and exact broker
-  identity, stop for Wade's mandatory checkpoint, then allow Gate 6B to
-  authenticate exactly one freshly rediscovered approved demo match;
+  identity while retaining `ctidTraderAccountId` only in volatile process
+  memory; present Wade only safe selection metadata, stop if it cannot identify
+  exactly one intended demo account, then allow Gate 6B to reproduce the
+  approved safe-field predicate against a fresh list and authenticate exactly
+  one match using the fresh ID only in that session's request;
 - exclude every live account from candidacy while treating unrelated live
   entries as exclusions rather than global failure;
 - preserve exact broker-neutral numeric contracts with integer-only,

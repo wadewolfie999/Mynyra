@@ -13,7 +13,7 @@ Determine whether a branch has enough evidence, scope control, and risk clarity 
 - Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
 - Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
 - Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23/Workstream II remains Not Started, and broker-dependent implementation remains Blocked / NO-GO unless separately approved by the operator.
+- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
 - Live trading remains disabled unless exact operator approval exists.
 - Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
 
@@ -23,7 +23,7 @@ Use before PR creation, merge handoff, commit-readiness claims, review transfer,
 
 ## Must Not Be Used
 
-Do not use as a substitute for code review, risk review, replay validation, L2 review, or build/test verification. Do not approve readiness if Workstream II/Phase 23, broker-dependent implementation, or live authorization is implied without explicit operator GO.
+Do not use as a substitute for code review, risk review, replay validation, L2 review, or build/test verification. Do not approve readiness if Gate 5.1, Gate 6, broker-dependent implementation, or live authorization is implied without explicit operator GO.
 
 ## Required Inputs
 
@@ -65,7 +65,7 @@ Read relevant docs, active plan, ADRs, and review outputs for changed areas.
 4. Verify required validation evidence exists and covers the changed behavior.
 5. Confirm documentation and indexes are consistent.
 6. Confirm residual risk, rollback path, and required approvals are stated.
-7. Fail readiness if Workstream II/Phase 23, live trading, broker-specific behavior, or risk changes are implied without approval.
+7. Fail readiness if Gate 5.1, Gate 6, live trading, broker-specific behavior, or risk changes are implied without approval.
 
 ## Validation Checklist
 
@@ -82,7 +82,7 @@ Read relevant docs, active plan, ADRs, and review outputs for changed areas.
 - Missing validation evidence.
 - Untracked generated artifacts confusing review.
 - Docs/index drift.
-- Workstream II/Phase 23, broker-dependent, or live authorization implied by wording.
+- Gate 5.1, Gate 6, broker-dependent, or live authorization implied by wording.
 - PR readiness claimed before required specialist review.
 
 ## Hard Prohibitions
@@ -107,7 +107,7 @@ Use $tradebot-pr-readiness-review to decide whether this TradeBot docs branch is
 
 ## Stop Conditions
 
-Stop if branch state is unsafe, validation is missing, changed files exceed scope, Workstream II/Phase 23 or broker-dependent implementation is implied active, live authorization is ambiguous, or rollback is not documented.
+Stop if branch state is unsafe, validation is missing, changed files exceed scope, Gate 5.1/Gate 6 or broker-dependent implementation is implied active, live authorization is ambiguous, or rollback is not documented.
 
 ## Reporting Format
 

@@ -49,16 +49,22 @@ risk, portfolio, replay, or analytics code.
   never treated as `ctidTraderAccountId`.
 - Account proof is staged. Separately authorized Gate 6A retrieves the
   authenticated account list with `accounts` scope, excludes live and
-  environment-ambiguous entries from candidacy, presents exact API-provided
-  demo identity metadata in a private local Wade checkpoint artifact, and
-  stops before account authentication. It does not require a previously known
-  FIBO title.
-- Only after Wade confirms the exact observed `ctidTraderAccountId`, present
-  `isLive == false`, and byte-for-byte `brokerTitleShort` may separately
-  authorized Gate 6B repeat authenticated discovery, require exactly one exact
-  approved demo match, and authenticate it. A visible login is optional human
-  confirmation, never the API ID. The mere presence of another live entry is
-  not failure; resemblance or partial title matching is never selection.
+  environment-ambiguous entries from candidacy, retains each
+  `ctidTraderAccountId` only in volatile process memory, and presents Wade only
+  safe selection metadata: broker-title presence/value, demo/live status,
+  optional API-supplied visible account metadata, and a non-reusable local
+  candidate label when needed. It stops before account authentication and does
+  not require a previously known FIBO title. If safe metadata cannot
+  distinguish exactly one intended demo account, it stops without exposing the
+  API identifier.
+- Only after Wade approves an exact safe-field selection predicate may
+  separately authorized Gate 6B repeat authenticated discovery, reproduce that
+  selection deterministically, require exactly one exact demo match, retain the
+  fresh response-derived `ctidTraderAccountId` only in volatile process memory,
+  and use it solely for that session's account-authentication request. A visible
+  login is optional human confirmation, never the API ID. The mere presence of
+  another live entry is not failure; resemblance or partial title matching is
+  never selection.
 - Wade-authorized Gates 1-3 revalidation selects and pins transport, framing,
   official proto2 schema provenance, cTrader numeric mapping, and the
   pre-implementation baseline/local-diff boundary. The evidence is design-only
@@ -88,6 +94,8 @@ Benefits:
 - Demo/live separation is enforced before DNS and again during account
   discovery.
 - Secret rotation and expiry are isolated from source and repository state.
+- API account identifiers never enter files, checkpoints, logs, evidence, or
+  reports.
 
 Costs and risks:
 
