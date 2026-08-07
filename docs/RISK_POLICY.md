@@ -97,6 +97,30 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 - Never print secret values.
 - Secret-looking files require operator review.
 - Documentation may mention environment variable names such as `AIIO_API_KEY` and `AIIO_API_SECRET`, but never values.
+- cTrader client secrets and tokens must use macOS Keychain; authorization
+  codes and `ctidTraderAccountId` remain process-memory only for the bounded
+  proof. A visible account login is never an API account ID.
+
+## cTrader Demo-Only Gate
+
+- Official cTrader Open API is the sole integration path; the Algo Bridge is
+  abandoned, non-controlling, and out of scope.
+- Read-only gates use `accounts` scope only. `trading` requires a later exact
+  operator authorization.
+- `demo.ctraderapi.com:5035` is the only allowed Open API message endpoint,
+  with no configuration or fallback to live.
+- Live account entries are excluded from candidacy. Gate 6A may discover only
+  account-list identity metadata and must stop for Wade's checkpoint before any
+  account authentication. Another live entry's mere presence is not failure.
+- Gate 6B may authenticate only one exact Wade-approved demo match from a fresh
+  authenticated account-list response. Token ambiguity, absent `isLive`,
+  missing/contradictory broker metadata, zero/multiple exact matches, title
+  resemblance, an attempted live selection, or exhausted reconnect budget fails
+  closed before market data or order capability.
+- Gate 2 and Gate 5 were accepted by Wade on 2026-08-07 as design evidence.
+  Gate 5.1 and the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint →
+  Gate 6B`) remain blocked, separately authorized, and make no financial-limit
+  or runtime-path change.
 
 ## External API And Network Risk
 

@@ -52,8 +52,16 @@ Financial safety and operator authority cannot be silently overridden by any doc
 - `WORKSTREAM_I_RISK_MATRIX.md`: approved Workstream I subsystem risk classifications, controls, and gates.
 - `WORKSTREAM_I_REPLAY_COMPATIBILITY_CHECKLIST.md`: approved deterministic replay and broker-event simulation compatibility gates.
 - `PHASE22_OFFLINE_MT5_PROP_RESEARCH.md`: broker-neutral Phase 22 offline research artifact for MT5 integration surfaces, synthetic prop-account rules, deterministic fixtures, and non-activation gates; it does not authorize implementation or connectivity.
-- `WORKSTREAM_II_IRAN_COMPATIBLE_PROVIDER_PIVOT.md`: active OANDA-hold and lawful Iran-compatible replacement-provider evidence package; it ranks validation candidates but does not select a provider or authorize account action.
-- `RESIDUAL_GAPS_BACKLOG.md`: current residual engineering, evidence, governance, and operational gaps, plus the OANDA hold and Iran-compatible pivot gates; it does not authorize broker selection, connectivity, credentials, or live trading.
+- `WORKSTREAM_II_IRAN_COMPATIBLE_PROVIDER_PIVOT.md`: superseded provider-search evidence preserved after FIBO Group/cTrader selection and permanent OANDA cancellation.
+- `CTRADER_OPEN_API_GATE1_PROTOCOL_FIT.md`: revalidated official transport,
+  framing, schema/binding, authentication, symbol-subscription, and reconnect
+  design; no connection authority.
+- `CTRADER_OPEN_API_GATE2_NUMERIC_CONTRACT.md`: exact cTrader-to-TradeBot field,
+  presence, unit, overflow, and runtime-metadata mapping.
+- `CTRADER_OPEN_API_GATE3_BASELINE_INTEGRITY.md`: accepted-base,
+  contamination, design-only diff, invariant, and future source-surface proof.
+- `CTRADER_OPEN_API_GATE5.md`: controlling OAuth, macOS Keychain, redaction, demo-only endpoint, account-ID, failure, and subsequent read-only proof design.
+- `RESIDUAL_GAPS_BACKLOG.md`: current residual engineering and Open API proof gates; it does not authorize OAuth execution, connectivity, credentials in use, account access, orders, or live trading.
 - `decisions/`: permanent architecture decision records.
 
 Root-level documents:
