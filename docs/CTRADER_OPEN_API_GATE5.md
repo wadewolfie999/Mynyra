@@ -224,7 +224,7 @@ scopes.
 | Access token | Bearer secret | Scope-qualified Keychain token envelope | Use only for its recorded scope; track absolute expiry; refresh before use when inside the safety margin |
 | Refresh token | Long-lived bearer secret | Same atomic Keychain token envelope | Rotate atomically with every successful refresh; cTrader invalidates the old token pair |
 | Expiry metadata | Sensitive metadata | Same Keychain envelope with token type and scope | Compute from receipt time plus `expiresIn`; use monotonic elapsed time in-process and a conservative wall-clock expiry across restarts |
-| `ctidTraderAccountId` | Private account identity metadata, not an authentication secret | Response/process memory; Gate 6A may present it only in a permission-restricted, local Wade checkpoint artifact outside the repository and shared evidence | Never infer from login, put in tracked config/logs/chat/shared reports, or reuse without a fresh authenticated account-list response |
+| `ctidTraderAccountId` | Private account identity metadata, not an authentication secret | Volatile response/process memory only; never any file, checkpoint artifact, configuration, log, evidence, report, transcript, or tracked content | Never infer from login, hash/encode for persistence, expose to Wade, or reuse across sessions; Gate 6B obtains it from a fresh authenticated account-list response and uses it solely for that session's account-auth request |
 
 The token envelope is one Keychain value under service
 `TradeBot.cTraderOpenApi.tokens.accounts`. A refresh is successful only when a
@@ -287,11 +287,14 @@ or encoded form:
 - `ctidTraderAccountId`, `traderLogin`, visible account/login number;
 - private balances, positions, and raw account responses.
 
-Gate 6A's separately authorized, permission-restricted local Wade checkpoint
-artifact is the sole exception for the exact account identity fields enumerated
-in the Gate 6A evidence contract. It is not a log or shared review artifact and
-must contain no credential, token, authorization code, balance, position, or raw
-response.
+There is no checkpoint-artifact exception for `ctidTraderAccountId`. A future
+Gate 6A checkpoint may contain only exact broker-title presence/value,
+demo/live status, optional API-supplied visible account metadata, bounded
+omission/contradiction findings, and a non-reusable local candidate label that
+is neither derived from nor reusable as the API identifier. It must contain no
+credential, token, authorization code, API account identifier, balance,
+position, or raw response. If those safe fields cannot distinguish exactly one
+intended demo account, stop without producing selection evidence.
 
 Log only bounded event names, local correlation IDs, scope name, demo/live
 classification, error category/code, retry count, and redacted account count.
@@ -331,16 +334,22 @@ Gate 6A is not authorized by this directive. Its future scope is limited to:
    redacted live-exclusion count; never record or authenticate its identifiers.
    Treat absent `isLive` as an omission/ambiguity finding and exclude that entry.
    The presence of unrelated live entries is not itself failure.
-7. For each remaining candidate with present `isLive == false`, present Wade a
-   private local record containing only: the response-derived
-   `ctidTraderAccountId`; exact `isLive` presence and value; exact
+7. Retain each remaining candidate's response-derived
+   `ctidTraderAccountId` only in volatile process memory. Present Wade a private
+   local record containing only: exact `isLive` presence/value; exact
    `brokerTitleShort` presence and byte-for-byte value; optional
-   `traderLogin`/visible-login metadata if the API actually supplies it; and
-   bounded omission, ambiguity, or contradiction findings. The artifact must be
-   permission-restricted, outside the repository and shared evidence, and must
-   contain no raw response, token, code, secret, balance, position, or market
+   `traderLogin`/visible-login metadata if the API actually supplies it; a
+   non-reusable session-local candidate label when needed; and bounded
+   omission, ambiguity, or contradiction findings. The label must be random or
+   ordinal within that Gate 6A session, must not be derived from the API ID, and
+   cannot be a Gate 6B matching key. The artifact must contain no API account
+   identifier, raw response, token, code, secret, balance, position, or market
    data.
-8. Stop before `ProtoOAAccountAuthReq`. Do not select the first entry, infer a
+8. Require the safe checkpoint fields—not the candidate label—to distinguish
+   exactly one intended demo account. If zero or multiple candidates remain
+   indistinguishable, stop without exposing an API ID. Clear every in-memory
+   `ctidTraderAccountId` when Gate 6A ends.
+9. Stop before `ProtoOAAccountAuthReq`. Do not select the first entry, infer a
    missing title, normalize a title, query symbols, request market data, or
    perform any trading operation.
 
@@ -350,39 +359,42 @@ decision.
 
 ### Mandatory Wade Checkpoint
 
-After Gate 6A, stop. Wade must review the private local candidate evidence and
-confirm the intended demo account by its exact response-derived
-`ctidTraderAccountId`, present `isLive == false`, and exact byte-for-byte
-`brokerTitleShort`. If Wade uses an API-supplied visible login as an additional
-human check, it remains optional identity evidence and never becomes the API
-ID. No account may be authenticated because a title merely resembles, contains,
-case-folds to, or otherwise heuristically matches FIBO. Missing, contradictory,
-zero-candidate, or ambiguous evidence returns to Wade without authentication.
+After Gate 6A, stop. Wade must review only the safe candidate evidence and
+approve an exact selection predicate consisting of present `isLive == false`,
+exact byte-for-byte `brokerTitleShort`, and any API-supplied visible metadata
+needed to make the selection unique. A non-reusable local candidate label may
+help Wade discuss the list but is not an identity or later matching key.
+`ctidTraderAccountId` is never shown or persisted. No account may be
+authenticated because a title merely resembles, contains, case-folds to, or
+otherwise heuristically matches FIBO. If safe metadata cannot distinguish
+exactly one intended demo account, return to Wade without authentication.
 
 ### Gate 6B — Selected Demo-Account Authentication Proof
 
 Gate 6B requires a second, explicit Wade authorization naming the approved
-Gate 6A candidate. In a fresh connection generation it must repeat application
-authentication and account-list discovery, then:
+safe-field selection predicate. In a fresh connection generation it must
+repeat application authentication and account-list discovery, then:
 
 1. Exclude every entry with absent `isLive` or present `isLive == true`; an
    unrelated live entry is never a candidate and its mere presence is not
    failure.
-2. Match the Wade-approved `ctidTraderAccountId` and exact
-   `brokerTitleShort` byte-for-byte against the fresh authenticated account-list
-   response. Require a nonzero ID that fits the Gate 2 checked request type,
-   present `isLive == false`, present/non-empty broker title, matching
+2. Reproduce Wade's approved safe-field predicate byte-for-byte against the
+   fresh authenticated account-list response. Require present
+   `isLive == false`, present/non-empty exact broker title, matching
    `SCOPE_VIEW`, current connection generation, and response ownership through
-   the current access token. If Wade relied on an optional API-supplied visible
-   login at the checkpoint, require its exact presence/value as an additional
-   confirmation only.
+   the current access token. If Wade relied on optional API-supplied visible
+   metadata at the checkpoint, require its exact presence/value. Never use the
+   Gate 6A candidate label as a matching key.
 3. Require exactly one eligible approved demo match. Reject zero or multiple
    matches, missing or contradictory broker metadata, any ownership ambiguity,
    or any attempted live selection. Never choose by list order or title
    resemblance.
-4. Send `ProtoOAAccountAuthReq` only for that fresh response-derived
-   `ctidTraderAccountId` and current access token. Declare proof only after the
-   matching account-auth response.
+4. Retain the uniquely matched, nonzero, Gate 2 range-checked
+   `ctidTraderAccountId` only in volatile process memory. Send it only in that
+   session's `ProtoOAAccountAuthReq` with the current access token; never write,
+   display, hash, encode, or otherwise persist it. Clear it on success, failure,
+   disconnect, or session end. Declare proof only after the matching
+   account-auth response.
 5. Stop without a symbol query, market-data request, order-state request, order,
    modification, or cancellation.
 
@@ -426,7 +438,7 @@ and client-library diagnostics must be excluded from logs.
 | Account list empty or target unavailable | Gate 6A stops after discovery; do not guess an ID, use a visible login as an ID, or authenticate an account |
 | Live account entry present in account list | Exclude it from candidacy and record only a redacted count. Its mere presence is not failure; never authenticate it or change endpoint. |
 | Selected/attempted account is live, or no verified demo candidate remains | Hard stop as `LIVE_ACCOUNT_SELECTION_FORBIDDEN` or account-selection failure; never connect to the live host. |
-| Missing `isLive` presence, missing/contradictory broker metadata, zero/multiple Gate 6B matches, or mismatch with Wade's checkpoint | Stop for Wade review through the private local interface; do not choose the first entry or infer/normalize fields |
+| Missing `isLive` presence, missing/contradictory broker metadata, safe fields unable to distinguish one intended demo account, zero/multiple Gate 6B matches, or mismatch with Wade's approved safe-field predicate | Stop for Wade review without exposing the API identifier; do not choose the first entry or infer/normalize fields |
 | Disconnect, timeout, maintenance, server unavailable | Mark state unauthenticated, clear in-memory IDs, bounded exponential backoff with jitter and a fixed attempt cap, then repeat the full demo-only sequence |
 | Rate limit | Honor a bounded cooldown, make no concurrent retry burst, and stop after the configured cap |
 | Malformed or unexpected response | Fail closed, redact payload, disconnect, and preserve only non-sensitive diagnostic metadata |
@@ -446,8 +458,9 @@ no broker adapter and no order capability:
   can send only application auth, account-list, and account-auth messages;
 - an `AccountProofStateMachine` with distinct Gate 6A discovery and Gate 6B
   authentication states, a mandatory operator checkpoint between them, exact
-  response-derived identity matching, demo-only filtering, presence checks,
-  redaction, bounded reconnect, and terminal success/failure results;
+  safe-field predicate matching, memory-only response-derived account-ID use,
+  demo-only filtering, presence checks, redaction, bounded reconnect, and
+  terminal success/failure results;
 - deterministic tests for every failure row above, including proof that no
   symbol, quote, order, cancellation, position, or live-endpoint message can be
   constructed.
@@ -462,7 +475,7 @@ Gate 1 has selected the serialization, framing, transport, and port.
 
 Wade accepted Gate 5 on 2026-08-07. This acceptance records the design only and
 does not authorize Gate 5.1 execution, dependency work, or Gate 6. Gate 6 is the
-complete Gate 6A discovery → mandatory Wade identity/account checkpoint → Gate
+complete Gate 6A discovery → mandatory Wade safe-selection checkpoint → Gate
 6B authentication umbrella; Gate 6A and Gate 6B each require later authority.
 No exact FIBO title is required before Gate 6A; it must be observed there and
 approved before Gate 6B. Gate 5.1 and the entire Gate 6 umbrella remain blocked.

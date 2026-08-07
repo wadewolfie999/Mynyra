@@ -13,7 +13,7 @@ Break unproductive agent loops and force one bounded, evidence-producing next ac
 - Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
 - Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
 - Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23/Workstream II remains Not Started, and broker-dependent implementation remains Blocked / NO-GO unless separately approved by the operator.
+- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
 - Live trading remains disabled unless exact operator approval exists.
 - Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
 
@@ -67,7 +67,7 @@ Read the most relevant authority doc, active plan, previous handoff, or failed v
 - Documentation work starts with authority docs, not lower-order summaries.
 - Only one bounded next action is active after loop detection.
 - Stop condition is explicit before continuing.
-- Phase 23/Workstream II, live, broker, credential, and risk gates remain unchanged.
+- Recorded Phase 23/Gates 1–5 status and all unauthorized operational, live, broker, credential, and risk gates remain unchanged.
 
 ## Failure Modes Caught
 
@@ -81,7 +81,7 @@ Read the most relevant authority doc, active plan, previous handoff, or failed v
 
 - Do not repeat broad rewrites without new evidence.
 - Do not modify source, tests, credentials, broker code, or generated artifacts unless explicitly authorized by a later task.
-- Do not implement Phase 23/Workstream II, broker-dependent integration, or enable live trading.
+- Do not implement Gate 5.1, any Gate 6 activity, broker-dependent integration, or enable live trading.
 - Do not stage, commit, push, reset, clean, or discard changes.
 
 ## Interaction With Existing Skills

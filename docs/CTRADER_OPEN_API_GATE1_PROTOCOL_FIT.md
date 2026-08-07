@@ -132,12 +132,15 @@ After a separately authorized OAuth/token gate, Gate 6A must:
 4. Accept only the correlated current-generation response, require its required
    `accessToken` to equal the request token without logging either value, and
    require `permissionScope` presence and `SCOPE_VIEW` for the read-only proof.
-5. Record the bounded candidate identity evidence required by Gate 5 and stop
-   before account authentication.
+5. Retain each `ctidTraderAccountId` only in volatile process memory. Record
+   only the safe candidate selection metadata allowed by Gate 5 and stop before
+   account authentication; never write the API identifier to evidence or a
+   checkpoint artifact.
 
 After the mandatory Wade checkpoint and separate Gate 6B authorization, Gate
 6B must repeat current-generation application authentication and account
-discovery, select exactly one exact Wade-approved demo match, range-check the
+discovery, reproduce the exact Wade-approved safe-field predicate, require one
+unique demo match, range-check the
 fresh response-derived `uint64 ctidTraderAccountId` for the signed `int64`
 account-auth field, send `ProtoOAAccountAuthReq`, and accept only the matching
 `ProtoOAAccountAuthRes`.

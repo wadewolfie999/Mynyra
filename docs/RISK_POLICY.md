@@ -98,8 +98,10 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 - Secret-looking files require operator review.
 - Documentation may mention environment variable names such as `AIIO_API_KEY` and `AIIO_API_SECRET`, but never values.
 - cTrader client secrets and tokens must use macOS Keychain; authorization
-  codes and `ctidTraderAccountId` remain process-memory only for the bounded
-  proof. A visible account login is never an API account ID.
+  codes and `ctidTraderAccountId` remain volatile process-memory only for the
+  bounded proof. `ctidTraderAccountId` is never written to logs, evidence,
+  reports, checkpoint artifacts, configuration, or tracked files. A visible
+  account login is never an API account ID.
 
 ## cTrader Demo-Only Gate
 
@@ -111,9 +113,16 @@ Any live-capable path must support operator-controlled halt behavior that stops 
   with no configuration or fallback to live.
 - Live account entries are excluded from candidacy. Gate 6A may discover only
   account-list identity metadata and must stop for Wade's checkpoint before any
-  account authentication. Another live entry's mere presence is not failure.
+  account authentication. The checkpoint may contain only broker-title
+  presence/value, demo/live status, optional API-supplied visible account
+  metadata, and a non-reusable local candidate label. If those safe fields do
+  not distinguish exactly one intended demo account, stop without exposing the
+  API identifier. Another live entry's mere presence is not failure.
 - Gate 6B may authenticate only one exact Wade-approved demo match from a fresh
-  authenticated account-list response. Token ambiguity, absent `isLive`,
+  authenticated account-list response by reproducing the approved safe-field
+  selection deterministically. Its fresh `ctidTraderAccountId` remains only in
+  volatile process memory and is used solely for that session's account-auth
+  request. Token ambiguity, absent `isLive`,
   missing/contradictory broker metadata, zero/multiple exact matches, title
   resemblance, an attempted live selection, or exhausted reconnect budget fails
   closed before market data or order capability.

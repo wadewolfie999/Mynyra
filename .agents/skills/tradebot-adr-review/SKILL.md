@@ -13,7 +13,7 @@ Validate ADR status and implications without letting ADR acceptance become unaut
 - Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
 - Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
 - Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23/Workstream II remains Not Started, and broker-dependent implementation remains Blocked / NO-GO unless separately approved by the operator.
+- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
 - Live trading remains disabled unless exact operator approval exists.
 - Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
 
@@ -71,7 +71,7 @@ git diff --name-status
 - Accepted ADR is not treated as source implementation approval.
 - Superseded or deprecated ADRs are clearly marked.
 - Consequences include risk, testing, and rollback implications where relevant.
-- Phase 22 is Complete — Accepted; Phase 23/Workstream II remains Not Started unless separate operator GO exists.
+- Phase 22 is Complete — Accepted; Phase 23 is Complete — Selected; Open API Gates 1–5 are complete or accepted as recorded; operational cTrader execution has not started.
 
 ## Failure Modes Caught
 
@@ -85,7 +85,7 @@ git diff --name-status
 
 - Do not mutate ADR status without explicit operator or review-authority evidence.
 - Do not authorize source, broker, credential, risk, or live changes.
-- Do not implement Phase 23/Workstream II or broker-dependent integration.
+- Do not implement Gate 5.1, any Gate 6 activity, or broker-dependent integration without explicit operator GO.
 - Do not stage, commit, push, reset, clean, or discard changes.
 
 ## Interaction With Existing Skills
@@ -98,7 +98,7 @@ git diff --name-status
 ## Example Invocation Prompt
 
 ```text
-Use $tradebot-adr-review to verify ADR 0003 status and confirm it does not authorize Workstream II/Phase 23 or broker-dependent implementation.
+Use $tradebot-adr-review to verify ADR status and confirm acceptance does not authorize Gate 5.1, Gate 6, or broker-dependent implementation.
 ```
 
 ## Stop Conditions

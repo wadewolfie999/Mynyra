@@ -73,7 +73,9 @@ these invariants:
    position, or live-endpoint messages.
 3. OAuth uses only `accounts`; `trading` is a distinct later authorization.
 4. Provider IDs/types remain below the cTrader boundary. The response-derived
-   `ctidTraderAccountId` never becomes a visible login or persisted config.
+   `ctidTraderAccountId` remains only in volatile process memory and never
+   becomes a visible login, log field, evidence/report value, checkpoint
+   artifact, configuration value, or tracked content.
 5. The exact Gate 2 checked conversions and proto2 presence tests govern.
 6. `BACKTEST` remains deterministic and cannot load cTrader dependencies,
    credentials, network state, or wall-clock outcomes.
