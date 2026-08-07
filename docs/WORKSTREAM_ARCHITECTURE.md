@@ -14,7 +14,7 @@ This architecture defines domains and coordination boundaries. It does not autho
 | Workstream | Domain | Current position |
 | --- | --- | --- |
 | Workstream I — Broker-Neutral Execution Foundation | Deterministic broker-neutral contracts, lifecycle, execution/risk alignment, replay, persistence, and local simulation foundation. | Complete — Accepted through Phase 22. |
-| Workstream II — Broker Integration Program | Broker-selection evidence, adapter-fit analysis, failure semantics, and future broker-hosted validation/readiness paths. | Next active strategic area; evidence/evaluation coordination only. Phase 23 remains the next formal phase and no implementation is authorized. |
+| Workstream II — Broker Integration Program | FIBO/cTrader demo target, official Open API integration gates, failure semantics, and future broker-hosted validation/readiness paths. | Phase 23 selection complete; Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted by Wade on 2026-08-07. Gate 5.1 and the Gate 6 umbrella remain blocked. |
 | Workstream III — Documentation & Knowledge Architecture | Documentation platform, information architecture, canonical knowledge, and maintenance workflows. | Parallel/future domain unless separately activated. |
 | Workstream IV — ML Optimization & Strategy Research | Reproducible offline optimization, ML-assisted research, and strategy evidence. | Parallel/future domain unless separately activated. |
 | Workstream V — Core Platform Enhancement | Broker-neutral core capability, reliability, maintainability, and performance improvements. | Parallel/future domain unless separately activated. |
@@ -47,20 +47,26 @@ The primary rhythm is Strategy 2 — Parallel Evidence Lanes With Wade Checkpoin
 - Bigi owns technical evidence, the adapter-fit audit, the failure-mode checklist, and demo/live semantics analysis.
 - ChatGPT/review assistant supports prompt structure, output review, and governance-drift detection.
 
-This rhythm governs strategic evidence preparation for the next Phase 23 decision. It does not start broker-dependent implementation, select a broker, authorize connection work, or open Phase 24.
+This rhythm produced Wade's FIBO Group/cTrader selection. ADR 0004 makes official Open API the sole integration path; the Algo Bridge is abandoned, non-controlling, and out of scope. It does not authorize the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`), OAuth execution, connection work, account access, market data, orders, or live trading.
 
 Strategy 3 gate labels may be added later as a governance overlay. A full Kanban system is intentionally not part of v1.0.
 
 ## Decision And Gate Rules
 
 - Phase 22 remains Complete — Accepted at the Workstream I broker-neutral boundary.
-- Workstream II is strategic/evaluation-active only; Phase 23 remains the next formal broker-selection/evaluation phase.
-- Only Wade may accept the evidence and make an explicit broker-selection decision.
-- Phase 24 remains Blocked until Phase 23 records a selection and Wade separately approves connection scope.
+- Workstream II completed Phase 23 selection. Gate 2 and Gate 5 were accepted
+  by Wade on 2026-08-07; only acceptance housekeeping and commit-candidate
+  preparation are in current Phase 24 scope.
+- Only Wade may authorize each Open API execution gate.
+- Every Phase 24 execution step remains blocked until Wade separately approves its exact scope.
 - Workstream III–VII status changes require separate activation.
 - No evidence lane may use credentials, call a broker, connect an account, place sandbox or real orders, or enable live behavior.
 - No workstream label, checkpoint, artifact, or acceptance statement authorizes live trading.
 
 ## Professional Halting Point
 
-Stop at a Wade checkpoint after the scoped evidence package is assembled. Continue only with an explicit operator decision that names the next documentation/evaluation scope. Implementation, connection, credential, account, sandbox-order, and live actions remain outside the current authorization.
+Stop after Gate 2/Gate 5 acceptance housekeeping and commit-candidate review.
+Continue only with an explicit operator decision that names Gate 5.1, Gate 6A,
+or Gate 6B. Those gates, OAuth, connection, credential use, account requests,
+market data, orders, and live actions remain outside current authorization;
+Gate 6A discovery must stop for Wade's checkpoint before Gate 6B.

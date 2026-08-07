@@ -38,6 +38,28 @@ If no file arguments are supplied, the program falls back to `data/BTCUSDT-15.cs
 
 Credentials may also be held in `SystemConfig` fields. Do not hardcode or document values.
 
+### cTrader Open API Gate 5 Names
+
+- Client ID name: `TRADEBOT_CTRADER_CLIENT_ID` (identifier, not a secret).
+- Client secret: macOS Keychain service
+  `TradeBot.cTraderOpenApi.client-secret`.
+- `accounts` token envelope: macOS Keychain service
+  `TradeBot.cTraderOpenApi.tokens.accounts`.
+
+There are no client-secret, authorization-code, access-token, refresh-token,
+account-ID, endpoint, port, or scope environment variables. `.env.example`
+contains one clearly invalid client-ID placeholder only.
+
+Gate 5 fixed values, which future code must reject attempts to override:
+
+- Redirect URI: `http://127.0.0.1:18080/ctrader/oauth/callback`.
+- OAuth scope: `accounts`.
+- Open API host: `demo.ctraderapi.com`.
+- Open API port/transport: `5035`, Protobuf over strict TLS/TCP.
+
+`trading` scope, a live hostname, and runtime endpoint selection are not valid
+Gate 5 configuration.
+
 ## Network Defaults
 
 `SystemConfig` contains default endpoint strings:

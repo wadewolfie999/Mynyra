@@ -52,6 +52,10 @@ Use `0000-template.md`.
 - `0001-deprecate-offline-mop-mor-ss.md`: Deprecate the old offline/intranet-era MOP/MOR/SS workflow.
 - `0002-github-as-system-of-record.md`: Establish GitHub as the system of record after local documentation cleanup is committed and pushed.
 - `0003-workstream-i-integration-architecture.md`: Accepted broker-neutral Workstream I integration architecture.
+- `0004-ctrader-open-api-primary-integration.md`: Accepted sole cTrader Open API
+  path, abandoned/non-controlling Algo Bridge, demo-only endpoint, staged OAuth
+  scopes, revalidated Gates 1-3 design evidence, and separately gated
+  implementation.
 
 ## Conflict Handling
 

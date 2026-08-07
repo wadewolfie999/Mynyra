@@ -23,6 +23,15 @@ compile_commands.json
 # Logs
 *.log
 
+# Local credentials and secret-bearing configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+config/local/
+
 # Testing
 Testing/
 

@@ -94,7 +94,14 @@ Plan approval, phase approval, and ADR acceptance are distinct. None independent
 
 `docs/WORKSTREAM_ARCHITECTURE.md` is the current project-level domain and coordination map. Plans must identify the affected workstream and the governing roadmap phase, if any, without treating a workstream label or strategic activity as implementation approval.
 
-Workstream II currently permits only strategic evidence preparation under Strategy 2 — Parallel Evidence Lanes With Wade Checkpoints. Wade owns authority, scope, gates, broker selection, and acceptance. Bigi owns technical evidence, adapter-fit audit, failure-mode checklist, and demo/live semantics analysis. ChatGPT/review assistant supports prompt structure, output review, and governance-drift detection. The 2026-07-29 operator directive places OANDA on hold and authorizes a lawful Iran-compatible replacement-provider search under `PLAN-20260729-iran-compatible-provider-search`. Phase 23 remains the next formal broker-selection/evaluation phase; Phase 24 implementation and all connection, credential, account, sandbox-order, and live actions remain blocked.
+Workstream II completed Phase 23 selection with FIBO Group through cTrader as
+the demo-only XAUUSD target. ADR 0004 makes official cTrader Open API the sole
+integration path, classifies the Algo Bridge as abandoned/non-controlling/out
+of scope, and permanently cancels OANDA. Gate 1 and Gate 3 are revalidated;
+Gate 2 and Gate 5 were accepted by Wade on 2026-08-07. Gate 5.1 execution,
+Gate 6A discovery,
+the mandatory Wade account checkpoint, Gate 6B authentication, market data,
+orders, and live actions remain separately blocked.
 
 Strategy 3 gate labels may be added later as a governance overlay. Do not infer or implement a full Kanban system from this planning rule.
 
@@ -192,10 +199,199 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 ## Final Outcome
 ```
 
+# Plan: Rebaseline cTrader Open API Gates 1-5
+
+- Plan ID: `PLAN-20260806-ctrader-open-api-gate5`
+- Status: Complete — Gate 1/Gate 3 revalidated and Gate 2/Gate 5 accepted by
+  Wade; Gate 5.1 and the Gate 6 umbrella remain unauthorized
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Workstream II, Open API Gate 5 design only
+- Related issue or decision: Wade rebaseline directive dated 2026-08-07; ADR
+  0004
+- Created: 2026-08-06
+- Updated: 2026-08-07
+
+## Objective
+
+Preserve and prune the active Gate 5 review surface, revalidate protocol fit,
+numeric mapping, and pre-implementation baseline integrity, correct the final
+Gate 2/Gate 5 defects, and produce self-contained acceptance evidence without
+executing Gate 5.1, Gate 6A, or Gate 6B.
+
+## Context
+
+Wade reported `TradeBot Demo Integration` as `Active`. Official Open API is the
+sole integration path and OANDA is permanently cancelled. The Algo Bridge is
+abandoned, non-controlling, and out of scope. The active Open API worktree is
+branch `codex/ctrader-open-api-gate5` at accepted baseline `400b486`; its Gate 5
+changes are unstaged and uncommitted. Wade superseded the previous corrective
+handoff, authorized bounded Gates 1-3 revalidation, and kept the Gate 6
+umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`) blocked.
+
+## Scope
+
+- Reconcile the active Open API worktree and detect Bridge contamination by
+  changed path/content only.
+- Audit every active tracked and untracked Gate 5 file without general cleanup.
+- Revalidate Gates 1-3 from official cTrader documentation, pinned official
+  proto2 sources, accepted broker-neutral contracts, and the active baseline.
+- Correct Gate 2 with deterministic integer-only price rounding and an exact
+  zero-anchored volume predicate.
+- Correct only the controlling Gate 5/authority documents required for OAuth
+  correlation, Gate 5.1, staged Gate 6A/checkpoint/Gate 6B account selection,
+  demo-only/secret boundaries, and gate status.
+- Create pre-pruning and post-pruning deterministic snapshots plus one
+  self-contained acceptance-evidence bundle outside the repository.
+
+## Out of Scope
+
+- OAuth authorization, callback execution, token exchange or refresh.
+- cTrader connection, account discovery/authentication, symbols, XAUUSD data,
+  quotes, orders, modifications, cancellations, or any live account action.
+- Source, test, dependency, runtime-mode, endpoint-client, or risk-limit changes.
+- Any Bridge investigation, recovery, preservation, validation, implementation,
+  merge, deletion, or historical reconstruction.
+- Gate 5.1 execution; Gate 6A discovery; Gate 6B authentication; staging,
+  commit, push, reset, clean, stash, or relocation.
+
+## Preconditions
+
+- Explicit Wade directive is controlling.
+- Repository/worktree identity and dirty-change ownership are unambiguous.
+- No credential or token value is inspected, created, copied, or logged.
+
+## Assumptions
+
+- Application status and target details are operator-supplied controlling facts.
+- Official cTrader documentation and the official proto-message repository are
+  controlling protocol sources.
+- Actual FIBO account/symbol values are unavailable by design because this
+  directive prohibits operational account and market requests.
+
+## Invariants
+
+- `BACKTEST` remains default and no runtime behavior changes.
+- `accounts` is the only initial scope; `trading` remains blocked.
+- `demo.ctraderapi.com:5035` with Protobuf over strict TLS/TCP is the only
+  future message endpoint and has no fallback.
+- Visible account/login numbers are never used as `ctidTraderAccountId`.
+- Live trading and every order operation remain prohibited.
+
+## Files Expected to Change
+
+- `.gitignore`, `.env.example`, `PLANS.md`.
+- Gates 1-3 evidence, Gate 5 design, ADR/index, architecture, security,
+  configuration, project state, roadmap, workstream, risk, backlog, and
+  documentation index files.
+
+## Implementation Steps
+
+1. Reconcile the active worktree, baseline, upstream, status, and diff scope.
+2. Detect Bridge contamination by active changed paths only; stop if found.
+3. Prune the ten excessive skill edits and historical Phase 22 rewrite proven
+   to be prior Gate 5 scope expansion.
+4. Revalidate Gate 1 protocol fit from official documentation and a pinned
+   official schema revision; stop if any essential decision remains open.
+5. Revalidate Gate 2 conversions against `Decimal64` and provider field
+   types/presence; stop if any required factor is invented or unresolved.
+6. Revalidate Gate 3 accepted-base, contamination, production-behavior, and
+   smallest future source-surface integrity.
+7. Reconcile Gate 5 correlation, demo selection, secrets, and endpoint rules.
+8. Run offline Git, documentation, schema-reference, and secret-safety checks.
+9. Create post-pruning and self-contained external evidence and stop before
+   Gate 6A and therefore before the complete Gate 6 umbrella.
+
+## Verification
+
+```sh
+git worktree list --porcelain
+git diff --check
+git status --short
+git diff --name-status
+grep -RInE 'TO''DO|TB''D|FIX''ME|PLACE''HOLDER|example ''only' AGENTS.md PLANS.md CONTRIBUTING.md docs .agents 2>/dev/null || true
+grep -RInE 'live trading|live-trading|real order|API key|credential|secret' AGENTS.md PLANS.md CONTRIBUTING.md docs .agents 2>/dev/null || true
+```
+
+Review `.env.example` and the diff with a secret-pattern scan that reports only
+whether a potential value exists.
+
+## Risks
+
+- cTrader does not document OAuth `state`; without verified correlation the
+  loopback callback remains exposed to local injection/login-CSRF and OAuth is
+  blocked.
+- A configurable endpoint could accidentally reach a live host.
+- Long-lived refresh tokens or account IDs could leak through logs or local
+  files if the Keychain/redaction boundary is bypassed.
+- `protoc`, the Protobuf runtime, and a dedicated strict TLS implementation are
+  not installed or dependency-approved; they remain Gate 6A prerequisites.
+- The exact FIBO `brokerTitleShort` literal and intended demo account must be
+  observed during a separately authorized Gate 6A and confirmed by Wade before
+  Gate 6B; neither may be guessed or required circularly before discovery. The
+  spot timestamp unit also requires later authorized evidence.
+
+## Rollback
+
+With operator approval, reverse only the active Gate 5 documentation diff. Do
+not inspect or alter the abandoned Bridge, delete branches/worktrees, or rotate
+any secret; Gate 5 creates no external or credential state.
+
+## Progress Log
+
+- 2026-08-06: Established the active Gate 5 branch at baseline `400b486` and
+  drafted the initial design; Wade did not accept that report.
+- 2026-08-06: Confirmed no existing local/remote Open API branch or recoverable
+  Open API diff, then created the scoped branch from exact baseline `400b486`.
+- 2026-08-06: Verified official cTrader OAuth, account discovery, endpoint,
+  refresh, error, heartbeat, and account-ID semantics and authored Gate 5.
+- 2026-08-07: Reconciled the active Open API worktree without inspecting Bridge
+  history; no Bridge paths contaminate the active diff.
+- 2026-08-07: Found no controlling Gates 1-3 Open API artifact or generated
+  cTrader definitions on the active branch/baseline; bounded revalidation is
+  awaiting Wade authorization.
+- 2026-08-07: Corrected the undocumented OAuth `state` assumption, account-field
+  presence/identity rules, sole-path disposition, and Gate 6 umbrella blockers.
+- 2026-08-07: Preserved the complete pre-pruning state and hashes outside the
+  repository, then removed only ten proven excessive skill edits and the
+  historical Phase 22 rewrite.
+- 2026-08-07: Revalidated Gate 1 with Protobuf/TLS-TCP on the fixed demo port,
+  Gate 2 with exact checked field conversions, and Gate 3 as the
+  pre-implementation accepted-base/local-diff integrity boundary.
+- 2026-08-07: Corrected demo selection so other live entries are excluded but
+  do not invalidate one uniquely eligible FIBO demo account.
+- 2026-08-07: Final correction replaced inbound price `RejectUnaligned` with
+  exact integer `NearestTiesAwayFromZero`, fixed the zero-anchored volume
+  predicate, defined Gate 5.1, and split account proof into Gate 6A, a mandatory
+  Wade checkpoint, and Gate 6B.
+- 2026-08-07: Wade accepted Gate 2 and Gate 5. Acceptance records and the
+  canonical evidence package were finalized without authorizing Gate 5.1 or
+  any part of the Gate 6 umbrella.
+
+## Deviations
+
+No prior controlling Gates 1-3 artifact existed, so Wade-authorized bounded
+revalidation created new evidence. No Bridge history or operational cTrader
+state was used. Runtime FIBO metadata remains assigned to its later gate.
+
+## Completion Evidence
+
+Pre/post snapshots, Gates 1-3 documents, corrected Gate 5 design, scope audit,
+checks, hashes, and a self-contained external bundle are required for closure.
+No prohibited operational or Git-history action is performed.
+
+## Final Outcome
+
+Gate 1 and Gate 3 are revalidated. Gate 2 and Gate 5 were accepted by Wade on
+2026-08-07. Gate 5.1 and the Gate 6 umbrella (`Gate 6A → mandatory Wade
+checkpoint → Gate 6B`) remain blocked and separately authorized; acceptance
+does not imply execution authority.
+
 # Active Approved Research Plan: Workstream II Iran-Compatible Provider Search
 
 - Plan ID: `PLAN-20260729-iran-compatible-provider-search`
-- Status: In Progress — Research/Documentation Only
+- Status: Superseded — FIBO Group/cTrader selected; OANDA permanently cancelled
 - Owner: Wade
 - Implementer: Codex and approved research actors
 - Review authority: Wade

@@ -98,6 +98,39 @@ Architecture policy:
 
 `BrokerGateway` is the broker boundary. It owns broker-neutral order normalization, local-to-external identity correlation, lifecycle event handling, cancellation, reconciliation snapshot handling, paper-mode deterministic adapter simulation, and live-capable broker interaction. `IBrokerAdapter` implementations attach below `BrokerGateway`; provider-native schemas must be translated into broker-neutral lifecycle, execution, cancel, health, account, instrument, and reconciliation contracts before core components consume them. Execution logic must not bypass `BrokerGateway` for live-capable order side effects.
 
+## cTrader Open API Boundary
+
+ADR 0004 makes official cTrader Open API the sole integration path for the FIBO
+Group demo-only XAUUSD target. Gate 2 and Gate 5 were accepted by Wade on
+2026-08-07 as design evidence only. Gate 5 changes documentation and secret
+policy only; no Open API source or generated cTrader binding exists in the accepted
+baseline. Gates 1-3 now pin the official proto2 schema and define the future
+boundary without changing production behavior.
+
+The future boundary must:
+
+- keep OAuth, Keychain, provider messages, account IDs, and demo transport in a
+  cTrader-specific layer below `BrokerGateway`;
+- use the fixed loopback callback and only the `accounts` scope for read-only
+  gates;
+- connect only to immutable `demo.ctraderapi.com:5035` using Protobuf over
+  strict TLS/TCP with no live/configurable fallback;
+- use Gate 6A only to discover response-derived demo candidates and exact broker
+  identity, stop for Wade's mandatory checkpoint, then allow Gate 6B to
+  authenticate exactly one freshly rediscovered approved demo match;
+- exclude every live account from candidacy while treating unrelated live
+  entries as exclusions rather than global failure;
+- preserve exact broker-neutral numeric contracts with integer-only,
+  explicitly named rounding and validation policies;
+- expose no order-capable message or adapter until a later explicit directive.
+
+Gate 6 is the complete umbrella `Gate 6A → mandatory Wade checkpoint → Gate
+6B`; acceptance of Gate 2 or Gate 5 authorizes none of it.
+
+The cTrader Algo/cBot Bridge is
+`ABANDONED — NON-CONTROLLING — OUT OF SCOPE`. It is not part of this branch's
+runtime architecture or evidence base.
+
 ## Market-Data Boundary
 
 `CsvReader` and `LocalDataReplayAdapter` handle local data. `LiveDataAdapter` handles live-like and live-capable market data. Strategy, portfolio, and risk components should consume normalized candles or replay ticks through explicit interfaces rather than parsing external payloads directly.
@@ -157,6 +190,11 @@ Unrecognized mode strings parse to `BACKTEST`. Credential env fallbacks are `AII
 ## Credential Boundary
 
 `AuthManager` loads credentials from `SystemConfig` first, then environment variables. Secrets must not be committed, logged, or documented. Documentation may mention env var names but never values.
+
+Future cTrader credentials do not use the generic copying `AuthManager` API.
+The client ID is injected by the name `TRADEBOT_CTRADER_CLIENT_ID`; the client
+secret and scope-qualified token envelope live in macOS Keychain. Authorization
+codes are memory-only. See `CTRADER_OPEN_API_GATE5.md`.
 
 ## Extension Points
 

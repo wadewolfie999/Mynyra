@@ -18,6 +18,7 @@ Verified credential env names:
 
 - `AIIO_API_KEY`
 - `AIIO_API_SECRET`
+- `TRADEBOT_CTRADER_CLIENT_ID` (identifier only; no cTrader secret/token env vars)
 
 ## `.env` Handling
 
@@ -45,6 +46,32 @@ Verified credential env names:
 - Do not use live exchange keys for tests.
 - Do not infer authorization from credentials being configured.
 
+## cTrader Open API Gate 5
+
+- Fixed callback:
+  `http://127.0.0.1:18080/ctrader/oauth/callback`; loopback-only, one-shot,
+  exact path/host/method, and secure request-to-callback correlation are
+  mandatory. cTrader `state` round-trip support is undocumented and must be
+  verified under separate authority before OAuth execution.
+- Initial scope is `accounts`. A `trading` token requires later explicit Wade
+  authorization and separate scope-qualified storage.
+- Store the client secret in macOS Keychain service
+  `TradeBot.cTraderOpenApi.client-secret`.
+- Store access token, refresh token, scope, token type, and expiry atomically in
+  Keychain service `TradeBot.cTraderOpenApi.tokens.accounts`.
+- Authorization codes are memory-only and must be discarded after one exchange
+  attempt or timeout. Account IDs are response-derived and memory-only for the
+  read-only proof.
+- Fully redact client IDs/secrets, authorization URLs and callback queries,
+  codes, state, tokens, headers, account IDs/logins, balances, and raw payloads.
+  Prefix/suffix or hash redaction is not allowed for these fields.
+- Never ask an operator to paste a cTrader credential, code, token, or account
+  identifier into Codex, ChatGPT, a tracked file, fixture, log, or report.
+- The only future runtime message endpoint is
+  `demo.ctraderapi.com:5035`. Live account entries are excluded candidates;
+  attempting to authenticate one or reaching a live endpoint is a terminal
+  security failure.
+
 ## Source-Control Exclusions
 
 `.gitignore` excludes:
@@ -57,6 +84,7 @@ Verified credential env names:
 - `build/`
 - `data/results/`
 - `data/archive/`
+- `config/local/`
 
 Certificate files are ignored by default. If test certificates need to be versioned in the future, operator approval and clear test-only labeling are required.
 
