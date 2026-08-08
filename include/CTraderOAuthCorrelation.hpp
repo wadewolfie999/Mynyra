@@ -44,6 +44,7 @@ public:
         AlreadyTerminal,
         CallbackBeforeArming,
         CallbackExpired,
+        Cancelled,
         UnexpectedRemote,
         UnexpectedMethod,
         UnexpectedHost,
@@ -77,6 +78,16 @@ public:
     // only for presence and is never returned or retained. Every outcome after
     // arming is terminal; later calls are replay rejection.
     Decision consume(const CallbackRequest& request, TimePoint now) noexcept;
+
+    // Called by the listener owner when checking its monotonic deadline. A
+    // check before the deadline leaves the guard armed; a check exactly at or
+    // after the deadline is terminal and securely clears the correlation
+    // value. A clock value before arming fails closed.
+    Decision expireIfDue(TimePoint now) noexcept;
+
+    // Terminally cancels an unarmed or armed guard and securely clears any
+    // correlation value. A cancelled guard cannot be rearmed.
+    Decision cancel() noexcept;
 
     Decision lastDecision() const noexcept { return lastDecision_; }
     bool isArmed() const noexcept;

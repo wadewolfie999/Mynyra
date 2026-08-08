@@ -61,9 +61,11 @@ ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
 - Financial-mode safety tests: phases 13, 15, 16, and 17 exercise paper/live-capable boundaries without live trading authorization.
 - OAuth-correlation tests: `ctrader_gate5_1_tests` uses only synthetic inputs
   to verify fixed loopback binding, secure generation, monotonic expiry, exact
-  match, one-shot consumption, malformed/duplicate/mismatch/replay rejection,
-  code discard, state clearing, and bounded redacted diagnostics. It performs
-  no socket, browser, provider, token, account, market-data, or order action.
+  no-callback timeout, explicit cancellation, exact-deadline behavior, match,
+  one-shot consumption, malformed/duplicate/mismatch/replay rejection, code
+  discard, terminal state clearing, and bounded redacted diagnostics. It
+  performs no socket, browser, provider, token, account, market-data, or order
+  action.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
 ## Required Coverage By Change Type
@@ -74,8 +76,9 @@ ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
 - Execution changes: buy/sell, close behavior, fees, slippage, blocked orders, partial fills, trigger orders, broker callback behavior.
 - Credential/network changes: env loading, redaction, signing, malformed payloads, reconnect, gap-fill, TLS/local validation where relevant.
 - OAuth-correlation changes: secure generation, fixed callback binding,
-  expiry, exact matching, single use, mismatch/replay rejection, code discard,
-  and fixed non-sensitive diagnostics.
+  no-callback expiry, explicit cancellation, exact matching, single use,
+  mismatch/replay rejection, state clearing, code discard, and fixed
+  non-sensitive diagnostics.
 - Analytics/output changes: generated CSV path, schema, reproducibility, and no secret leakage.
 - Documentation-only changes: `git diff --check`, doc grep audit, and index review.
 

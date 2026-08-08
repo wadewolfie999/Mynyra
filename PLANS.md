@@ -238,9 +238,9 @@ provider `state` support.
   `isLive == false` plus exact byte-for-byte `brokerTitleShort`; fail closed if
   those facts do not identify exactly one intended demo account.
 - Add an offline-only correlation guard with operating-system secure random
-  generation, fixed loopback binding, monotonic expiry, single use, exact
-  matching, malformed/duplicate/mismatch/replay rejection, code discard,
-  sensitive-state clearing, and bounded redacted diagnostics.
+  generation, fixed loopback binding, monotonic expiry, explicit cancellation,
+  single use, exact matching, malformed/duplicate/mismatch/replay rejection,
+  code discard, sensitive-state clearing, and bounded redacted diagnostics.
 - Add synthetic targeted tests and synchronize affected authority, security,
   risk, architecture, roadmap, testing, and Gate 5 documentation.
 - Commit, push, and open one narrow PR against `main` without merging it.
@@ -305,8 +305,9 @@ provider `state` support.
 2. Correct every persisted visible-login/account-identifier selection path.
 3. Implement the move-only one-shot correlation guard and synthetic test hook.
 4. Add targeted tests for secure generation, fixed binding, expiry, exact
-   match, code discard, malformed/duplicate/mismatch/replay rejection, state
-   clearing, and redacted diagnostics.
+   no-callback timeout, cancellation, match, code discard,
+   malformed/duplicate/mismatch/replay rejection, state clearing, and redacted
+   diagnostics.
 5. Run targeted and full offline builds/tests, documentation checks, diff
    hygiene, and sensitive-data scans.
 6. Stage only scoped files, commit, push, open the PR, and create the external
@@ -358,6 +359,10 @@ The pre-existing operator document and evidence archives remain untouched.
   fixed binding checks, monotonic expiry, terminal callback consumption,
   constant-time state comparison, sensitive-state clearing, code discard, and
   fixed diagnostics. Targeted and full CTest passed.
+- 2026-08-09: Added explicit, time-aware no-callback expiry and cancellation
+  transitions after PR #24 review. Exact-deadline expiry and cancellation now
+  clear correlation state, prohibit rearming, and make later callbacks replay
+  rejection; synthetic coverage records those invariants.
 - 2026-08-09: Reconciled persistent account selection to present
   `isLive == false` plus exact `brokerTitleShort` only. All account identifiers,
   visible logins, candidate labels, ordinals, and derived identifiers are

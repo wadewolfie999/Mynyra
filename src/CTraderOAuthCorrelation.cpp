@@ -362,6 +362,36 @@ CTraderOAuthCorrelationGuard::Decision CTraderOAuthCorrelationGuard::consume(
     return finish(Decision::CorrelationMatchedCodeDiscarded);
 }
 
+CTraderOAuthCorrelationGuard::Decision
+CTraderOAuthCorrelationGuard::expireIfDue(TimePoint now) noexcept
+{
+    if (phase_ == Phase::Unarmed) {
+        return finish(Decision::CallbackBeforeArming);
+    }
+    if (phase_ == Phase::Terminal) {
+        lastDecision_ = Decision::AlreadyTerminal;
+        return lastDecision_;
+    }
+    if (now < armedAt_) {
+        return finish(Decision::CallbackBeforeArming);
+    }
+    if (now < expiresAt_) {
+        lastDecision_ = Decision::Armed;
+        return lastDecision_;
+    }
+    return finish(Decision::CallbackExpired);
+}
+
+CTraderOAuthCorrelationGuard::Decision
+CTraderOAuthCorrelationGuard::cancel() noexcept
+{
+    if (phase_ == Phase::Terminal) {
+        lastDecision_ = Decision::AlreadyTerminal;
+        return lastDecision_;
+    }
+    return finish(Decision::Cancelled);
+}
+
 CTraderOAuthCorrelationGuard::Decision CTraderOAuthCorrelationGuard::finish(
     Decision decision) noexcept
 {
@@ -397,6 +427,7 @@ std::string_view CTraderOAuthCorrelationGuard::safeDiagnostic(
     case Decision::AlreadyTerminal: return "oauth_callback_replay_rejected";
     case Decision::CallbackBeforeArming: return "oauth_callback_before_arming";
     case Decision::CallbackExpired: return "oauth_callback_expired";
+    case Decision::Cancelled: return "oauth_correlation_cancelled";
     case Decision::UnexpectedRemote: return "oauth_callback_remote_rejected";
     case Decision::UnexpectedMethod: return "oauth_callback_method_rejected";
     case Decision::UnexpectedHost: return "oauth_callback_host_rejected";

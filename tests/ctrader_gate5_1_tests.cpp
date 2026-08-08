@@ -171,6 +171,60 @@ void test_mismatch_and_expiry_are_terminal()
             "expired guard retained correlation state");
 }
 
+void test_no_callback_timeout_clears_state_and_rejects_replay()
+{
+    const auto now = Guard::Clock::now();
+    Guard guard = armedGuard(now, 3);
+    const std::string query = matchingQuery(guard);
+
+    require(guard.expireIfDue(
+                now + Guard::CORRELATION_LIFETIME
+                    - std::chrono::nanoseconds(1)) == Decision::Armed,
+            "pre-deadline timeout check did not remain armed");
+    require(guard.isArmed(), "pre-deadline timeout check disarmed guard");
+    require(!guard.stateForAuthorizationRequest().empty(),
+            "pre-deadline timeout check cleared state");
+
+    require(guard.expireIfDue(now + Guard::CORRELATION_LIFETIME)
+                == Decision::CallbackExpired,
+            "no-callback timeout did not expire at the exact deadline");
+    require(!guard.isArmed(), "expired guard remained armed");
+    require(guard.isTerminal(), "expired guard was not terminal");
+    require(guard.stateForAuthorizationRequest().empty(),
+            "no-callback timeout retained correlation state");
+    require(!CTraderOAuthCorrelationTestAccess::arm(
+                guard, validBinding(), now + Guard::CORRELATION_LIFETIME,
+                syntheticEntropy(4)),
+            "expired guard was rearmed");
+    require(guard.consume(validCallback(query),
+                          now + Guard::CORRELATION_LIFETIME
+                              + std::chrono::seconds(1))
+                == Decision::AlreadyTerminal,
+            "post-timeout callback was not rejected as replay");
+}
+
+void test_explicit_cancellation_clears_state_and_is_terminal()
+{
+    const auto now = Guard::Clock::now();
+    Guard guard = armedGuard(now, 5);
+    const std::string query = matchingQuery(guard);
+
+    require(guard.cancel() == Decision::Cancelled,
+            "explicit cancellation returned the wrong category");
+    require(!guard.isArmed(), "cancelled guard remained armed");
+    require(guard.isTerminal(), "cancelled guard was not terminal");
+    require(guard.stateForAuthorizationRequest().empty(),
+            "explicit cancellation retained correlation state");
+    require(!CTraderOAuthCorrelationTestAccess::arm(
+                guard, validBinding(), now, syntheticEntropy(6)),
+            "cancelled guard was rearmed");
+    require(guard.consume(validCallback(query), now + std::chrono::seconds(1))
+                == Decision::AlreadyTerminal,
+            "post-cancellation callback was not rejected as replay");
+    require(guard.cancel() == Decision::AlreadyTerminal,
+            "repeated cancellation was not rejected as terminal");
+}
+
 void test_callback_binding_and_early_rejection()
 {
     const auto now = Guard::Clock::now();
@@ -255,7 +309,7 @@ void test_malformed_duplicate_and_rejected_callbacks()
 
 void test_all_diagnostics_are_bounded_and_redacted()
 {
-    constexpr std::array<Decision, 18> decisions = {
+    constexpr std::array<Decision, 19> decisions = {
         Decision::Unarmed,
         Decision::Armed,
         Decision::ListenerBindingRejected,
@@ -263,6 +317,7 @@ void test_all_diagnostics_are_bounded_and_redacted()
         Decision::AlreadyTerminal,
         Decision::CallbackBeforeArming,
         Decision::CallbackExpired,
+        Decision::Cancelled,
         Decision::UnexpectedRemote,
         Decision::UnexpectedMethod,
         Decision::UnexpectedHost,
@@ -297,6 +352,10 @@ int main()
     test_exact_match_discards_code_and_rejects_replay();
     std::cerr << "[ctrader_gate5_1_tests] mismatch and expiry...\n";
     test_mismatch_and_expiry_are_terminal();
+    std::cerr << "[ctrader_gate5_1_tests] no-callback timeout...\n";
+    test_no_callback_timeout_clears_state_and_rejects_replay();
+    std::cerr << "[ctrader_gate5_1_tests] explicit cancellation...\n";
+    test_explicit_cancellation_clears_state_and_is_terminal();
     std::cerr << "[ctrader_gate5_1_tests] callback binding and early rejection...\n";
     test_callback_binding_and_early_rejection();
     std::cerr << "[ctrader_gate5_1_tests] malformed and duplicate rejection...\n";

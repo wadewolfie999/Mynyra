@@ -96,7 +96,10 @@ Rules:
 - The later callback listener must bind only to `127.0.0.1`, never `0.0.0.0`,
   `::`, a LAN address, or a public interface.
 - Start the listener only immediately before authorization and close it after
-  one accepted callback, one rejection, or a short fixed timeout.
+  one accepted callback, one rejection, explicit cancellation, or the fixed
+  timeout. The listener owner must call the guard's terminal cancellation or
+  monotonic-expiry transition before closing; destruction alone is not the
+  timeout mechanism.
 - cTrader `state` round-trip support is unverified. Do not claim or depend on
   it as provider behavior. The offline guard now generates a cryptographically
   random, single-use value, enforces exact callback matching, and discards code
@@ -135,6 +138,9 @@ gate. Wade authorized its offline-verifiable control implementation on
 - fixed `127.0.0.1:18080` listener-binding validation and exact loopback
   remote, `GET`, `Host`, and callback-path checks;
 - a fixed 60-second monotonic lifetime;
+- explicit listener-owner transitions that cancel immediately or terminally
+  expire at the exact 60-second deadline, securely clear the correlation
+  value, prohibit rearming, and reject every later callback as replay;
 - one callback attempt, with mismatch, malformed input, duplicates, expiry,
   unexpected binding data, and every later replay terminally rejected;
 - constant-time exact state comparison, immediate state clearing, and
