@@ -37,6 +37,7 @@ set(CORE_SOURCES
     src/TriggerOrderManager.cpp
     src/OrderLifecycleStore.cpp
     src/DeterministicBrokerAdapter.cpp
+    src/CTraderOAuthCorrelation.cpp
 )
 
 add_library(tradebot_core_lib ${CORE_SOURCES})
@@ -98,4 +99,8 @@ if (BUILD_TESTING)
     add_executable(phase22_tests tests/phase22_tests.cpp)
     target_link_libraries(phase22_tests PRIVATE tradebot_core_lib)
     add_test(NAME phase22_tests COMMAND phase22_tests)
+
+    add_executable(ctrader_gate5_1_tests tests/ctrader_gate5_1_tests.cpp)
+    target_link_libraries(ctrader_gate5_1_tests PRIVATE tradebot_core_lib)
+    add_test(NAME ctrader_gate5_1_tests COMMAND ctrader_gate5_1_tests)
 endif()

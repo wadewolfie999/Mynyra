@@ -40,7 +40,7 @@ The workstream map is a planning/governance artifact only. It does not authorize
 | Execution | `ExecutionEngine`, `TriggerOrderManager` | Signal execution, pending/trigger orders, broker routing bridge |
 | Live data | `LiveDataAdapter` | Live-like candle queue, simulated external payload/test hooks, reconnect/gap-fill state |
 | Broker | `BrokerGateway`, `IBrokerAdapter`, `DeterministicBrokerAdapter`, `OrderLifecycleStore` | Broker-neutral order normalization, lifecycle events, paper-mode deterministic adapter simulation, live-capable broker boundary, reconciliation snapshot |
-| Network/auth | `AsyncNetworkClient`, `AuthManager` | Async network bridge, HMAC signing, env/config credential loading |
+| Network/auth | `AsyncNetworkClient`, `AuthManager`, `CTraderOAuthCorrelationGuard` | Async network bridge, HMAC signing, env/config credential loading, and offline-only one-shot cTrader OAuth correlation control |
 | Analytics/persistence | `AnalyticsEngine`, `MetricsAggregator`, `LocalMetricsExporter`, `StateSerializer` | CSV outputs, latency summaries, local metrics, resume snapshots |
 | Tests | `tests/phase13_tests.cpp` through `tests/phase18_tests.cpp` | Phase regression coverage |
 | Benchmarks | `src/benchmarks/` | Throughput, Phase 18 burn-in, Phase 19 `applyBbo` microbenchmark |
@@ -117,18 +117,25 @@ The future boundary must:
   strict TLS/TCP with no live/configurable fallback;
 - use Gate 6A only to discover response-derived demo candidates and exact broker
   identity while retaining `ctidTraderAccountId` only in volatile process
-  memory; present Wade only safe selection metadata, stop if it cannot identify
-  exactly one intended demo account, then allow Gate 6B to reproduce the
-  approved safe-field predicate against a fresh list and authenticate exactly
-  one match using the fresh ID only in that session's request;
+  memory; present Wade only exact `isLive` and `brokerTitleShort` facts, stop if
+  they cannot identify exactly one intended demo account, then allow Gate 6B
+  to reproduce that two-field predicate against a fresh list and authenticate
+  exactly one match using the fresh ID only in that session's request;
+- keep `traderLogin`, account numbers, visible logins, candidate labels,
+  per-account ordinals, and equivalent account-identifying values volatile and
+  exclude them from logs, evidence, reports, configuration, checkpoints, and
+  every persisted selection predicate;
 - exclude every live account from candidacy while treating unrelated live
   entries as exclusions rather than global failure;
 - preserve exact broker-neutral numeric contracts with integer-only,
   explicitly named rounding and validation policies;
 - expose no order-capable message or adapter until a later explicit directive.
 
-Gate 6 is the complete umbrella `Gate 6A → mandatory Wade checkpoint → Gate
-6B`; acceptance of Gate 2 or Gate 5 authorizes none of it.
+The offline `CTraderOAuthCorrelationGuard` is not connected to a listener,
+browser, token client, runtime mode, or broker adapter. It implements the local
+Gate 5.1 controls without claiming cTrader `state` support. Gate 6 is the
+complete umbrella `Gate 6A → mandatory Wade checkpoint → Gate 6B`; acceptance
+of Gate 2, Gate 5, or Gate 5.1 authorizes none of it.
 
 The cTrader Algo/cBot Bridge is
 `ABANDONED — NON-CONTROLLING — OUT OF SCOPE`. It is not part of this branch's
@@ -168,6 +175,7 @@ CTest registers phase tests:
 - `phase17_tests`
 - `phase18_tests`
 - `phase22_tests`
+- `ctrader_gate5_1_tests`
 
 Tests are C++ executables linked against `tradebot_core_lib`. Some tests create temporary files under `/tmp`.
 

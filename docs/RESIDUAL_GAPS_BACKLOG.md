@@ -10,7 +10,7 @@
 
 ## Current Gate
 
-Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group through cTrader for demo-only XAUUSD, closing Phase 23. Official Open API is the sole integration path; Gate 1 and Gate 3 are revalidated, and Gate 2 and Gate 5 were accepted by Wade on 2026-08-07. The Algo Bridge is abandoned/non-controlling/out of scope, OANDA is permanently cancelled, and Gate 5.1, the Gate 6 umbrella, plus every execution/live gate remain Blocked / NO-GO.
+Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group through cTrader for demo-only XAUUSD, closing Phase 23. Official Open API is the sole integration path; Gate 1 and Gate 3 are revalidated, and Gate 2 and Gate 5 were accepted by Wade on 2026-08-07. The Algo Bridge is abandoned/non-controlling/out of scope and OANDA is permanently cancelled. Gate 5.1 offline controls are implementation-complete awaiting Wade acceptance; provider OAuth verification, the Gate 6 umbrella, and every execution/live gate remain Blocked / NO-GO.
 
 ## Priority And Status
 
@@ -26,7 +26,7 @@ Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group th
 | ID | Priority | Area | Status | Residual gap and closure evidence |
 | --- | --- | --- | --- | --- |
 | GOV-001 | P0 | Phase 23 | Closed | Wade selected FIBO Group through cTrader for demo-only XAUUSD. |
-| GOV-002 | P0 | Phase 24 | Gate 2/Gate 5 accepted; execution gates blocked | Gate 5.1 correlation, generated-binding/toolchain readiness, the Gate 6 umbrella, and its mandatory Wade checkpoint remain unresolved. Exact FIBO identity is a Gate 6A observation, not a prerequisite to discovery. |
+| GOV-002 | P0 | Phase 24 | Gate 5.1 implementation awaiting Wade acceptance; execution gates blocked | Local correlation controls have synthetic evidence; cTrader `state` support, generated-binding/toolchain readiness, the Gate 6 umbrella, and its mandatory Wade checkpoint remain unresolved. Exact FIBO identity is a Gate 6A observation, not a prerequisite to discovery. |
 | ENG-001 | P0 | Execution lifecycle | Confirmed gap | `ExecutionEngine` still uses the compatibility `BrokerFill` path. Migrate it to acknowledgement/execution/cancel/health lifecycle callbacks and retain portfolio mutation only from confirmed execution or approved reconciliation. |
 | ENG-002 | P0 | Risk integration | Confirmed gap | The main gateway route does not obtain a concrete final normalized-quantity decision from `RiskEngine`; the compatibility route supplies an always-allowed decision after the preliminary `canTrade()` check. Add a real final decision API and end-to-end tests. |
 | ENG-003 | P0 | Persistence | Confirmed gap | `OrderLifecycleStore` is held in memory and is not included in `StateSerializer` snapshots. Persist lifecycle state, deduplication keys, audit history, and migration/version behavior before restart-sensitive use. |
@@ -37,7 +37,7 @@ Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group th
 | BRK-002 | P1 | Provider evidence | Selected; runtime evidence pending | Open API approval is operator-reported. Authentication, real demo account identity, XAUUSD metadata/data, reconnect behavior, and demo-order proof remain unexecuted. |
 | BRK-003 | P1 | Practice/sandbox validation | Blocked | No external practice or sandbox validation has been authorized or performed. Prove authentication, market data, order lifecycle, disconnects, partial fills, cancellation, reconciliation, and rate-limit behavior in a non-live environment before any live consideration. |
 | RISK-001 | P0 | Live readiness | Blocked | The live-readiness checklist is not satisfied. Missing evidence includes exact venue/account approval, kill switch, limits, monitoring, stale-data handling, disconnect recovery, reconciliation, rollback, and operator stop authority. |
-| RISK-002 | P0 | Credentials/security | Gate 5 design accepted; execution blocked | Gate 5 defines scope, Keychain source, rotation, redaction, Gate 5.1, and staged Gate 6A/checkpoint/Gate 6B selection; OAuth correlation remains unverified. |
+| RISK-002 | P0 | Credentials/security | Gate 5.1 local controls implemented; provider execution blocked | Gate 5 defines scope, Keychain source, rotation, redaction, and staged Gate 6A/checkpoint/Gate 6B selection. Local generation/binding/expiry/single-use/redaction controls are implemented; provider correlation remains unverified. |
 | DATA-001 | P1 | Deterministic inputs | Confirmed gap | `data/samples/` is empty and the executable's default CSV input is absent. Add approved, provenance-labelled fixtures or require explicit input paths for reproducible end-to-end demonstrations. |
 | DATA-002 | P1 | Replay/provenance | Evidence gap | Replay tests exist, but provider-event fixtures, timestamp units, event ordering, and generated-data provenance need a documented integration fixture policy before provider work. |
 | OPS-001 | P1 | Operations | Evidence gap | No provider-specific monitoring, audit-log schema, reconciliation dashboard/process, incident runbook, or rollback handoff has been demonstrated. Define these before any account-connected test. |
@@ -53,16 +53,18 @@ OANDA is permanently cancelled. FIBO Group through cTrader is selected, and offi
 The current gate sequence is:
 
 1. Preserve Wade's Gate 2 and Gate 5 acceptance record; acceptance grants no execution authority.
-2. Authorize Gate 5.1 only if Wade chooses to verify OAuth correlation.
+2. Wade reviews the offline Gate 5.1 implementation evidence. Provider
+   verification remains a distinct future authorization.
 3. Keep Gate 6A discovery, Wade's mandatory checkpoint, Gate 6B
    authentication, market data, reconnect, demo-order, and live gates separate.
 
 ## Recommended Sequencing
 
 1. Resolve ENG-001 through ENG-006 and add the missing end-to-end evidence while remaining broker-neutral.
-2. Preserve the Gate 2/Gate 5 acceptance evidence and bounded commit candidate.
-3. Execute Gate 5.1, Gate 6A, and Gate 6B only under separate explicit
-   authority and with Wade's checkpoint between discovery and authentication.
+2. Review the Gate 5.1 offline implementation and bounded PR evidence.
+3. Execute provider OAuth verification, Gate 6A, and Gate 6B only under
+   separate explicit authority and with Wade's checkpoint between discovery
+   and authentication.
 4. Execute later market-data, reconnect, and controlled demo-order gates separately.
 5. Treat practice validation, live-readiness review, and live authorization as separate decisions; do not collapse them into broker selection.
 

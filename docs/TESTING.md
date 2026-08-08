@@ -20,6 +20,8 @@ Tests are evidence, not ceremony. TradeBot is financial-sensitive, so tests must
   - `phase16_tests`
   - `phase17_tests`
   - `phase18_tests`
+  - `phase22_tests`
+  - `ctrader_gate5_1_tests`
 - All test executables link against `tradebot_core_lib`.
 - Some tests create temporary files under `/tmp`.
 
@@ -47,6 +49,7 @@ Targeted test:
 
 ```sh
 ctest --test-dir build -R phase18_tests --output-on-failure
+ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
 ```
 
 ## Test Layers
@@ -56,6 +59,11 @@ ctest --test-dir build -R phase18_tests --output-on-failure
 - Replay tests: `phase18_tests` covers local CSV and binary replay roundtrip.
 - Order-book tests: `phase18_tests` covers BBO application and best quote behavior.
 - Financial-mode safety tests: phases 13, 15, 16, and 17 exercise paper/live-capable boundaries without live trading authorization.
+- OAuth-correlation tests: `ctrader_gate5_1_tests` uses only synthetic inputs
+  to verify fixed loopback binding, secure generation, monotonic expiry, exact
+  match, one-shot consumption, malformed/duplicate/mismatch/replay rejection,
+  code discard, state clearing, and bounded redacted diagnostics. It performs
+  no socket, browser, provider, token, account, market-data, or order action.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
 ## Required Coverage By Change Type
@@ -65,6 +73,9 @@ ctest --test-dir build -R phase18_tests --output-on-failure
 - Risk changes: drawdown, position cap, VaR, close-only, halt, latency, error-rate, and live volatility scaling.
 - Execution changes: buy/sell, close behavior, fees, slippage, blocked orders, partial fills, trigger orders, broker callback behavior.
 - Credential/network changes: env loading, redaction, signing, malformed payloads, reconnect, gap-fill, TLS/local validation where relevant.
+- OAuth-correlation changes: secure generation, fixed callback binding,
+  expiry, exact matching, single use, mismatch/replay rejection, code discard,
+  and fixed non-sensitive diagnostics.
 - Analytics/output changes: generated CSV path, schema, reproducibility, and no secret leakage.
 - Documentation-only changes: `git diff --check`, doc grep audit, and index review.
 
