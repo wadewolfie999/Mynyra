@@ -98,8 +98,9 @@ Workstream II completed Phase 23 selection with FIBO Group through cTrader as
 the demo-only XAUUSD target. ADR 0004 makes official cTrader Open API the sole
 integration path, classifies the Algo Bridge as abandoned/non-controlling/out
 of scope, and permanently cancels OANDA. Gate 1 and Gate 3 are revalidated;
-Gate 2 and Gate 5 were accepted by Wade on 2026-08-07. Gate 5.1 execution,
-Gate 6A discovery,
+Gate 2 and Gate 5 were accepted by Wade on 2026-08-07. Gate 5.1 offline
+controls were authorized on 2026-08-09 and are implementation-complete
+awaiting Wade acceptance. Provider OAuth verification, Gate 6A discovery,
 the mandatory Wade account checkpoint, Gate 6B authentication, market data,
 orders, and live actions remain separately blocked.
 
@@ -198,6 +199,199 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 
 ## Final Outcome
 ```
+
+# Plan: Complete Gate 5 OAuth Correlation Controls
+
+- Plan ID: `PLAN-20260809-gate5-oauth-correlation-controls`
+- Status: Complete — offline implementation and verification complete;
+  awaiting Wade acceptance; provider OAuth and Gate 6 remain blocked
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Workstream II, Phase 24, Gate 5.1 only
+- Related issue or decision: Wade Gate 5 Completion Directive; ADR 0004; PR
+  #23 review finding
+- Created: 2026-08-09
+- Updated: 2026-08-09
+
+## Objective
+
+Remove the `traderLogin` persistence contradiction introduced through PR #23,
+implement every offline-verifiable control in the accepted Gate 5.1 design,
+and produce a narrow review-ready PR without executing OAuth or beginning Gate
+6A.
+
+## Context
+
+PR #23 correctly made `ctidTraderAccountId` memory-only but left optional
+`traderLogin`/visible-login metadata and candidate labels in the future Gate 6A
+checkpoint and Gate 6B predicate. That contradicts Gate 2 and `SECURITY.md`.
+The accepted Gate 5.1 design is sufficient to implement a local one-shot
+correlation guard, but official cTrader documentation still does not establish
+provider `state` support.
+
+## Scope
+
+- Make `ctidTraderAccountId`, `traderLogin`, account/visible-login numbers, and
+  equivalent account-identifying values volatile process-memory only.
+- Restrict a future persistent checkpoint predicate to present
+  `isLive == false` plus exact byte-for-byte `brokerTitleShort`; fail closed if
+  those facts do not identify exactly one intended demo account.
+- Add an offline-only correlation guard with operating-system secure random
+  generation, fixed loopback binding, monotonic expiry, explicit cancellation,
+  single use, exact matching, malformed/duplicate/mismatch/replay rejection,
+  code discard, sensitive-state clearing, and bounded redacted diagnostics.
+- Add synthetic targeted tests and synchronize affected authority, security,
+  risk, architecture, roadmap, testing, and Gate 5 documentation.
+- Commit, push, and open one narrow PR against `main` without merging it.
+
+## Out of Scope
+
+- Browser authorization, real provider callback, OAuth code exchange, token
+  acquisition/refresh/revocation, cTrader connection, account discovery or
+  access, market data, reconnect proof, orders, or trading.
+- Gate 6A, the Wade checkpoint, Gate 6B, and Gates 7–9.
+- Generated Protobuf bindings, dependency installation, endpoint clients,
+  Keychain implementation, listener sockets, broker adapters, runtime-mode
+  attachment, risk limits, or live behavior.
+- Any abandoned Algo Bridge investigation or change.
+- Merge of the resulting PR.
+
+## Preconditions
+
+- Authoritative base is merged `origin/main` commit `75e35eda`.
+- The isolated branch is `codex/gate5-completion-oauth-correlation`.
+- Wade's directive is explicit source/test/commit/push/PR authority for Gate
+  5.1 offline controls only.
+- The unrelated operator modification to
+  `WORKSTREAM_II_IRAN_COMPATIBLE_PROVIDER_PIVOT.md` remains untouched and
+  excluded.
+
+## Assumptions
+
+- The accepted design's “short fixed time window” is implemented as 60
+  monotonic seconds, matching the documented one-minute authorization-code
+  lifetime while creating no provider-behavior claim.
+- Apple/BSD `arc4random_buf` and Linux `getrandom` are the approved local
+  operating-system entropy sources; unsupported platforms fail closed.
+- A future listener owns socket lifecycle and HTTP response rendering; this
+  plan implements only the offline-verifiable correlation state machine.
+
+## Invariants
+
+- `BACKTEST`, `PAPER`, `LIVE`, order routing, risk limits, and existing Gates
+  1–4 remain unchanged.
+- The guard performs no network or external I/O and is not attached to any
+  runtime path.
+- Callback code/state/query values never enter diagnostics or persistence.
+- Every callback attempt after arming is terminal; later attempts are replay
+  rejection.
+- Provider `state` support remains unverified until separately authorized real
+  evidence exists.
+- Gate 6 and all later gates remain blocked.
+
+## Files Expected to Change
+
+- `CMakeLists.txt`, `include/CTraderOAuthCorrelation.hpp`,
+  `src/CTraderOAuthCorrelation.cpp`, `tests/ctrader_gate5_1_tests.cpp`.
+- `PLANS.md`, `docs/CTRADER_OPEN_API_GATE5.md`, `docs/SECURITY.md`,
+  `docs/RISK_POLICY.md`, `docs/ARCHITECTURE.md`, `docs/PROJECT_STATE.md`,
+  `docs/ROADMAP.md`, `docs/RESIDUAL_GAPS_BACKLOG.md`,
+  `docs/WORKSTREAM_ARCHITECTURE.md`, `docs/TESTING.md`, and ADR 0004.
+
+## Implementation Steps
+
+1. Reconcile merged `main`, worktrees, local changes, and the PR #23 thread.
+2. Correct every persisted visible-login/account-identifier selection path.
+3. Implement the move-only one-shot correlation guard and synthetic test hook.
+4. Add targeted tests for secure generation, fixed binding, expiry, exact
+   no-callback timeout, cancellation, match, code discard,
+   malformed/duplicate/mismatch/replay rejection, state clearing, and redacted
+   diagnostics.
+5. Run targeted and full offline builds/tests, documentation checks, diff
+   hygiene, and sensitive-data scans.
+6. Stage only scoped files, commit, push, open the PR, and create the external
+   transfer report.
+
+## Verification
+
+```sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
+ctest --test-dir build --output-on-failure
+git diff --check
+```
+
+Review the complete diff, run the documented Markdown/security scans, verify
+no tracked or untracked scoped artifact contains a real secret/account value,
+and confirm the operator's unrelated pivot-document diff hash is unchanged.
+
+## Risks
+
+- Local tests cannot prove that cTrader accepts or returns `state`; claiming
+  otherwise would reopen the login-CSRF/callback-substitution gap.
+- A diagnostic API that accepts caller text could leak code/state; diagnostics
+  must remain fixed categories.
+- Reusing or rearming a guard could enable replay; the implementation is
+  move-only and terminal after its first callback attempt.
+- Broad documentation edits could imply Gate 6 authority; status updates must
+  say Gate 5.1 implementation-complete awaiting Wade acceptance and keep every
+  external operation blocked.
+
+## Rollback
+
+With operator approval, revert only this plan's commit. No external state,
+credential, token, account, provider connection, or order exists to unwind.
+The pre-existing operator document and evidence archives remain untouched.
+
+## Progress Log
+
+- 2026-08-09: Reconciled the isolated branch at `75e35eda`, confirmed the
+  operator pivot-document diff hash remains
+  `9ad9450f1925f2b6c4435bb1c79fb6caab20b353faf14522513a9007b9b34fca`,
+  and identified two pre-existing untracked evidence archives for exclusion.
+- 2026-08-09: Retrieved PR #23's resolved review thread and confirmed the
+  technical finding remains applicable to Gate 5, security policy, and Gate 2.
+- 2026-08-09: Began the offline guard, synthetic tests, and persistence-policy
+  correction. No prohibited external operation occurred.
+- 2026-08-09: Implemented the move-only correlation guard with OS CSPRNG,
+  fixed binding checks, monotonic expiry, terminal callback consumption,
+  constant-time state comparison, sensitive-state clearing, code discard, and
+  fixed diagnostics. Targeted and full CTest passed.
+- 2026-08-09: Added explicit, time-aware no-callback expiry and cancellation
+  transitions after PR #24 review. Exact-deadline expiry and cancellation now
+  clear correlation state, prohibit rearming, and make later callbacks replay
+  rejection; synthetic coverage records those invariants.
+- 2026-08-09: Reconciled persistent account selection to present
+  `isLive == false` plus exact `brokerTitleShort` only. All account identifiers,
+  visible logins, candidate labels, ordinals, and derived identifiers are
+  volatile and prohibited from the checkpoint/predicate.
+
+## Deviations
+
+- The isolated worktree contains two pre-existing untracked Gate 5 evidence
+  archives. They are unrelated to this plan, are preserved, and will not be
+  staged or published.
+
+## Completion Evidence
+
+- `cmake -S . -B build`: passed.
+- `cmake --build build`: passed; the initial clean target build reproduced the
+  two known unrelated warnings in `AsyncNetworkClient.cpp` and
+  `RiskEngine.cpp`; the changed source emitted no warning.
+- `ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure`:
+  passed.
+- `ctest --test-dir build --output-on-failure`: 7/7 passed.
+- Diff, documentation, sensitive-data, unrelated-work, and publication
+  evidence is recorded in the PR and external transfer report.
+
+## Final Outcome
+
+The Gate 5.1 offline implementation is complete and ready for Wade review.
+Only Wade may accept Gate 5.1. cTrader `state` round-trip behavior remains
+unverified; provider OAuth, Gate 6A, the Wade checkpoint, Gate 6B, and all later
+gates remain blocked.
 
 # Plan: Rebaseline cTrader Open API Gates 1-5
 

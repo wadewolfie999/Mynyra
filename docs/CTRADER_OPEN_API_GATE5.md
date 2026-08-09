@@ -2,18 +2,24 @@
 
 ## Document Control
 
-- Status: Accepted by Wade on 2026-08-07; Gate 5.1 and Gate 6 are not authorized
-- Plan: `PLAN-20260806-ctrader-open-api-gate5`
+- Status: Gate 5 design accepted by Wade on 2026-08-07; Gate 5.1 offline
+  controls implementation-complete and awaiting Wade acceptance; provider
+  round-trip verification and Gate 6 are not authorized
+- Plans: accepted design `PLAN-20260806-ctrader-open-api-gate5`; offline
+  implementation `PLAN-20260809-gate5-oauth-correlation-controls`
 - Decision: ADR 0004
-- Branch: `codex/ctrader-open-api-gate5`
-- Accepted baseline: `400b486a6af64c653a54b7e7080dbb59bce90cd8`
+- Implementation branch: `codex/gate5-completion-oauth-correlation`
+- Implementation base: `75e35eda0846f39773886febb2ade63018561958`
+- Gates 1–3 accepted baseline: `400b486a6af64c653a54b7e7080dbb59bce90cd8`
 - Application: `TradeBot Demo Integration`; operator-reported `Active` on 2026-08-06
 - Target: FIBO Group through cTrader, demo-only XAUUSD
 - Live trading: prohibited
 
-This accepted design is the entire Gate 5 deliverable. It does not authorize Gate 5.1,
-an OAuth flow, token exchange, cTrader connection, account request,
-account authentication, market-data request, or order operation.
+This accepted design plus the offline-only correlation guard and synthetic
+tests are the entire Gate 5/Gate 5.1 implementation deliverable. They do not
+authorize a real OAuth flow, provider callback, token exchange, cTrader
+connection, account request, account authentication, market-data request, or
+order operation. cTrader `state` round-trip support remains unverified.
 
 ## Controlling Sources
 
@@ -51,7 +57,7 @@ The active Open API worktree now contains the bounded Gate 1 protocol-fit,
 Gate 2 numeric-contract, and Gate 3 baseline-integrity revalidations authorized
 by Wade. They use the exact official proto2 definitions pinned at upstream
 commit `3fd8bddfbe0cfc2ecfda079623dc4e498af11e66`. No generated C++ binding,
-dependency, production implementation, or Bridge evidence was added.
+dependency, provider client, or Bridge evidence was added.
 
 ## Gates 1-3 Recovery Status
 
@@ -61,9 +67,10 @@ dependency, production implementation, or Bridge evidence was added.
 | Gate 2 — numeric contract | `CTRADER_OPEN_API_GATE2_NUMERIC_CONTRACT.md` maps exact provider types/presence/units to `Decimal64`, defines integer-only price rounding, and fixes the zero-anchored volume predicate. | `GATE 2 ACCEPTED BY WADE`. Actual FIBO XAUUSD metadata and the under-documented spot timestamp unit are Gate 7 runtime stop conditions. |
 | Gate 3 — baseline/local-diff integrity | `CTRADER_OPEN_API_GATE3_BASELINE_INTEGRITY.md` establishes base `400b486`, the design-only diff, contamination boundary, invariants, and smallest future source surface. | `GATE 3 REVALIDATED`. Ordinary review of a future implementation diff remains later verification, not Gate 3. |
 
-Gates 1-3 and accepted Gate 5 are design evidence only and do not authorize
-Gate 5.1 or Gate 6, the complete Gate 6A → mandatory Wade checkpoint → Gate 6B
-umbrella. OAuth callback correlation remains unverified. The exact FIBO broker
+Gates 1-3 and accepted Gate 5 do not authorize Gate 6, the complete Gate 6A →
+mandatory Wade checkpoint → Gate 6B umbrella. Wade separately authorized only
+the offline-verifiable Gate 5.1 controls on 2026-08-09. OAuth callback
+correlation with cTrader remains unverified. The exact FIBO broker
 identity and intended demo account can be learned only by a separately
 authorized Gate 6A account-list discovery and then approved by Wade; they are
 not prerequisites for Gate 6A. The selected Protobuf toolchain is not installed
@@ -89,13 +96,16 @@ Rules:
 - The later callback listener must bind only to `127.0.0.1`, never `0.0.0.0`,
   `::`, a LAN address, or a public interface.
 - Start the listener only immediately before authorization and close it after
-  one accepted callback, one rejection, or a short fixed timeout.
+  one accepted callback, one rejection, explicit cancellation, or the fixed
+  timeout. The listener owner must call the guard's terminal cancellation or
+  monotonic-expiry transition before closing; destruction alone is not the
+  timeout mechanism.
 - cTrader `state` round-trip support is unverified. Do not claim or depend on
-  it in implementation. A later, separately authorized verification may send a
-  cryptographically random, single-use `state` value and must require the exact
-  value in the callback. It must stop before token exchange, redact and discard
-  any returned code, and fail if `state` is rejected, omitted, changed, or
-  duplicated.
+  it as provider behavior. The offline guard now generates a cryptographically
+  random, single-use value, enforces exact callback matching, and discards code
+  input without returning it. A later, separately authorized provider
+  verification may send that value and must fail if `state` is rejected,
+  omitted, changed, or duplicated. It must stop before token exchange.
 - Until secure request-to-callback correlation is proven, the fixed loopback
   listener and operator-started short time window reduce exposure but do not
   prevent a malicious local process or browser context from injecting an
@@ -117,7 +127,31 @@ Rules:
 ## Gate 5.1 — OAuth Correlation Verification
 
 Gate 5.1 is inserted between Gate 5 design acceptance and every account-proof
-gate. This corrective pass defines it but does not authorize or execute it.
+gate. Wade authorized its offline-verifiable control implementation on
+2026-08-09. This pass does not authorize or execute the provider round trip.
+
+### Offline Implementation Disposition
+
+`CTraderOAuthCorrelationGuard` implements only the local correlation boundary:
+
+- operating-system CSPRNG generation of a 256-bit, unpadded base64url value;
+- fixed `127.0.0.1:18080` listener-binding validation and exact loopback
+  remote, `GET`, `Host`, and callback-path checks;
+- a fixed 60-second monotonic lifetime;
+- explicit listener-owner transitions that cancel immediately or terminally
+  expire at the exact 60-second deadline, securely clear the correlation
+  value, prohibit rearming, and reject every later callback as replay;
+- one callback attempt, with mismatch, malformed input, duplicates, expiry,
+  unexpected binding data, and every later replay terminally rejected;
+- constant-time exact state comparison, immediate state clearing, and
+  authorization-code presence checking without returning or retaining code;
+- fixed diagnostic categories containing no query, code, state, identifier,
+  or caller-supplied value.
+
+`ctrader_gate5_1_tests` verifies those controls with synthetic values and no
+socket, browser, provider, credential, token, account, or market operation.
+This proves the local implementation only. It does not prove that cTrader
+accepts or returns `state`; provider support remains the OAuth stop condition.
 
 ### Purpose
 
@@ -131,7 +165,8 @@ measured under a later explicit directive rather than assumed.
 - Wade has accepted Gate 5.
 - Wade has confirmed that the portal stores the exact registered redirect URI
   `http://127.0.0.1:18080/ctrader/oauth/callback` character-for-character.
-- Wade has explicitly authorized Gate 5.1 as a separate execution step.
+- Wade has explicitly authorized the offline Gate 5.1 control implementation.
+  A real authorization request/provider callback remains separately blocked.
 - No production integration is running; no live account and no `trading` scope
   is selected or authorized.
 - The fixed, single-use listener is bound to `127.0.0.1:18080` and armed before
@@ -224,7 +259,8 @@ scopes.
 | Access token | Bearer secret | Scope-qualified Keychain token envelope | Use only for its recorded scope; track absolute expiry; refresh before use when inside the safety margin |
 | Refresh token | Long-lived bearer secret | Same atomic Keychain token envelope | Rotate atomically with every successful refresh; cTrader invalidates the old token pair |
 | Expiry metadata | Sensitive metadata | Same Keychain envelope with token type and scope | Compute from receipt time plus `expiresIn`; use monotonic elapsed time in-process and a conservative wall-clock expiry across restarts |
-| `ctidTraderAccountId` | Private account identity metadata, not an authentication secret | Volatile response/process memory only; never any file, checkpoint artifact, configuration, log, evidence, report, transcript, or tracked content | Never infer from login, hash/encode for persistence, expose to Wade, or reuse across sessions; Gate 6B obtains it from a fresh authenticated account-list response and uses it solely for that session's account-auth request |
+| `ctidTraderAccountId` | Private account identity metadata, not an authentication secret | Volatile response/process memory only; never any file, checkpoint artifact, configuration, log, evidence, report, transcript, or tracked/untracked content | Never infer from login, hash/encode for persistence, expose to Wade, or reuse across sessions; Gate 6B obtains it from a fresh authenticated account-list response and uses it solely for that session's account-auth request |
+| `traderLogin`, account number, visible login, or equivalent account-identifying value | Private account identity metadata | Volatile response/process memory only; never any file, checkpoint artifact, configuration, reusable label, log, evidence, report, transcript, or tracked/untracked content | Never use as an API ID, checkpoint predicate, human-visible selection aid, hash/encoded label, or cross-session key; clear it with the account-list response state |
 
 The token envelope is one Keychain value under service
 `TradeBot.cTraderOpenApi.tokens.accounts`. A refresh is successful only when a
@@ -287,17 +323,19 @@ or encoded form:
 - `ctidTraderAccountId`, `traderLogin`, visible account/login number;
 - private balances, positions, and raw account responses.
 
-There is no checkpoint-artifact exception for `ctidTraderAccountId`. A future
-Gate 6A checkpoint may contain only exact broker-title presence/value,
-demo/live status, optional API-supplied visible account metadata, bounded
-omission/contradiction findings, and a non-reusable local candidate label that
-is neither derived from nor reusable as the API identifier. It must contain no
-credential, token, authorization code, API account identifier, balance,
-position, or raw response. If those safe fields cannot distinguish exactly one
-intended demo account, stop without producing selection evidence.
+There is no checkpoint-artifact exception for any account-identifying value. A
+future Gate 6A checkpoint may persist only explicit `isLive` presence/value and
+exact `brokerTitleShort` presence/value, plus a bounded non-identifying outcome
+category. It must contain no `ctidTraderAccountId`, `traderLogin`, account or
+visible-login number, candidate label, per-account ordinal, value derived from
+an identifier, credential, token, authorization code, balance, position, or
+raw response. If `isLive == false` plus exact `brokerTitleShort` cannot
+distinguish exactly one intended demo account, stop without producing a
+selection predicate.
 
-Log only bounded event names, local correlation IDs, scope name, demo/live
-classification, error category/code, retry count, and redacted account count.
+Log only bounded event names, non-sensitive internal event sequences unrelated
+to OAuth `state`, scope name, demo/live classification, error category/code,
+retry count, and redacted account count.
 Exception messages and structured payload dumps must pass through the same
 field-aware redactor before any sink. Debug mode must not relax this policy.
 
@@ -334,21 +372,19 @@ Gate 6A is not authorized by this directive. Its future scope is limited to:
    redacted live-exclusion count; never record or authenticate its identifiers.
    Treat absent `isLive` as an omission/ambiguity finding and exclude that entry.
    The presence of unrelated live entries is not itself failure.
-7. Retain each remaining candidate's response-derived
-   `ctidTraderAccountId` only in volatile process memory. Present Wade a private
-   local record containing only: exact `isLive` presence/value; exact
-   `brokerTitleShort` presence and byte-for-byte value; optional
-   `traderLogin`/visible-login metadata if the API actually supplies it; a
-   non-reusable session-local candidate label when needed; and bounded
-   omission, ambiguity, or contradiction findings. The label must be random or
-   ordinal within that Gate 6A session, must not be derived from the API ID, and
-   cannot be a Gate 6B matching key. The artifact must contain no API account
-   identifier, raw response, token, code, secret, balance, position, or market
-   data.
-8. Require the safe checkpoint fields—not the candidate label—to distinguish
-   exactly one intended demo account. If zero or multiple candidates remain
-   indistinguishable, stop without exposing an API ID. Clear every in-memory
-   `ctidTraderAccountId` when Gate 6A ends.
+7. Retain every provider account identifier, including
+   `ctidTraderAccountId`, `traderLogin`, account number, visible login, or an
+   equivalent value, only in volatile process memory and never expose it to
+   Wade. Present Wade a private local record containing only exact `isLive`
+   presence/value, exact `brokerTitleShort` presence and byte-for-byte value,
+   and a bounded non-identifying outcome category. The artifact must contain no
+   candidate label, per-account ordinal, identifier-derived value, raw
+   response, token, code, secret, balance, position, or market data.
+8. Require present `isLive == false` and exact present/non-empty
+   `brokerTitleShort` to distinguish exactly one intended demo account. If zero
+   or multiple candidates remain indistinguishable, stop without producing a
+   persistent selection predicate or exposing an identifier. Clear every
+   in-memory account-identifying value when Gate 6A ends.
 9. Stop before `ProtoOAAccountAuthReq`. Do not select the first entry, infer a
    missing title, normalize a title, query symbols, request market data, or
    perform any trading operation.
@@ -360,31 +396,30 @@ decision.
 ### Mandatory Wade Checkpoint
 
 After Gate 6A, stop. Wade must review only the safe candidate evidence and
-approve an exact selection predicate consisting of present `isLive == false`,
-exact byte-for-byte `brokerTitleShort`, and any API-supplied visible metadata
-needed to make the selection unique. A non-reusable local candidate label may
-help Wade discuss the list but is not an identity or later matching key.
-`ctidTraderAccountId` is never shown or persisted. No account may be
-authenticated because a title merely resembles, contains, case-folds to, or
-otherwise heuristically matches FIBO. If safe metadata cannot distinguish
-exactly one intended demo account, return to Wade without authentication.
+approve an exact selection predicate consisting only of present
+`isLive == false` and exact byte-for-byte `brokerTitleShort`.
+`ctidTraderAccountId`, `traderLogin`, account/visible-login numbers, candidate
+labels, per-account ordinals, and equivalent account-identifying values are
+never shown or persisted. No account may be authenticated because a title
+merely resembles, contains, case-folds to, or otherwise heuristically matches
+FIBO. If those two approved facts cannot distinguish exactly one intended demo
+account, return to Wade without authentication.
 
 ### Gate 6B — Selected Demo-Account Authentication Proof
 
 Gate 6B requires a second, explicit Wade authorization naming the approved
-safe-field selection predicate. In a fresh connection generation it must
+two-field selection predicate. In a fresh connection generation it must
 repeat application authentication and account-list discovery, then:
 
 1. Exclude every entry with absent `isLive` or present `isLive == true`; an
    unrelated live entry is never a candidate and its mere presence is not
    failure.
-2. Reproduce Wade's approved safe-field predicate byte-for-byte against the
+2. Reproduce Wade's approved two-field predicate byte-for-byte against the
    fresh authenticated account-list response. Require present
    `isLive == false`, present/non-empty exact broker title, matching
    `SCOPE_VIEW`, current connection generation, and response ownership through
-   the current access token. If Wade relied on optional API-supplied visible
-   metadata at the checkpoint, require its exact presence/value. Never use the
-   Gate 6A candidate label as a matching key.
+   the current access token. No account identifier, visible login, candidate
+   label, per-account ordinal, or derived value may participate in matching.
 3. Require exactly one eligible approved demo match. Reject zero or multiple
    matches, missing or contradictory broker metadata, any ownership ambiguity,
    or any attempted live selection. Never choose by list order or title
@@ -438,7 +473,7 @@ and client-library diagnostics must be excluded from logs.
 | Account list empty or target unavailable | Gate 6A stops after discovery; do not guess an ID, use a visible login as an ID, or authenticate an account |
 | Live account entry present in account list | Exclude it from candidacy and record only a redacted count. Its mere presence is not failure; never authenticate it or change endpoint. |
 | Selected/attempted account is live, or no verified demo candidate remains | Hard stop as `LIVE_ACCOUNT_SELECTION_FORBIDDEN` or account-selection failure; never connect to the live host. |
-| Missing `isLive` presence, missing/contradictory broker metadata, safe fields unable to distinguish one intended demo account, zero/multiple Gate 6B matches, or mismatch with Wade's approved safe-field predicate | Stop for Wade review without exposing the API identifier; do not choose the first entry or infer/normalize fields |
+| Missing `isLive` presence, missing/contradictory broker metadata, `isLive == false` plus exact `brokerTitleShort` unable to distinguish one intended demo account, zero/multiple Gate 6B matches, or mismatch with Wade's approved two-field predicate | Stop for Wade review without exposing any account-identifying value; do not choose the first entry, persist a visible login/label, or infer/normalize fields |
 | Disconnect, timeout, maintenance, server unavailable | Mark state unauthenticated, clear in-memory IDs, bounded exponential backoff with jitter and a fixed attempt cap, then repeat the full demo-only sequence |
 | Rate limit | Honor a bounded cooldown, make no concurrent retry burst, and stop after the configured cap |
 | Malformed or unexpected response | Fail closed, redact payload, disconnect, and preserve only non-sensitive diagnostic metadata |
@@ -458,7 +493,8 @@ no broker adapter and no order capability:
   can send only application auth, account-list, and account-auth messages;
 - an `AccountProofStateMachine` with distinct Gate 6A discovery and Gate 6B
   authentication states, a mandatory operator checkpoint between them, exact
-  safe-field predicate matching, memory-only response-derived account-ID use,
+  `isLive == false` plus `brokerTitleShort` predicate matching, memory-only
+  response-derived account-identifier use,
   demo-only filtering, presence checks, redaction, bounded reconnect, and
   terminal success/failure results;
 - deterministic tests for every failure row above, including proof that no
@@ -473,12 +509,13 @@ Gate 1 has selected the serialization, framing, transport, and port.
 
 ## Gate 5 Acceptance And Stop
 
-Wade accepted Gate 5 on 2026-08-07. This acceptance records the design only and
-does not authorize Gate 5.1 execution, dependency work, or Gate 6. Gate 6 is the
-complete Gate 6A discovery → mandatory Wade safe-selection checkpoint → Gate
-6B authentication umbrella; Gate 6A and Gate 6B each require later authority.
-No exact FIBO title is required before Gate 6A; it must be observed there and
-approved before Gate 6B. Gate 5.1 and the entire Gate 6 umbrella remain blocked.
-Gates 7–9 remain blocked.
+Wade accepted the Gate 5 design on 2026-08-07 and authorized only the offline
+Gate 5.1 controls on 2026-08-09. Their implementation is complete and awaiting
+Wade's acceptance; cTrader `state` behavior remains unverified, so real OAuth
+execution is still blocked. Gate 6 is the complete Gate 6A discovery →
+mandatory Wade safe-selection checkpoint → Gate 6B authentication umbrella;
+Gate 6A and Gate 6B each require later authority. No exact FIBO title is
+required before Gate 6A; it must be observed there and approved before Gate 6B.
+The entire Gate 6 umbrella and Gates 7–9 remain blocked.
 
-`GATE 5 ACCEPTED BY WADE`
+`GATE 5.1 IMPLEMENTATION COMPLETE — AWAITING WADE ACCEPTANCE`

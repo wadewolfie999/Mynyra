@@ -98,10 +98,11 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 - Secret-looking files require operator review.
 - Documentation may mention environment variable names such as `AIIO_API_KEY` and `AIIO_API_SECRET`, but never values.
 - cTrader client secrets and tokens must use macOS Keychain; authorization
-  codes and `ctidTraderAccountId` remain volatile process-memory only for the
-  bounded proof. `ctidTraderAccountId` is never written to logs, evidence,
-  reports, checkpoint artifacts, configuration, or tracked files. A visible
-  account login is never an API account ID.
+  codes, `ctidTraderAccountId`, `traderLogin`, account numbers, visible logins,
+  and equivalent account-identifying values remain volatile process-memory
+  only for the bounded proof. None is ever written to logs, evidence, reports,
+  checkpoint artifacts, configuration, reusable labels, or tracked/untracked
+  files. A visible account login is never an API account ID or selection key.
 
 ## cTrader Demo-Only Gate
 
@@ -113,23 +114,28 @@ Any live-capable path must support operator-controlled halt behavior that stops 
   with no configuration or fallback to live.
 - Live account entries are excluded from candidacy. Gate 6A may discover only
   account-list identity metadata and must stop for Wade's checkpoint before any
-  account authentication. The checkpoint may contain only broker-title
-  presence/value, demo/live status, optional API-supplied visible account
-  metadata, and a non-reusable local candidate label. If those safe fields do
-  not distinguish exactly one intended demo account, stop without exposing the
-  API identifier. Another live entry's mere presence is not failure.
+  account authentication. The checkpoint may contain only exact broker-title
+  presence/value, exact demo/live presence/value, and a bounded
+  non-identifying outcome category. If present `isLive == false` plus exact
+  `brokerTitleShort` does not distinguish exactly one intended demo account,
+  stop without producing a persistent selection predicate. Candidate labels,
+  per-account ordinals, visible logins, and equivalent account identifiers are
+  prohibited. Another live entry's mere presence is not failure.
 - Gate 6B may authenticate only one exact Wade-approved demo match from a fresh
-  authenticated account-list response by reproducing the approved safe-field
-  selection deterministically. Its fresh `ctidTraderAccountId` remains only in
+  authenticated account-list response by reproducing the approved
+  `isLive == false` plus exact `brokerTitleShort` selection deterministically.
+  Its fresh `ctidTraderAccountId` remains only in
   volatile process memory and is used solely for that session's account-auth
   request. Token ambiguity, absent `isLive`,
   missing/contradictory broker metadata, zero/multiple exact matches, title
   resemblance, an attempted live selection, or exhausted reconnect budget fails
   closed before market data or order capability.
-- Gate 2 and Gate 5 were accepted by Wade on 2026-08-07 as design evidence.
-  Gate 5.1 and the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint →
-  Gate 6B`) remain blocked, separately authorized, and make no financial-limit
-  or runtime-path change.
+- Gate 2 and the Gate 5 design were accepted by Wade on 2026-08-07. Wade
+  authorized only the offline Gate 5.1 controls on 2026-08-09; they are
+  implementation-complete and awaiting Wade acceptance. Provider OAuth
+  verification and the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint
+  → Gate 6B`) remain blocked and make no financial-limit or runtime-path
+  change.
 
 ## External API And Network Risk
 

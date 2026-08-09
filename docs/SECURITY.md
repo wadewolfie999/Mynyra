@@ -52,7 +52,9 @@ Verified credential env names:
   `http://127.0.0.1:18080/ctrader/oauth/callback`; loopback-only, one-shot,
   exact path/host/method, and secure request-to-callback correlation are
   mandatory. cTrader `state` round-trip support is undocumented and must be
-  verified under separate authority before OAuth execution.
+  verified under separate authority before OAuth execution. The offline
+  `CTraderOAuthCorrelationGuard` controls are implementation-complete and do
+  not establish provider support.
 - Initial scope is `accounts`. A `trading` token requires later explicit Wade
   authorization and separate scope-qualified storage.
 - Store the client secret in macOS Keychain service
@@ -60,22 +62,25 @@ Verified credential env names:
 - Store access token, refresh token, scope, token type, and expiry atomically in
   Keychain service `TradeBot.cTraderOpenApi.tokens.accounts`.
 - Authorization codes are memory-only and must be discarded after one exchange
-  attempt or timeout. `ctidTraderAccountId` is response-derived and volatile
-  process-memory-only: never write, display, hash, encode, or otherwise place it
-  in logs, evidence, reports, checkpoint artifacts, configuration, or tracked
-  files.
+  attempt or timeout. `ctidTraderAccountId`, `traderLogin`, account numbers,
+  visible logins, and equivalent account-identifying values are
+  response-derived and volatile process-memory-only: never write, display,
+  hash, encode, or otherwise place them in logs, evidence, reports, checkpoint
+  artifacts, configuration, reusable labels, or tracked/untracked files.
 - Fully redact client IDs/secrets, authorization URLs and callback queries,
   codes, state, tokens, headers, account IDs/logins, balances, and raw payloads.
   Prefix/suffix or hash redaction is not allowed for these fields.
 - Never ask an operator to paste a cTrader credential, code, token, or account
   identifier into Codex, ChatGPT, a tracked file, fixture, log, or report.
-- A future Gate 6A checkpoint may contain only broker-title field
-  presence/value, demo/live status, optional API-supplied visible account
-  metadata, bounded findings, and a non-reusable local candidate label that is
-  not derived from the API identifier. If those safe fields cannot distinguish
-  exactly one intended demo account, stop without exposing the identifier.
+- A future Gate 6A checkpoint may contain only exact `brokerTitleShort`
+  presence/value, exact `isLive` presence/value, and a bounded non-identifying
+  outcome category. No candidate label, per-account ordinal, visible login, or
+  other account-identifying value is permitted. If present `isLive == false`
+  plus exact `brokerTitleShort` cannot distinguish exactly one intended demo
+  account, stop without producing a persistent selection predicate.
 - A separately authorized Gate 6B must retrieve a fresh account list,
-  reproduce the approved safe-field selection deterministically, keep the
+  reproduce the approved `isLive == false` plus exact `brokerTitleShort`
+  selection deterministically, keep the
   fresh identifier only in volatile process memory, and use it solely for that
   session's account-authentication request.
 - The only future runtime message endpoint is

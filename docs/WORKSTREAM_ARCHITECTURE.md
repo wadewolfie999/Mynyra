@@ -14,7 +14,7 @@ This architecture defines domains and coordination boundaries. It does not autho
 | Workstream | Domain | Current position |
 | --- | --- | --- |
 | Workstream I — Broker-Neutral Execution Foundation | Deterministic broker-neutral contracts, lifecycle, execution/risk alignment, replay, persistence, and local simulation foundation. | Complete — Accepted through Phase 22. |
-| Workstream II — Broker Integration Program | FIBO/cTrader demo target, official Open API integration gates, failure semantics, and future broker-hosted validation/readiness paths. | Phase 23 selection complete; Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted by Wade on 2026-08-07. Gate 5.1 and the Gate 6 umbrella remain blocked. |
+| Workstream II — Broker Integration Program | FIBO/cTrader demo target, official Open API integration gates, failure semantics, and future broker-hosted validation/readiness paths. | Phase 23 selection complete; Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted by Wade on 2026-08-07. Gate 5.1 offline controls are implementation-complete awaiting Wade acceptance; provider OAuth and the Gate 6 umbrella remain blocked. |
 | Workstream III — Documentation & Knowledge Architecture | Documentation platform, information architecture, canonical knowledge, and maintenance workflows. | Parallel/future domain unless separately activated. |
 | Workstream IV — ML Optimization & Strategy Research | Reproducible offline optimization, ML-assisted research, and strategy evidence. | Parallel/future domain unless separately activated. |
 | Workstream V — Core Platform Enhancement | Broker-neutral core capability, reliability, maintainability, and performance improvements. | Parallel/future domain unless separately activated. |
@@ -55,8 +55,9 @@ Strategy 3 gate labels may be added later as a governance overlay. A full Kanban
 
 - Phase 22 remains Complete — Accepted at the Workstream I broker-neutral boundary.
 - Workstream II completed Phase 23 selection. Gate 2 and Gate 5 were accepted
-  by Wade on 2026-08-07; only acceptance housekeeping and commit-candidate
-  preparation are in current Phase 24 scope.
+  by Wade on 2026-08-07. Wade authorized the offline Gate 5.1 controls on
+  2026-08-09; implementation and review-evidence preparation are the current
+  Phase 24 scope.
 - Only Wade may authorize each Open API execution gate.
 - Every Phase 24 execution step remains blocked until Wade separately approves its exact scope.
 - Workstream III–VII status changes require separate activation.
@@ -65,8 +66,9 @@ Strategy 3 gate labels may be added later as a governance overlay. A full Kanban
 
 ## Professional Halting Point
 
-Stop after Gate 2/Gate 5 acceptance housekeeping and commit-candidate review.
-Continue only with an explicit operator decision that names Gate 5.1, Gate 6A,
-or Gate 6B. Those gates, OAuth, connection, credential use, account requests,
-market data, orders, and live actions remain outside current authorization;
-Gate 6A discovery must stop for Wade's checkpoint before Gate 6B.
+Stop after the Gate 5.1 offline implementation PR and Wade review handoff.
+Continue only with an explicit operator decision that names provider OAuth
+verification, Gate 6A, or Gate 6B. Those operations, connection, credential
+use, account requests, market data, orders, and live actions remain outside
+current authorization; Gate 6A discovery must stop for Wade's checkpoint
+before Gate 6B.
