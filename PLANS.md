@@ -99,10 +99,9 @@ the demo-only XAUUSD target. ADR 0004 makes official cTrader Open API the sole
 integration path, classifies the Algo Bridge as abandoned/non-controlling/out
 of scope, and permanently cancels OANDA. Gate 1 and Gate 3 are revalidated;
 Gate 2 and Gate 5 were accepted by Wade on 2026-08-07. Gate 5.1 offline
-controls were authorized on 2026-08-09 and are implementation-complete
-awaiting Wade acceptance. Provider OAuth verification, Gate 6A discovery,
-the mandatory Wade account checkpoint, Gate 6B authentication, market data,
-orders, and live actions remain separately blocked.
+controls were authorized, merged, and accepted on 2026-08-09. Wade separately
+authorized Gate 6A, its mandatory account checkpoint, and Gate 6B; market data,
+orders, and live actions remain blocked.
 
 Strategy 3 gate labels may be added later as a governance overlay. Do not infer or implement a full Kanban system from this planning rule.
 
@@ -212,7 +211,7 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 - Related issue or decision: Wade Gate 5 Completion Directive; ADR 0004; PR
   #23 review finding
 - Created: 2026-08-09
-- Updated: 2026-08-09
+- Updated: 2026-08-10
 
 ## Objective
 
@@ -1313,7 +1312,7 @@ Protobuf was not installed at preflight.
 - Gate 7 symbol or market-data requests and every Gate 8–9 action.
 - Positions, balances, order state, orders, modifications, cancellations, or
   any trading operation.
-- `trading` scope, live accounts, live endpoints, endpoint configuration,
+- Trading messages, live accounts, live endpoints, endpoint configuration,
   fallback hosts, broker adapters, `BrokerGateway`, `ExecutionEngine`,
   `LiveDataAdapter`, or runtime-mode attachment.
 - Acceptance, locking, or merge of Gate 6 by Codex.
@@ -1327,15 +1326,16 @@ Protobuf was not installed at preflight.
   the Full Gate 6 Single-Goal Execution Directive.
 - The isolated branch is `codex/gate6-read-only-proof`.
 - Exact callback remains
-  `http://127.0.0.1:18080/ctrader/oauth/callback`; authorization uses only
-  `accounts` scope.
+  `http://127.0.0.1:18080/ctrader/oauth/callback`; Wade's 2026-08-10 override
+  fixes Gate 6 authorization to `trading` scope.
 - Secret values must be configured by Wade through the accepted local
   environment/Keychain procedure and must never enter Codex-visible output.
 
 ## Assumptions
 
-- cTrader OAuth `state` round-trip remains unverified provider behavior. The
-  first real callback must prove exact round-trip correlation; absence,
+- cTrader OAuth `state` remains undocumented provider behavior. One controlled
+  callback matched exactly on 2026-08-10; every fresh callback must prove the
+  same exact round-trip correlation, and absence,
   rejection, mismatch, duplication, or timeout terminates before token exchange.
 - Homebrew `protoc 35.1` with pkg-config package `35.1.0` and its matching
   CMake-reported C++ runtime `7.35.1` is the reviewed local toolchain; the
@@ -1362,6 +1362,8 @@ Protobuf was not installed at preflight.
 - The proof transport can send only application auth, account-list, account
   auth, and heartbeat messages. Account auth is impossible before Wade's
   checkpoint confirmation.
+- OAuth scope and token storage are fixed to `trading`; the token's broader
+  capability does not widen the immutable protocol payload allowlist.
 - Every live account is excluded; absent `isLive` or broker title is ineligible;
   zero or multiple exact demo matches fail closed.
 - The checkpoint process remains alive. Process death, timeout, disconnect,
@@ -1398,8 +1400,8 @@ Protobuf was not installed at preflight.
 8. On Wade's exact confirmation, run Gate 6B in the same process using a fresh
    connection/list response, clear all volatile state, and stop before Gate 7.
 9. Re-run validation/scans, stage and commit only scoped changes, update the
-   canonical sanitized transfer report, and stop for Wade's approval. Do not
-   push, open a PR, or execute the provider flow under the current instruction.
+   canonical sanitized transfer report, push the authorized branch, and keep
+   PR #25 unmerged for Wade's acceptance.
 
 ## Verification
 
@@ -1447,7 +1449,7 @@ revoked. No account or market state is modified by this read-only proof.
 - 2026-08-09: PR #24 merged at `42affb3`; Wade explicitly accepted Gate 5.1.
 - 2026-08-09: Created isolated branch `codex/gate6-read-only-proof` from merged
   `origin/main`; preserved all unrelated worktrees and ignored artifacts.
-- 2026-08-09: Reconfirmed official view-only scope, token endpoint,
+- 2026-08-09: Reconfirmed the original official view-only scope, token endpoint,
   authentication sequence, demo Protobuf endpoint/port, and pinned schema
   provenance. Found Protobuf compiler/runtime absent.
 - 2026-08-09: Installed Homebrew Protobuf 35.1 and verified its CMake-reported
@@ -1467,24 +1469,35 @@ revoked. No account or market state is modified by this read-only proof.
 - 2026-08-09: Completed the default and opt-in offline suites, targeted
   sanitizer checks, repository documentation synchronization, and path-only
   sensitive-data scans without provider traffic.
+- 2026-08-10: Pushed implementation commit `ac9028d` and opened draft PR #25.
+  Wade confirmed rotated credentials, client-ID configuration, and exact
+  redirect registration.
+- 2026-08-10: The first callback attempt failed closed before token exchange.
+  A fresh attempt then proved exact OAuth correlation; token setup failed
+  locally before network transfer because an empty libcurl redirect-protocol
+  list is invalid. A credential-free direct endpoint probe returned HTTP 200.
+- 2026-08-10: Wade explicitly authorized `trading` scope for the intended demo
+  account while withholding every trading message and Gate 7. The token
+  transport correction now uses a valid HTTPS-only redirect protocol setting
+  while keeping redirects disabled; targeted offline tests pass.
 
 ## Deviations
 
-Provider preflight disclosed a credential into the browser tool transcript,
-and the required fixed redirect URI was absent. These are security stops for
-provider execution; the credential must be rotated and the redirect registered
-before a clean execution context may resume Gate 6A.
+The earlier credential disclosure and missing redirect were remediated by Wade.
+The accepted Gate 5 `accounts`-scope baseline is superseded for Gate 6 only by
+Wade's 2026-08-10 `trading`-scope directive. A local libcurl option defect was
+found after correlation and corrected before any credential-bearing token
+request left the process.
 
 ## Completion Evidence
 
-Local implementation, synthetic verification, documentation synchronization,
-and sensitive-data scans are complete. The scoped local commit is the current
-authorized stopping boundary. Credential rotation, redirect registration,
-Gate 6A checkpoint, Gate 6B proof, publication, and Wade acceptance remain
-pending.
+The initial local implementation, synthetic verification, documentation
+synchronization, and sensitive-data scans are complete in draft PR #25. The
+scope/transport correction, fresh Gate 6A checkpoint, Gate 6B proof, updated
+publication evidence, and Wade acceptance remain pending.
 
 ## Final Outcome
 
-Provider execution is blocked on credential rotation, redirect registration,
-and a clean execution context. No provider traffic occurred. Gate 7 remains
-blocked.
+Provider execution is authorized with fixed `trading` scope and a non-trading
+message allowlist. Gate 6A must next run from a fresh callback attempt and stop
+at Wade's checkpoint. Gate 7 remains blocked.

@@ -32,13 +32,13 @@ struct CTraderGate6Config final {
     static constexpr std::string_view TOKEN_HOST = "openapi.ctrader.com";
     static constexpr std::string_view DEMO_HOST = "demo.ctraderapi.com";
     static constexpr uint16_t DEMO_PORT = 5035;
-    static constexpr std::string_view OAUTH_SCOPE = "accounts";
+    static constexpr std::string_view OAUTH_SCOPE = "trading";
     static constexpr std::string_view REDIRECT_URI =
         "http://127.0.0.1:18080/ctrader/oauth/callback";
     static constexpr std::string_view CLIENT_SECRET_SERVICE =
         "TradeBot.cTraderOpenApi.client-secret";
     static constexpr std::string_view TOKEN_SERVICE =
-        "TradeBot.cTraderOpenApi.tokens.accounts";
+        "TradeBot.cTraderOpenApi.tokens.trading";
 
     static bool isAllowedOpenApiEndpoint(std::string_view host,
                                          uint16_t port) noexcept;
@@ -57,7 +57,7 @@ enum class Gate6Decision {
     StaleConnectionGeneration,
     CorrelationRejected,
     TokenOwnershipRejected,
-    ViewScopeRequired,
+    TradingScopeRequired,
     LiveAccountExcluded,
     MissingAccountMetadata,
     UnsafeBrokerMetadata,
@@ -80,7 +80,7 @@ struct Gate6AccountListEvidence {
     bool currentConnectionGeneration{false};
     bool correlationMatched{false};
     bool tokenOwned{false};
-    bool viewScope{false};
+    bool tradingScope{false};
     std::vector<Gate6AccountRecord> accounts;
 };
 

@@ -616,7 +616,8 @@ OAuthResult receiveCorrelatedAuthorizationCode(std::string_view clientId) noexce
     std::string authorizationUrl =
         "https://id.ctrader.com/my/settings/openapi/grantingaccess/?client_id="
         + *encodedClient + "&redirect_uri=" + *encodedRedirect
-        + "&scope=accounts&product=web&state="
+        + "&scope=" + std::string(CTraderGate6Config::OAUTH_SCOPE)
+        + "&product=web&state="
         + std::string(guard.stateForAuthorizationRequest());
     secureClear(*encodedClient);
     secureClear(*encodedRedirect);
@@ -958,6 +959,30 @@ std::size_t tokenWriteCallback(char* data, std::size_t size,
     return bytes;
 }
 
+bool configureTokenCurl(CURL* curl, const char* url, curl_slist* headers,
+                        std::string& response) noexcept
+{
+    return curl != nullptr && url != nullptr && headers != nullptr
+        && curl_easy_setopt(curl, CURLOPT_URL, url) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tokenWriteCallback) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "https") == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "https") == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_PROXY, "") == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_NOPROXY, "*") == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_TIMEOUT, 20L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L) == CURLE_OK
+        && curl_easy_setopt(curl, CURLOPT_USERAGENT, "TradeBot-Gate6/1.0") == CURLE_OK;
+}
+
 RuntimeFailure exchangeAuthorizationCode(std::string_view clientId,
                                          std::string_view clientSecret,
                                          std::string_view authorizationCode,
@@ -1000,25 +1025,8 @@ RuntimeFailure exchangeAuthorizationCode(std::string_view clientId,
     }
     headers = extendedHeaders;
 
-    const bool configured =
-        curl_easy_setopt(curl, CURLOPT_URL, sensitiveUrl.view().data()) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, tokenWriteCallback) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_PROTOCOLS_STR, "https") == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_REDIR_PROTOCOLS_STR, "") == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_PROXY, "") == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_NOPROXY, "*") == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_TIMEOUT, 20L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L) == CURLE_OK
-        && curl_easy_setopt(curl, CURLOPT_USERAGENT, "TradeBot-Gate6/1.0") == CURLE_OK;
+    const bool configured = configureTokenCurl(
+        curl, sensitiveUrl.view().data(), headers, response);
     if (!configured) {
         curl_slist_free_all(headers);
         curl_easy_cleanup(curl);
@@ -1451,7 +1459,7 @@ std::optional<Gate6AccountListEvidence> discoverAccounts(
 {
     ProtoOAGetAccountListByAccessTokenReq request;
     request.set_accesstoken(accessToken.data(), accessToken.size());
-    const std::string correlation = transport.nextCorrelation("accounts");
+    const std::string correlation = transport.nextCorrelation("trading");
     const bool sent = transport.send(
         PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ, request, correlation);
     clearAccountListRequest(request);
@@ -1477,8 +1485,8 @@ std::optional<Gate6AccountListEvidence> discoverAccounts(
     evidence.currentConnectionGeneration = transport.generation() > 0;
     evidence.correlationMatched = true;
     evidence.tokenOwned = constantTimeEqual(response.accesstoken(), accessToken);
-    evidence.viewScope = response.has_permissionscope()
-        && response.permissionscope() == SCOPE_VIEW;
+    evidence.tradingScope = response.has_permissionscope()
+        && response.permissionscope() == SCOPE_TRADE;
     evidence.accounts.reserve(
         static_cast<std::size_t>(response.ctidtraderaccount_size()));
     for (const ProtoOACtidTraderAccount& account : response.ctidtraderaccount()) {
@@ -1566,6 +1574,28 @@ bool validateCTraderTokenResponseOffline(std::string_view response) noexcept
     TokenEnvelope parsed;
     return parseTokenResponse(response, parsed)
         && tokenHasExecutionLifetime(parsed);
+}
+
+bool validateCTraderTokenTransportConfigurationOffline() noexcept
+{
+    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+        return false;
+    }
+    CURL* curl = curl_easy_init();
+    std::string response;
+    curl_slist* headers = curl_slist_append(nullptr, "Accept: application/json");
+    curl_slist* extendedHeaders = headers == nullptr ? nullptr
+        : curl_slist_append(headers, "Cache-Control: no-store");
+    if (extendedHeaders != nullptr) {
+        headers = extendedHeaders;
+    }
+    const bool configured = extendedHeaders != nullptr && configureTokenCurl(
+        curl, "https://openapi.ctrader.com/apps/token", headers, response);
+    curl_slist_free_all(headers);
+    if (curl != nullptr) curl_easy_cleanup(curl);
+    secureClear(response);
+    curl_global_cleanup();
+    return configured;
 }
 
 int runCTraderGate6Proof(bool preflightOnly)

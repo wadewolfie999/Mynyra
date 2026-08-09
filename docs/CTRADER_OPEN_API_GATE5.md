@@ -4,8 +4,8 @@
 
 - Status: Gate 5 design accepted by Wade on 2026-08-07; Gate 5.1 offline
   controls merged in PR #24 and accepted by Wade on 2026-08-09; Gate 6 is
-  separately authorized but provider execution is stopped pending credential
-  rotation and fixed redirect-URI registration
+  separately authorized and executing under Wade's 2026-08-10 `trading`
+  scope override; Gate 7 and all trading messages remain unauthorized
 - Plans: accepted design `PLAN-20260806-ctrader-open-api-gate5`; offline
   implementation `PLAN-20260809-gate5-oauth-correlation-controls`
 - Decision: ADR 0004
@@ -19,8 +19,9 @@
 This accepted design plus the offline-only correlation guard and synthetic
 tests are the Gate 5/Gate 5.1 deliverable. Wade's later Gate 6 directive—not
 Gate 5 acceptance—authorizes the bounded real OAuth and read-only account-proof
-sequence. cTrader `state` round-trip support remains unverified and must match
-exactly before any token exchange can proceed.
+sequence. The 2026-08-10 Gate 6 callback returned the exact correlation value,
+so provider `state` round-trip is verified for that attempt. Every fresh
+attempt must still match exactly before token exchange can proceed.
 
 ## Controlling Sources
 
@@ -40,8 +41,10 @@ The official cTrader authorization-request table documents `client_id`,
 `state`, PKCE, or another request-to-callback correlation mechanism. RFC 6749
 recommends `state` for request/callback binding, but that standard guidance is
 not evidence that cTrader accepts or returns it. Correlation support is
-therefore unverified and blocks token exchange until the authorized Gate 6
-callback returns one exact matching value.
+was therefore unverified before provider execution. The 2026-08-10 controlled
+Gate 6 callback returned one exact matching value. This observed result does
+not establish documented provider support or permit weaker correlation on any
+later attempt.
 
 ## Architecture Disposition
 
@@ -70,7 +73,7 @@ Bridge dependency and no market-data or order path.
 Gates 1-3 and accepted Gate 5 did not authorize Gate 6. Wade subsequently
 accepted Gate 5.1 and explicitly authorized the complete Gate 6A → mandatory
 Wade checkpoint → Gate 6B umbrella. OAuth callback correlation with cTrader
-remains unverified until the first bounded callback matches. Exact FIBO broker
+was verified for one bounded callback on 2026-08-10. Exact FIBO broker
 identity and the intended demo account must still be learned in Gate 6A and
 approved by Wade before Gate 6B. Homebrew Protobuf 35.1 is installed and the
 opt-in Gate 6 build verifies its matching 7.35.1 runtime headers.
@@ -99,18 +102,19 @@ Rules:
   timeout. The listener owner must call the guard's terminal cancellation or
   monotonic-expiry transition before closing; destruction alone is not the
   timeout mechanism.
-- cTrader `state` round-trip support is unverified. Do not claim or depend on
-  it as provider behavior. The offline guard now generates a cryptographically
-  random, single-use value, enforces exact callback matching, and discards code
-  input without returning it. The authorized Gate 6 run may send that value
-  and must fail if `state` is rejected,
+- cTrader `state` round-trip support is undocumented. One controlled Gate 6
+  callback matched exactly on 2026-08-10, but that observation is not a
+  provider guarantee. The offline guard generates a cryptographically random,
+  single-use value, enforces exact callback matching, and discards code input
+  without returning it. Every fresh Gate 6 run must send a new value and fail
+  if `state` is rejected,
   omitted, changed, or duplicated. Only an exact match may continue to token
   exchange under the Gate 6 directive.
-- Until secure request-to-callback correlation is proven, the fixed loopback
-  listener and operator-started short time window reduce exposure but do not
+- For every fresh request, the fixed loopback listener and operator-started
+  short time window reduce exposure but do not
   prevent a malicious local process or browser context from injecting an
-  unrelated code. This login-CSRF/callback-substitution limitation blocks OAuth
-  execution; no PKCE or other undocumented provider capability is assumed.
+  unrelated code. Exact single-use state matching is therefore mandatory; no
+  PKCE or other undocumented provider capability is assumed.
 - Reject malformed queries, duplicate parameters or requests, unexpected
   methods/paths/hosts, callbacks received before listener arming, and callbacks
   received after the single-use listener closes or times out.
@@ -166,10 +170,11 @@ measured during the authorized Gate 6 run rather than assumed.
 - Wade has accepted Gate 5 and Gate 5.1.
 - Wade has confirmed that the portal stores the exact registered redirect URI
   `http://127.0.0.1:18080/ctrader/oauth/callback` character-for-character.
-- Wade has explicitly authorized Gate 6 provider execution; credential
-  rotation and fixed redirect registration must still be complete first.
-- No production integration is running; no live account and no `trading` scope
-  is selected or authorized.
+- Wade has explicitly authorized Gate 6 provider execution and confirmed
+  credential rotation plus fixed redirect registration.
+- No production integration is running. Live accounts and all trading messages
+  remain prohibited. Wade explicitly authorized OAuth `trading` scope for the
+  intended demo account on 2026-08-10.
 - The fixed, single-use listener is bound to `127.0.0.1:18080` and armed before
   the browser authorization request begins.
 
@@ -178,7 +183,7 @@ measured during the authorized Gate 6 run rather than assumed.
 1. Generate a cryptographically random, unpredictable, single-use correlation
    value in process memory.
 2. Include it in one cTrader authorization request only if the provider accepts
-   the parameter; request `accounts` scope only.
+   the parameter; request the fixed `trading` scope authorized for Gate 6.
 3. Open that single authorization request and receive at most one callback on
    the registered loopback URI.
 4. Compare returned correlation data byte-for-byte and within the listener's
@@ -222,29 +227,30 @@ Before the authorized Gate 6 run, Wade—not Codex or ChatGPT—must:
    secret only into the interactive Keychain prompt described below. Do not
    paste either value into Codex/ChatGPT, source, a tracked file, terminal
    command arguments, screenshots, or the final report.
-6. During any later authorization screen, request `accounts` scope and select
+6. During the Gate 6 authorization screen, request `trading` scope and select
    only the intended FIBO Group demo account. Do not authorize any live
    account. The mere display of another live account is not a failure; leave it
    unselected. Stop if the intended demo account is ambiguous.
-7. Do not request `trading` or use Playground tokens. The current directive
-   authorizes Gate 6A and Gate 6B in one persistent process, but Gate 6B still
-   requires Wade's explicit safe-metadata checkpoint confirmation.
+7. Do not use Playground tokens. The current directive authorizes Gate 6A and
+   Gate 6B in one persistent process, but Gate 6B still requires Wade's
+   explicit safe-metadata checkpoint confirmation. The scope authorization
+   does not authorize any order, position, symbol, or market-data message.
 
 ## Staged OAuth Permission Policy
 
-Gate 5 and all initial read-only gates use only:
+Gate 5 originally selected the least-privilege scope:
 
 ```text
 scope=accounts
 ```
 
-cTrader documents `accounts` as view-only and incapable of trading
-operations. `trading` is prohibited until Wade gives a later explicit
-directive for the controlled demo-order gate. A `trading` token is a separate
-authorization event: re-authorize deliberately, store it under a distinct
-scope-qualified Keychain service, and never let a read-only executable load it.
-There is no automatic scope upgrade, scope fallback, or token reuse across
-scopes.
+cTrader documents `accounts` as view-only. Wade's explicit 2026-08-10
+directive supersedes that restriction for Gate 6 and fixes its fresh OAuth
+request to `scope=trading`. This grants token-level capability but no protocol
+authority: the Gate 6 executable's immutable payload allowlist remains limited
+to application authentication, account-list discovery, account authentication,
+and heartbeat. There is no automatic scope upgrade, scope fallback, or token
+reuse across scopes, and no Playground token may be loaded.
 
 ## Local Secret Lifecycle
 
@@ -260,7 +266,7 @@ scopes.
 | `traderLogin`, account number, visible login, or equivalent account-identifying value | Private account identity metadata | Volatile response/process memory only; never any file, checkpoint artifact, configuration, reusable label, log, evidence, report, transcript, or tracked/untracked content | Never use as an API ID, checkpoint predicate, human-visible selection aid, hash/encoded label, or cross-session key; clear it with the account-list response state |
 
 The token envelope is one Keychain value under service
-`TradeBot.cTraderOpenApi.tokens.accounts`. A refresh is successful only when a
+`TradeBot.cTraderOpenApi.tokens.trading`. A refresh is successful only when a
 new access token, refresh token, scope, token type, and expiry are written as
 one updated value. If the update fails, discard the new response and stop; do
 not keep a mixed old/new pair.
@@ -350,8 +356,8 @@ mandatory Wade checkpoint between them.
 Wade's later Gate 6 directive authorizes Gate 6A only within this scope:
 
 1. Only after Gate 5.1 succeeds and Wade separately authorizes Gate 6A, perform
-   one OAuth authorization with `scope=accounts`, exchange the correlated code,
-   and obtain a view-only token through the approved secret boundary.
+   one OAuth authorization with `scope=trading`, exchange the correlated code,
+   and obtain a scope-qualified token through the approved secret boundary.
 2. Connect only to `demo.ctraderapi.com:5035` using Protobuf over strict
    TLS/TCP. There is no live hostname, runtime override, or fallback.
 3. Send `ProtoOAApplicationAuthReq` with the client ID and Keychain-sourced
@@ -360,7 +366,7 @@ Wade's later Gate 6 directive authorizes Gate 6A only within this scope:
    only the correlated response on the current authenticated connection
    generation, require its required `accessToken` to equal the request token
    without logging either value, and require present `permissionScope` exactly
-   equal to `SCOPE_VIEW`.
+   equal to `SCOPE_TRADE`.
 5. Parse only that response's `ProtoOACtidTraderAccount` entries. Exact schema
    fields are `ctidTraderAccountId` (`uint64`, required), `isLive` (`bool`,
    optional), `traderLogin` (`int64`, optional), and `brokerTitleShort`
@@ -416,7 +422,7 @@ discovery, then:
 2. Reproduce Wade's approved two-field predicate byte-for-byte against the
    fresh authenticated account-list response. Require present
    `isLive == false`, present/non-empty exact broker title, matching
-   `SCOPE_VIEW`, current connection generation, and response ownership through
+   `SCOPE_TRADE`, current connection generation, and response ownership through
    the current access token. No account identifier, visible login, candidate
    label, per-account ordinal, or derived value may participate in matching.
 3. Require exactly one eligible approved demo match. Reject zero or multiple
@@ -482,7 +488,7 @@ and client-library diagnostics must be excluded from logs.
 The authorized opt-in Gate 6 implementation adds no broker adapter and no order
 capability:
 
-- immutable `CTraderOpenApiGateConfig` values for the callback, `accounts`
+- immutable `CTraderOpenApiGateConfig` values for the callback, `trading`
   scope, and demo host;
 - a cTrader-specific `ICTraderSecretStore` with a macOS Keychain
   implementation and deterministic in-memory fake;
@@ -500,8 +506,8 @@ capability:
   constructed.
 
 Do not attach this proof tool to `BrokerGateway`, `ExecutionEngine`,
-`LiveDataAdapter`, or a runtime mode. Do not add a trading scope, order schema,
-XAUUSD request, or general-purpose configurable endpoint. Pinned Protobuf
+`LiveDataAdapter`, or a runtime mode. Do not add an order schema, XAUUSD
+request, or general-purpose configurable endpoint. Pinned Protobuf
 generation and strict TLS dependencies are configure-time requirements; Gate 1
 remains controlling for serialization, framing, transport, and port.
 
@@ -510,9 +516,10 @@ remains controlling for serialization, framing, transport, and port.
 Wade accepted the Gate 5 design on 2026-08-07 and the merged Gate 5.1
 implementation on 2026-08-09. Wade then authorized the complete Gate 6A
 discovery → mandatory safe-selection checkpoint → Gate 6B authentication
-umbrella. Provider execution is currently stopped until the exposed client
-secret is rotated and the exact fixed redirect URI is registered. No exact
+umbrella. Wade confirmed the rotated client secret, client ID, and exact fixed
+redirect URI. On 2026-08-10 he also authorized a fresh TradeBot OAuth attempt
+with `trading` scope while withholding all trading-message authority. No exact
 FIBO title is required before Gate 6A; it must be observed there and approved
 before Gate 6B. Gates 7–9 remain blocked.
 
-`GATE 5.1 ACCEPTED — GATE 6 AUTHORIZED BUT PREREQUISITE-BLOCKED`
+`GATE 5.1 ACCEPTED — GATE 6 EXECUTION AUTHORIZED`

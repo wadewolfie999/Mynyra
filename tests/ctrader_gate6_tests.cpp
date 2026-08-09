@@ -23,6 +23,7 @@ using tradebot::ctrader::Gate6AccountRecord;
 using tradebot::ctrader::Gate6Decision;
 using tradebot::ctrader::SensitiveString;
 using tradebot::ctrader::validateCTraderTokenResponseOffline;
+using tradebot::ctrader::validateCTraderTokenTransportConfigurationOffline;
 
 constexpr uint64_t TEST_ONLY_ACCOUNT_A = 101;
 constexpr uint64_t TEST_ONLY_ACCOUNT_B = 202;
@@ -61,8 +62,13 @@ void test_fixed_demo_boundary_and_payload_allowlist()
     require(!CTraderGate6Config::isAllowedOpenApiEndpoint(
                 CTraderGate6Config::DEMO_HOST, 5036),
             "JSON port was accepted");
-    require(CTraderGate6Config::OAUTH_SCOPE == "accounts",
-            "read-only scope changed");
+    require(CTraderGate6Config::OAUTH_SCOPE == "trading",
+            "authorized Gate 6 scope changed");
+    require(CTraderGate6Config::TOKEN_SERVICE
+                == "TradeBot.cTraderOpenApi.tokens.trading",
+            "trading token service changed");
+    require(validateCTraderTokenTransportConfigurationOffline(),
+            "token transport options were rejected locally");
 
     require(CTraderGate6Config::isAllowedOutboundPayload(51),
             "heartbeat was rejected");
@@ -188,7 +194,7 @@ void test_evidence_ownership_and_scope_fail_closed()
     cases.push_back({{true, true, false, true, {}},
                      Gate6Decision::TokenOwnershipRejected});
     cases.push_back({{true, true, true, false, {}},
-                     Gate6Decision::ViewScopeRequired});
+                     Gate6Decision::TradingScopeRequired});
 
     for (Case& testCase : cases) {
         CTraderGate6AccountProof proof;
@@ -319,7 +325,7 @@ void test_diagnostics_are_fixed_and_redacted()
         Gate6Decision::StaleConnectionGeneration,
         Gate6Decision::CorrelationRejected,
         Gate6Decision::TokenOwnershipRejected,
-        Gate6Decision::ViewScopeRequired,
+        Gate6Decision::TradingScopeRequired,
         Gate6Decision::LiveAccountExcluded,
         Gate6Decision::MissingAccountMetadata,
         Gate6Decision::UnsafeBrokerMetadata,

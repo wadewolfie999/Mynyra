@@ -14,4 +14,8 @@ int runCTraderGate6Proof(bool preflightOnly = false);
 // parsed token material after returning.
 bool validateCTraderTokenResponseOffline(std::string_view response) noexcept;
 
+// Offline-only validation seam for the libcurl option boundary. It configures
+// a handle but performs no request and handles no credentials or tokens.
+bool validateCTraderTokenTransportConfigurationOffline() noexcept;
+
 } // namespace tradebot::ctrader

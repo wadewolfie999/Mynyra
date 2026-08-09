@@ -111,8 +111,9 @@ The Gate 6 boundary:
 
 - keep OAuth, Keychain, provider messages, account IDs, and demo transport in a
   cTrader-specific layer below `BrokerGateway`;
-- use the fixed loopback callback and only the `accounts` scope for read-only
-  gates;
+- use the fixed loopback callback and Wade-authorized `trading` scope for Gate
+  6, while a numeric outbound allowlist prevents every trading, position,
+  symbol, market-data, and order message;
 - connect only to immutable `demo.ctraderapi.com:5035` using Protobuf over
   strict TLS/TCP with no live/configurable fallback;
 - use Gate 6A only to discover response-derived demo candidates and exact broker
@@ -137,8 +138,9 @@ That runtime has fixed authorization/token/demo hosts, an outbound Protobuf
 message allowlist limited to application auth, account discovery, account
 auth, and heartbeat, macOS Keychain storage, strict TLS, bounded diagnostics,
 and a volatile account-proof state machine. It is not attached to a runtime
-mode, `BrokerGateway`, market data, or order execution. cTrader `state` support
-is still an empirical Gate 6 stop condition, not an assumed provider feature.
+mode, `BrokerGateway`, market data, or order execution. The controlled provider
+callback on 2026-08-10 returned the exact correlation state, establishing that
+provider behavior for the registered loopback flow.
 
 The cTrader Algo/cBot Bridge is
 `ABANDONED — NON-CONTROLLING — OUT OF SCOPE`. It is not part of this branch's

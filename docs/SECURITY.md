@@ -51,16 +51,19 @@ Verified credential env names:
 - Fixed callback:
   `http://127.0.0.1:18080/ctrader/oauth/callback`; loopback-only, one-shot,
   exact path/host/method, and secure request-to-callback correlation are
-  mandatory. cTrader `state` round-trip support is undocumented and must be
-  verified by the authorized Gate 6 callback before token exchange. The
-  accepted `CTraderOAuthCorrelationGuard` controls do not themselves establish
-  provider support.
-- Initial scope is `accounts`. A `trading` token requires later explicit Wade
-  authorization and separate scope-qualified storage.
+  mandatory. cTrader `state` round-trip support is undocumented; one controlled
+  callback matched exactly on 2026-08-10. Every fresh request must still use a
+  new value and match exactly before token exchange. The accepted
+  `CTraderOAuthCorrelationGuard` controls do not establish a provider guarantee.
+- The accepted Gate 5 baseline used `accounts`. Wade explicitly superseded
+  that scope for Gate 6 on 2026-08-10 and authorized `trading` solely for the
+  demo account proof. The executable's fixed payload allowlist still prohibits
+  every trading operation and all Gates 7-9 requests.
 - Store the client secret in macOS Keychain service
   `TradeBot.cTraderOpenApi.client-secret`.
-- Store access token, refresh token, scope, token type, and expiry atomically in
-  Keychain service `TradeBot.cTraderOpenApi.tokens.accounts`.
+- Store the Gate 6 access token, refresh token, scope, token type, and expiry
+  atomically in Keychain service `TradeBot.cTraderOpenApi.tokens.trading`.
+  Never load or reuse a Playground or differently scoped token.
 - Authorization codes are memory-only and must be discarded after one exchange
   attempt or timeout. `ctidTraderAccountId`, `traderLogin`, account numbers,
   visible logins, and equivalent account-identifying values are

@@ -43,9 +43,10 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
 - Workstream II — Broker Integration Program: FIBO Group/cTrader selected;
   Gate 1 and Gate 3 revalidated; Gate 2 and Gate 5 accepted by Wade on
   2026-08-07. Gate 5.1 merged in PR #24 and Wade accepted its implementation
-  on 2026-08-09. Wade then authorized the Gate 6 umbrella; execution is
-  currently stopped on credential rotation and fixed redirect-URI
-  registration. Gate 7 and later work remain unauthorized.
+  on 2026-08-09. Wade then authorized the Gate 6 umbrella and confirmed its
+  credential/redirect prerequisites. On 2026-08-10 he fixed Gate 6 OAuth to
+  `trading` scope while withholding every trading message. Gate 7 and later
+  work remain unauthorized.
 - Workstream III — Documentation & Knowledge Architecture: parallel/future unless separately activated.
 - Workstream IV — ML Optimization & Strategy Research: parallel/future unless separately activated.
 - Workstream V — Core Platform Enhancement: parallel/future unless separately activated.
@@ -54,10 +55,11 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
 
 Workstream II includes a demo validation path and a separate live-readiness path.
 Current scope is the single authorized Gate 6 sequence: Gate 6A, Wade's
-mandatory safe-metadata checkpoint, then Gate 6B in the same process. Its
-provider execution is stopped pending credential rotation and fixed redirect
-registration. XAUUSD requests, reconnect proof, demo orders, live deployment,
-and live trading remain unauthorized.
+mandatory safe-metadata checkpoint, then Gate 6B in the same process. One
+OAuth callback correlated exactly; a local token-client option defect then
+stopped before transfer and is being corrected in draft PR #25. XAUUSD
+requests, reconnect proof, demo orders, live deployment, and live trading
+remain unauthorized.
 
 ## Deterministic Phase Authority
 
@@ -68,7 +70,7 @@ This table is the canonical phase state for Workstreams I-III. `PROJECT_STATE.md
 | I — Broker-Neutral Execution Foundation | Phase 21: Infrastructure Alignment | Complete — Approved | Internal TradeBot integration architecture and boundary alignment. ADR 0003 is Accepted; Phase 21 planning artifacts are approved. |
 | I — Broker-Neutral Execution Foundation | Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness | Complete — Accepted | `PLAN-20260624-workstream-i-broker-neutral-completion` closed the provider-neutral contracts, deterministic simulation, execution/risk alignment, persistence, replay, tests, and documentation boundary. No broker or prop firm selection, connection method, connectivity, credentials, account access, real or sandbox orders, broker-dependent implementation, or live trading is authorized. |
 | II — Broker Integration Program | Phase 23: Broker Selection | Complete — Selected | Wade selected FIBO Group through cTrader for demo-only XAUUSD. OANDA is permanently cancelled. Selection does not authorize OAuth, connectivity, credentials, account access, market data, orders, or live trading. |
-| II — Broker Integration Program | Phase 24: Connection Protocol | Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted; Gate 5.1 merged and accepted; Gate 6 authorized but stopped on prerequisites | Official Open API is sole. The opt-in Gate 6 proof remains read-only and demo-only. Credential rotation and fixed redirect registration block provider execution; market data, reconnect proof, order proof, and live use require separate directives. |
+| II — Broker Integration Program | Phase 24: Connection Protocol | Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted; Gate 5.1 merged and accepted; Gate 6 executing | Official Open API is sole. Gate 6 uses Wade-authorized `trading` scope but an immutable non-trading message allowlist and demo-only endpoint. Market data, reconnect proof, order proof, and live use require separate directives. |
 | III — Documentation & Knowledge Architecture | Phase 25: Documentation Platform Evaluation & Selection | Not Started | Evaluate and select the documentation platform. No platform is selected. |
 | III — Documentation & Knowledge Architecture | Phase 26: Core Documentation Architecture & Drafting | Blocked | Build the core documentation structure and draft canonical documentation only after Phase 25 selection and operator approval of the documentation architecture. |
 
@@ -174,9 +176,9 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 - Scope: connection protocol only within the separately approved scope.
 - Stop/go gate: no account connection, credential use, or live trading before exact operator approval and applicable risk gates.
 - Status: Gate 1 and Gate 3 revalidated; Gate 2 and Gate 5 accepted by Wade;
-  Gate 5.1 merged and accepted. Gate 6 is explicitly authorized but provider
-  execution is stopped pending credential rotation and fixed redirect
-  registration. Gate 7 and every trading/live gate remain blocked pending
+  Gate 5.1 merged and accepted. Gate 6 is explicitly authorized with fixed
+  `trading` scope for the intended demo account, but no trading message is
+  authorized. Gate 7 and every trading/live gate remain blocked pending
   separate operator approval.
 
 ### Phase 25: Workstream III Documentation Platform Evaluation And Selection
@@ -221,7 +223,7 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 
 ## Next Roadmap Action
 
-Remediate the Gate 6 credential and redirect prerequisites, then resume the
-authorized Gate 6A discovery, mandatory Wade checkpoint, and Gate 6B account
+Validate and push the narrow Gate 6 scope/token-transport correction, then run
+a fresh Gate 6A discovery, mandatory Wade checkpoint, and Gate 6B account-
 authentication proof. Stop before XAUUSD data, reconnect testing, orders, live
 accounts, live trading, or risk-limit changes; those remain unauthorized.

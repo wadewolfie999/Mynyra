@@ -78,7 +78,8 @@ ctest --test-dir build/gate6 --output-on-failure
   action.
 - Gate 6 account-proof tests: `ctrader_gate6_tests` uses only synthetic values
   to verify exact demo endpoint/port and outbound message allowlists, strict
-  token-response parsing, account-list ownership/scope/generation predicates,
+  token-response parsing, offline libcurl option acceptance, exact
+  `SCOPE_TRADE` account-list ownership/scope/generation predicates,
   live and missing-metadata exclusion, exact safe-metadata selection, fresh
   Gate 6B matching, account-auth response binding, terminal clearing,
   cancellation, and bounded redacted diagnostics. Linking the runtime test

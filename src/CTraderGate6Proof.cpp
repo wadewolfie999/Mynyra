@@ -127,8 +127,8 @@ Gate6Decision CTraderGate6AccountProof::validateEvidence(
     if (!evidence.tokenOwned) {
         return Gate6Decision::TokenOwnershipRejected;
     }
-    if (!evidence.viewScope) {
-        return Gate6Decision::ViewScopeRequired;
+    if (!evidence.tradingScope) {
+        return Gate6Decision::TradingScopeRequired;
     }
     return Gate6Decision::Ready;
 }
@@ -371,7 +371,7 @@ std::string_view CTraderGate6AccountProof::safeDiagnostic(
     case Gate6Decision::StaleConnectionGeneration: return "gate6_stale_generation";
     case Gate6Decision::CorrelationRejected: return "gate6_correlation_rejected";
     case Gate6Decision::TokenOwnershipRejected: return "gate6_token_ownership_rejected";
-    case Gate6Decision::ViewScopeRequired: return "gate6_view_scope_required";
+    case Gate6Decision::TradingScopeRequired: return "gate6_trading_scope_required";
     case Gate6Decision::LiveAccountExcluded: return "gate6_live_account_excluded";
     case Gate6Decision::MissingAccountMetadata: return "gate6_account_metadata_missing";
     case Gate6Decision::UnsafeBrokerMetadata: return "gate6_broker_metadata_rejected";
