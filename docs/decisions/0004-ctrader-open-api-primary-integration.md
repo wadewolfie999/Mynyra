@@ -3,9 +3,10 @@
 ## Status
 
 Accepted architecture direction; Gate 2 and Gate 5 were accepted by Wade on
-2026-08-07; Gate 5.1 offline controls were authorized on 2026-08-09 and are
-implementation-complete awaiting Wade acceptance; provider verification and
-the Gate 6 umbrella remain blocked
+2026-08-07; Gate 5.1 merged in PR #24 and Wade accepted its implementation on
+2026-08-09. Gate 6 is separately authorized, but provider execution is stopped
+pending credential rotation and fixed redirect-URI registration. Gate 7 and
+later gates remain blocked
 
 ## Context
 
@@ -110,9 +111,10 @@ Costs and risks:
 - cTrader does not document `state`; a fixed loopback listener and short
   operator-started window do not by themselves prevent local callback
   injection or login CSRF.
-- The active repository contains no generated cTrader C++ bindings or approved
-  Protobuf/TLS toolchain. The pinned proto2 schema supports presence semantics,
-  but generation and dependency verification remain Gate 6A prerequisites.
+- The Gate 6 branch pins the official proto2 schema and generates C++ bindings
+  only in the build tree with exact local Protobuf package/header checks. The
+  opt-in target uses strict TLS and remains detached from runtime modes and
+  order-capable subsystems.
 - Local OAuth callback controls are implemented, but cTrader `state`
   round-trip support remains unverified. Exact FIBO identity/account evidence
   is intentionally deferred to Gate 6A and a mandatory Wade checkpoint before
@@ -126,12 +128,14 @@ Costs and risks:
   behavior, and the next minimal boundary.
 - Authority documents identify Open API as sole and the Bridge as abandoned,
   non-controlling, and out of scope.
-- Gates 1-3 evidence documents record their required verdicts and preserve the
-  complete Gate 6 umbrella as blocked.
+- Gates 1-3 evidence documents record their required verdicts; Gate 6 authority
+  is separate and does not authorize Gate 7 or trading.
 - `.env.example` contains placeholders only and `.gitignore` excludes local
   secret-bearing files.
 - Documentation/security scans and `git diff --check` pass.
-- `ctrader_gate5_1_tests` verifies the offline guard with synthetic inputs.
+- `ctrader_gate5_1_tests` verifies the offline guard with synthetic inputs;
+  `ctrader_gate6_tests` verifies the demo endpoint/message allowlist, token
+  parser, volatile selection state, and fail-closed account-proof behavior.
 - No OAuth, browser flow, provider callback, token exchange, cTrader
   connection, account request, market-data request, or order operation is
   executed.

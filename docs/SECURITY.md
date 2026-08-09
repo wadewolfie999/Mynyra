@@ -52,9 +52,9 @@ Verified credential env names:
   `http://127.0.0.1:18080/ctrader/oauth/callback`; loopback-only, one-shot,
   exact path/host/method, and secure request-to-callback correlation are
   mandatory. cTrader `state` round-trip support is undocumented and must be
-  verified under separate authority before OAuth execution. The offline
-  `CTraderOAuthCorrelationGuard` controls are implementation-complete and do
-  not establish provider support.
+  verified by the authorized Gate 6 callback before token exchange. The
+  accepted `CTraderOAuthCorrelationGuard` controls do not themselves establish
+  provider support.
 - Initial scope is `accounts`. A `trading` token requires later explicit Wade
   authorization and separate scope-qualified storage.
 - Store the client secret in macOS Keychain service
@@ -72,18 +72,18 @@ Verified credential env names:
   Prefix/suffix or hash redaction is not allowed for these fields.
 - Never ask an operator to paste a cTrader credential, code, token, or account
   identifier into Codex, ChatGPT, a tracked file, fixture, log, or report.
-- A future Gate 6A checkpoint may contain only exact `brokerTitleShort`
+- The authorized Gate 6A checkpoint may contain only exact `brokerTitleShort`
   presence/value, exact `isLive` presence/value, and a bounded non-identifying
   outcome category. No candidate label, per-account ordinal, visible login, or
   other account-identifying value is permitted. If present `isLive == false`
   plus exact `brokerTitleShort` cannot distinguish exactly one intended demo
   account, stop without producing a persistent selection predicate.
-- A separately authorized Gate 6B must retrieve a fresh account list,
+- Gate 6B must retrieve a fresh account list in the same volatile process,
   reproduce the approved `isLive == false` plus exact `brokerTitleShort`
   selection deterministically, keep the
   fresh identifier only in volatile process memory, and use it solely for that
   session's account-authentication request.
-- The only future runtime message endpoint is
+- The only Gate 6 runtime message endpoint is
   `demo.ctraderapi.com:5035`. Live account entries are excluded candidates;
   attempting to authenticate one or reaching a live endpoint is a terminal
   security failure.

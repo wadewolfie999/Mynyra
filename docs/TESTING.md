@@ -22,6 +22,8 @@ Tests are evidence, not ceremony. TradeBot is financial-sensitive, so tests must
   - `phase18_tests`
   - `phase22_tests`
   - `ctrader_gate5_1_tests`
+- The opt-in Gate 6 configuration additionally registers
+  `ctrader_gate6_tests`; normal builds remain unchanged.
 - All test executables link against `tradebot_core_lib`.
 - Some tests create temporary files under `/tmp`.
 
@@ -52,6 +54,14 @@ ctest --test-dir build -R phase18_tests --output-on-failure
 ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
 ```
 
+Opt-in Gate 6 suite:
+
+```sh
+cmake -S . -B build/gate6 -DTRADEBOT_ENABLE_CTRADER_GATE6=ON
+cmake --build build/gate6
+ctest --test-dir build/gate6 --output-on-failure
+```
+
 ## Test Layers
 
 - Unit-style tests: direct class behavior inside phase test executables.
@@ -66,6 +76,13 @@ ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
   discard, terminal state clearing, and bounded redacted diagnostics. It
   performs no socket, browser, provider, token, account, market-data, or order
   action.
+- Gate 6 account-proof tests: `ctrader_gate6_tests` uses only synthetic values
+  to verify exact demo endpoint/port and outbound message allowlists, strict
+  token-response parsing, account-list ownership/scope/generation predicates,
+  live and missing-metadata exclusion, exact safe-metadata selection, fresh
+  Gate 6B matching, account-auth response binding, terminal clearing,
+  cancellation, and bounded redacted diagnostics. Linking the runtime test
+  target does not open a browser, read Keychain, or perform network traffic.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
 ## Required Coverage By Change Type

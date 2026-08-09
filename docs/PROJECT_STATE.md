@@ -5,8 +5,8 @@
 - Purpose: authoritative current-state summary for TradeBot.
 - Authority level: current-state evidence below active approved plans and above the roadmap; the project workstream map is defined in `WORKSTREAM_ARCHITECTURE.md`, and phase definitions and statuses are delegated to `ROADMAP.md`.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and handoff recipients.
-- Last documentation/state audit: 2026-08-09 against Gate 5.1 branch
-  `codex/gate5-completion-oauth-correlation` from merged base `75e35eda`.
+- Last documentation/state audit: 2026-08-09 against Gate 6 branch
+  `codex/gate6-read-only-proof` from merged Gate 5.1 base `42affb3`.
 - Last CMake/CTest verification evidence: 2026-08-09.
 
 This document represents current state only. Historical execution belongs in Git commits, pull requests, issues, ADRs, and handoffs.
@@ -26,18 +26,21 @@ This document represents current state only. Historical execution belongs in Git
 - Workstream II — Broker Integration Program: FIBO Group through cTrader is the
   selected demo-only XAUUSD target. Official cTrader Open API is the sole
   integration path; Gate 1 and Gate 3 are revalidated, Gate 2 and Gate 5 were
-  accepted by Wade on 2026-08-07. Gate 5.1 offline controls are
-  implementation-complete awaiting Wade acceptance; provider OAuth
-  verification and the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint
-  → Gate 6B`) are blocked.
+  accepted by Wade on 2026-08-07. PR #24 merged the Gate 5.1 controls and Wade
+  accepted their implementation on 2026-08-09. Wade then authorized the Gate
+  6 umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`). Its opt-in
+  local proof implementation is in progress, but real execution is stopped
+  pending credential rotation and registration of the fixed redirect URI.
 - Workstreams III–VII: parallel/future domains unless separately activated.
 - Phase 21: Complete — Approved; ADR 0003 is Accepted.
 - Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness; Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`.
 - Phase 23: Complete — FIBO Group through cTrader selected by Wade.
 - Phase 24: Gate 1 and Gate 3 are revalidated; Gate 2 and Gate 5 were accepted
-  by Wade on 2026-08-07. Gate 5.1 local controls are implementation-complete
-  awaiting Wade acceptance. Provider correlation verification, the Gate 6
-  umbrella, market data, reconnect proof, and orders remain blocked.
+  by Wade on 2026-08-07; Gate 5.1 is merged and accepted. Gate 6 is authorized
+  but not executed: local implementation and offline validation are in
+  progress, and provider traffic is stopped pending credential rotation and
+  fixed redirect-URI registration. Market data, reconnect proof, and orders
+  remain unauthorized.
 - Phase 25: Not Started; no documentation platform is selected.
 - Phase 26: Blocked pending Phase 25 selection and operator-approved documentation architecture.
 - Live trading: disabled and unauthorized.
@@ -60,9 +63,9 @@ This document represents current state only. Historical execution belongs in Git
 ## In-Progress Work
 
 - Repository governance and Codex skill-system maintenance.
-- Gate 5.1 offline correlation implementation and review evidence under
-  `PLAN-20260809-gate5-oauth-correlation-controls` and
-  `CTRADER_OPEN_API_GATE5.md`. No OAuth or cTrader operation has executed.
+- Gate 6 opt-in account-proof implementation under
+  `PLAN-20260809-ctrader-open-api-gate6-proof`. It contains no market-data or
+  order path. No OAuth, token, or cTrader operation has executed.
 
 ## Blocked Or Constrained Work
 
@@ -70,13 +73,15 @@ This document represents current state only. Historical execution belongs in Git
   `ABANDONED — NON-CONTROLLING — OUT OF SCOPE`; it is not an evidence source or
   fallback and is not to be investigated under Gate 5.
 - OANDA is permanently cancelled.
-- Provider OAuth verification, token exchange, cTrader endpoints, account discovery,
-  XAUUSD metadata/quotes, reconnect proof, every order operation, live accounts,
-  and live trading remain Blocked / NO-GO until exact later directives.
+- Authorized Gate 6 provider execution is stopped until the cTrader client
+  secret is rotated and the fixed redirect URI is registered. XAUUSD
+  metadata/quotes, reconnect proof, every order operation, live accounts, and
+  live trading remain Blocked / NO-GO until exact later directives.
 - Gates 1-3 now control protocol fit, numeric mapping, and pre-implementation
-  baseline integrity. Generated C++ bindings and the selected toolchain are not
-  installed or approved. Local Gate 5.1 controls are implemented, but OAuth
-  `state` round-trip remains an unresolved provider question.
+  baseline integrity. Homebrew Protobuf 35.1 is installed locally; the Gate 6
+  opt-in build generates bindings only inside the build tree from SHA-256-
+  verified official schemas. OAuth `state` round-trip remains an unresolved
+  provider question until the authorized correlated callback succeeds.
   Exact FIBO `brokerTitleShort` and intended demo-account identity must be
   observed in Gate 6A and confirmed by Wade before Gate 6B, not guessed or
   required before discovery. The spot timestamp unit remains later-gate
@@ -117,6 +122,9 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ctest --test-dir build -R phase22_tests --output-on-failure
 ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
+cmake -S . -B build/gate6 -DTRADEBOT_ENABLE_CTRADER_GATE6=ON
+cmake --build build/gate6
+ctest --test-dir build/gate6 --output-on-failure
 ```
 
 Results:
@@ -125,6 +133,9 @@ Results:
 - Build succeeded.
 - Full CTest suite passed: 7 tests, 0 failed.
 - Targeted `ctrader_gate5_1_tests` passed.
+- Opt-in Gate 6 full CTest suite passed: 8 tests, 0 failed.
+- Gate 5.1 and Gate 6 targeted tests passed under AddressSanitizer and
+  UndefinedBehaviorSanitizer: 2 tests, 0 failed.
 
 ## Operating Constraints
 
@@ -135,15 +146,14 @@ Results:
 
 ## Next Safe Action
 
-Wade review of the Gate 5.1 offline implementation PR and transfer evidence is
-the current bounded action. A later directive may authorize provider OAuth
-correlation verification. The complete Gate 6 umbrella remains blocked; Gate
-6A and Gate 6B require distinct later directives with a mandatory Wade
-identity/account checkpoint between them.
+Rotate the cTrader client secret, register and verify the fixed loopback
+redirect URI without exposing credential fields, then resume the already-
+authorized Gate 6 sequence in a clean task context. Re-run the offline
+preflight before any provider traffic.
 
 ## Next Professional Halting Point
 
-Stop after the Gate 5.1 offline implementation review handoff. Do not execute
-provider OAuth, token exchange, Gate 6A, Gate 6B, connectivity, account
-requests, market data, reconnect testing, order operations, or live use
-without a new directive.
+Stop at the credential/redirect prerequisite until remediated. During the
+authorized Gate 6 run, stop at Wade's mandatory checkpoint before Gate 6B and
+stop again after the read-only account proof. Gate 7 market data, reconnect
+testing, orders, and live use require new directives.
