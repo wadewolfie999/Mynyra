@@ -136,6 +136,16 @@ Gate6Decision CTraderGate6AccountProof::validateEvidence(
 Gate6Decision CTraderGate6AccountProof::acceptGate6A(
     Gate6AccountListEvidence evidence) noexcept
 {
+    try {
+        return acceptGate6AImpl(evidence);
+    } catch (...) {
+        return finish(Gate6Decision::ResourceExhausted);
+    }
+}
+
+Gate6Decision CTraderGate6AccountProof::acceptGate6AImpl(
+    Gate6AccountListEvidence& evidence)
+{
     if (phase_ == Phase::Terminal || phase_ == Phase::Complete) {
         lastDecision_ = Gate6Decision::AlreadyTerminal;
         return lastDecision_;
@@ -169,8 +179,10 @@ Gate6Decision CTraderGate6AccountProof::acceptGate6A(
             return finish(Gate6Decision::InvalidAccountIdentifier);
         }
 
-        volatileCandidates_.push_back(
-            {account.accountId, std::move(*account.brokerTitleShort)});
+        volatileCandidates_.emplace_back();
+        VolatileCandidate& candidate = volatileCandidates_.back();
+        candidate.accountId = account.accountId;
+        candidate.brokerTitleShort = std::move(*account.brokerTitleShort);
     }
 
     if (volatileCandidates_.empty()) {
@@ -199,6 +211,16 @@ Gate6Decision CTraderGate6AccountProof::acceptGate6A(
 
 Gate6Decision CTraderGate6AccountProof::confirmWadeSelection(
     std::string_view brokerTitleShort) noexcept
+{
+    try {
+        return confirmWadeSelectionImpl(brokerTitleShort);
+    } catch (...) {
+        return finish(Gate6Decision::ResourceExhausted);
+    }
+}
+
+Gate6Decision CTraderGate6AccountProof::confirmWadeSelectionImpl(
+    std::string_view brokerTitleShort)
 {
     if (phase_ == Phase::Terminal || phase_ == Phase::Complete) {
         lastDecision_ = Gate6Decision::AlreadyTerminal;
@@ -380,6 +402,7 @@ std::string_view CTraderGate6AccountProof::safeDiagnostic(
     case Gate6Decision::AmbiguousDemoAccount: return "gate6_demo_account_ambiguous";
     case Gate6Decision::WadeSelectionRejected: return "gate6_wade_selection_rejected";
     case Gate6Decision::AccountAuthenticationMismatch: return "gate6_account_auth_mismatch";
+    case Gate6Decision::ResourceExhausted: return "gate6_resource_exhausted";
     }
     return "gate6_unknown_failure";
 }

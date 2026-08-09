@@ -1,18 +1,69 @@
 #include "CTraderGate6Proof.hpp"
 #include "CTraderGate6Runtime.hpp"
+#include "CTraderOAuthCorrelation.hpp"
 #include "OpenApiCommonModelMessages.pb.h"
 #include "OpenApiModelMessages.pb.h"
 
 #include <array>
+#include <atomic>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <new>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
+
+namespace {
+
+std::atomic<bool> failNextAllocation{false};
+
+void* allocateForTest(std::size_t size)
+{
+    if (failNextAllocation.exchange(false)) {
+        throw std::bad_alloc();
+    }
+    if (void* memory = std::malloc(size == 0 ? 1 : size)) {
+        return memory;
+    }
+    throw std::bad_alloc();
+}
+
+} // namespace
+
+void* operator new(std::size_t size)
+{
+    return allocateForTest(size);
+}
+
+void* operator new[](std::size_t size)
+{
+    return allocateForTest(size);
+}
+
+void operator delete(void* memory) noexcept
+{
+    std::free(memory);
+}
+
+void operator delete[](void* memory) noexcept
+{
+    std::free(memory);
+}
+
+void operator delete(void* memory, std::size_t) noexcept
+{
+    std::free(memory);
+}
+
+void operator delete[](void* memory, std::size_t) noexcept
+{
+    std::free(memory);
+}
 
 namespace {
 
@@ -24,6 +75,7 @@ using tradebot::ctrader::Gate6Decision;
 using tradebot::ctrader::SensitiveString;
 using tradebot::ctrader::validateCTraderTokenResponseOffline;
 using tradebot::ctrader::validateCTraderTokenTransportConfigurationOffline;
+using tradebot::ctrader::validateCTraderKeychainCopyBoundaryOffline;
 
 constexpr uint64_t TEST_ONLY_ACCOUNT_A = 101;
 constexpr uint64_t TEST_ONLY_ACCOUNT_B = 202;
@@ -109,6 +161,63 @@ void test_token_response_parser_fails_closed()
         require(!validateCTraderTokenResponseOffline(response),
                 "unsafe synthetic token response was accepted");
     }
+}
+
+void test_keychain_copy_owns_and_clears_only_mutable_bytes()
+{
+    const std::string immutableFixture = "TEST_ONLY_KEYCHAIN_VALUE";
+    const std::string snapshot = immutableFixture;
+    require(validateCTraderKeychainCopyBoundaryOffline(immutableFixture),
+            "immutable Keychain copy boundary rejected synthetic bytes");
+    require(immutableFixture == snapshot,
+            "immutable source bytes were modified");
+    require(!validateCTraderKeychainCopyBoundaryOffline({}),
+            "empty Keychain bytes were accepted");
+}
+
+void test_allocation_failures_are_terminal_and_sanitized()
+{
+    CTraderOAuthCorrelationGuard correlation;
+    failNextAllocation = true;
+    const bool armed = correlation.arm(
+        {CTraderOAuthCorrelationGuard::LOOPBACK_ADDRESS,
+         CTraderOAuthCorrelationGuard::LOOPBACK_PORT},
+        CTraderOAuthCorrelationGuard::Clock::now());
+    failNextAllocation = false;
+    require(!armed && correlation.isTerminal(),
+            "correlation allocation failure was not terminal");
+    require(correlation.stateForAuthorizationRequest().empty(),
+            "correlation allocation failure retained state");
+    require(correlation.lastDecision()
+                == CTraderOAuthCorrelationGuard::Decision::EntropyUnavailable,
+            "correlation allocation failure was not sanitized");
+
+    CTraderGate6AccountProof proof;
+    Gate6AccountListEvidence input = evidence({
+        account(TEST_ONLY_ACCOUNT_A, false, "TEST_ONLY_FIBO")
+    });
+    failNextAllocation = true;
+    const Gate6Decision decision = proof.acceptGate6A(std::move(input));
+    failNextAllocation = false;
+    require(decision == Gate6Decision::ResourceExhausted,
+            "state-machine allocation failure was not sanitized");
+    require(proof.isTerminal(),
+            "state-machine allocation failure was not terminal");
+    require(proof.safeCandidates().empty(),
+            "allocation failure retained checkpoint state");
+    require(!proof.accountIdForAuthentication().has_value(),
+            "allocation failure retained an account identifier");
+    require(CTraderGate6AccountProof::safeDiagnostic(decision)
+                == "gate6_resource_exhausted",
+            "allocation failure diagnostic was not fixed");
+
+    constexpr std::string_view validTokenFixture =
+        R"({"accessToken":"TEST_ONLY_ACCESS","tokenType":"bearer","expiresIn":2628000,"refreshToken":"TEST_ONLY_REFRESH","errorCode":null,"description":null})";
+    failNextAllocation = true;
+    const bool parsed = validateCTraderTokenResponseOffline(validTokenFixture);
+    failNextAllocation = false;
+    require(!parsed,
+            "token parser allocation failure did not fail closed");
 }
 
 void test_gate6a_safe_candidates_and_checkpoint()
@@ -313,7 +422,7 @@ void test_cancel_and_sensitive_string_clear()
 
 void test_diagnostics_are_fixed_and_redacted()
 {
-    constexpr std::array<Gate6Decision, 20> decisions = {
+    constexpr std::array<Gate6Decision, 21> decisions = {
         Gate6Decision::Ready,
         Gate6Decision::AwaitingWadeCheckpoint,
         Gate6Decision::ReadyForGate6B,
@@ -333,7 +442,8 @@ void test_diagnostics_are_fixed_and_redacted()
         Gate6Decision::NoEligibleDemoAccount,
         Gate6Decision::AmbiguousDemoAccount,
         Gate6Decision::WadeSelectionRejected,
-        Gate6Decision::AccountAuthenticationMismatch
+        Gate6Decision::AccountAuthenticationMismatch,
+        Gate6Decision::ResourceExhausted
     };
     for (const Gate6Decision decision : decisions) {
         const std::string_view diagnostic =
@@ -355,6 +465,10 @@ int main()
     test_fixed_demo_boundary_and_payload_allowlist();
     std::cerr << "[ctrader_gate6_tests] token-response boundary...\n";
     test_token_response_parser_fails_closed();
+    std::cerr << "[ctrader_gate6_tests] Keychain copy ownership...\n";
+    test_keychain_copy_owns_and_clears_only_mutable_bytes();
+    std::cerr << "[ctrader_gate6_tests] allocation failure boundaries...\n";
+    test_allocation_failures_are_terminal_and_sanitized();
     std::cerr << "[ctrader_gate6_tests] Gate 6A checkpoint...\n";
     test_gate6a_safe_candidates_and_checkpoint();
     std::cerr << "[ctrader_gate6_tests] ambiguity and metadata...\n";

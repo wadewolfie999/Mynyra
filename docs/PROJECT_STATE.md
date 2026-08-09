@@ -7,7 +7,7 @@
 - Audience: operator, maintainers, Codex, contributors, reviewers, and handoff recipients.
 - Last documentation/state audit: 2026-08-10 against Gate 6 branch
   `codex/gate6-read-only-proof` from merged Gate 5.1 base `42affb3`.
-- Last CMake/CTest verification evidence: 2026-08-09.
+- Last CMake/CTest verification evidence: 2026-08-10.
 
 This document represents current state only. Historical execution belongs in Git commits, pull requests, issues, ADRs, and handoffs.
 
@@ -28,8 +28,11 @@ This document represents current state only. Historical execution belongs in Git
   integration path; Gate 1 and Gate 3 are revalidated, Gate 2 and Gate 5 were
   accepted by Wade on 2026-08-07. PR #24 merged the Gate 5.1 controls and Wade
   accepted their implementation on 2026-08-09. Wade then authorized the Gate
-  6 umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`). Its opt-in
-  local proof implementation is in draft PR #25. Wade confirmed credential
+  6 umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`). Gate 6A
+  succeeded, Wade confirmed exact `isLive=false` and exact
+  `brokerTitleShort=FIBO`, Gate 6B account authentication succeeded, and Wade
+  accepted the Gate 6 execution. Its opt-in local proof implementation remains
+  open in draft PR #25. Wade confirmed credential
   rotation, client-ID configuration, and fixed redirect registration, then
   authorized `trading` scope for Gate 6 while withholding trading messages.
 - Workstreams III–VII: parallel/future domains unless separately activated.
@@ -37,10 +40,9 @@ This document represents current state only. Historical execution belongs in Git
 - Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness; Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`.
 - Phase 23: Complete — FIBO Group through cTrader selected by Wade.
 - Phase 24: Gate 1 and Gate 3 are revalidated; Gate 2 and Gate 5 were accepted
-  by Wade on 2026-08-07; Gate 5.1 is merged and accepted. Gate 6 is authorized
-  and executing through draft PR #25. One exact OAuth callback correlation was
-  verified on 2026-08-10; token setup then stopped locally before network
-  transfer on an invalid libcurl option. The correction is under validation.
+  by Wade on 2026-08-07; Gate 5.1 is merged and accepted. Gate 6 execution
+  completed successfully and Wade accepted it on 2026-08-10. Implementation
+  closure remains tied to independent review and merge of draft PR #25.
   Market data, reconnect proof, and orders remain unauthorized.
 - Phase 25: Not Started; no documentation platform is selected.
 - Phase 26: Blocked pending Phase 25 selection and operator-approved documentation architecture.
@@ -66,9 +68,8 @@ This document represents current state only. Historical execution belongs in Git
 - Repository governance and Codex skill-system maintenance.
 - Gate 6 opt-in account-proof implementation under
   `PLAN-20260809-ctrader-open-api-gate6-proof`. It contains no market-data or
-  order path. One controlled OAuth callback correlated exactly; no token was
-  acquired, no cTrader message connection occurred, and no account request
-  has executed.
+  order path. Provider execution and Wade acceptance are complete; corrective
+  implementation review remains in draft PR #25.
 
 ## Blocked Or Constrained Work
 
@@ -76,8 +77,8 @@ This document represents current state only. Historical execution belongs in Git
   `ABANDONED — NON-CONTROLLING — OUT OF SCOPE`; it is not an evidence source or
   fallback and is not to be investigated under Gate 5.
 - OANDA is permanently cancelled.
-- Gate 6 provider execution is authorized with `trading` OAuth scope only for
-  the intended demo account. The executable's immutable allowlist still
+- Gate 6 provider execution completed and Wade accepted its result. The
+  executable's immutable allowlist still
   excludes every trading, symbol, market-data, and position message. XAUUSD
   metadata/quotes, reconnect proof, every order operation, live accounts, and
   live trading remain Blocked / NO-GO until exact later directives.
@@ -87,10 +88,10 @@ This document represents current state only. Historical execution belongs in Git
   verified official schemas. OAuth `state` remains undocumented, but one
   authorized callback matched exactly on 2026-08-10; every fresh attempt must
   still match or fail closed before token exchange.
-  Exact FIBO `brokerTitleShort` and intended demo-account identity must be
-  observed in Gate 6A and confirmed by Wade before Gate 6B, not guessed or
-  required before discovery. The spot timestamp unit remains later-gate
-  evidence.
+  Gate 6A observed exact `isLive=false` and exact `brokerTitleShort=FIBO`; Wade
+  confirmed those approved facts before Gate 6B. Gate 6B reproduced the
+  predicate from a fresh list and completed account authentication without
+  persisting an identifier. The spot timestamp unit remains later-gate evidence.
 - Phase 26 is blocked until Phase 25 selects a documentation platform and the operator approves documentation architecture.
 - GitHub-dependent sync remains constrained by intermittent or costly global connectivity.
 - Ubuntu compute-node commands are not verified in this workspace.
@@ -119,7 +120,7 @@ This document represents current state only. Historical execution belongs in Git
 
 ## Verification Evidence
 
-Verified locally on 2026-08-09:
+Verified locally on 2026-08-10:
 
 ```sh
 cmake -S . -B build
@@ -141,6 +142,9 @@ Results:
 - Opt-in Gate 6 full CTest suite passed: 8 tests, 0 failed.
 - Gate 5.1 and Gate 6 targeted tests passed under AddressSanitizer and
   UndefinedBehaviorSanitizer: 2 tests, 0 failed.
+- Gate 6 regression coverage includes immutable Keychain-copy ownership and
+  fail-closed allocation injection for correlation, account state, and token
+  parsing.
 
 ## Operating Constraints
 
@@ -151,12 +155,11 @@ Results:
 
 ## Next Safe Action
 
-Validate and push the narrow `trading`-scope/token-transport correction to
-draft PR #25, then start one fresh TradeBot loopback attempt. Never load or
-reuse a Playground token.
+Complete the narrow PR #25 corrective review and request independent re-review.
+Do not repeat OAuth or provider execution, mark the PR ready, merge it, or begin
+Gate 7 without a separate directive.
 
 ## Next Professional Halting Point
 
-During the authorized Gate 6 run, stop at Wade's mandatory checkpoint before
-Gate 6B and stop again after the account-authentication proof. Gate 7 market
-data, reconnect testing, orders, and live use require new directives.
+Stop after the PR #25 corrective handoff. Gate 7 market data, reconnect testing,
+orders, and live use require new directives.

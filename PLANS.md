@@ -1256,8 +1256,8 @@ Approved for research-only work by explicit operator instruction after authority
 # Plan: Execute cTrader Open API Gate 6 Read-Only Proof
 
 - Plan ID: `PLAN-20260809-ctrader-open-api-gate6-proof`
-- Status: In Progress — Gate 6A, mandatory Wade checkpoint, and Gate 6B
-  explicitly authorized; Gates 7–9 remain blocked
+- Status: Execution Complete — Accepted by Wade; implementation closure remains
+  tied to review and merge of draft PR #25; Gates 7–9 remain blocked
 - Owner: Wade
 - Implementer: Codex
 - Review authority: Wade
@@ -1265,7 +1265,7 @@ Approved for research-only work by explicit operator instruction after authority
 - Related issue or decision: Full Gate 6 Single-Goal Execution Directive; ADR
   0004; accepted Gate 5/Gate 5.1 contract
 - Created: 2026-08-09
-- Updated: 2026-08-09
+- Updated: 2026-08-10
 
 ## Objective
 
@@ -1480,6 +1480,14 @@ revoked. No account or market state is modified by this read-only proof.
   account while withholding every trading message and Gate 7. The token
   transport correction now uses a valid HTTPS-only redirect protocol setting
   while keeping redirects disabled; targeted offline tests pass.
+- 2026-08-10: A fresh Gate 6A run succeeded. Wade confirmed the only approved
+  checkpoint facts, exact `isLive=false` and exact `brokerTitleShort=FIBO`.
+  Gate 6B then reproduced that predicate from a fresh authenticated account-list
+  response and completed account authentication without exposing or persisting
+  an account identifier. The process stopped before Gate 7.
+- 2026-08-10: Wade accepted the Gate 6 execution result. Draft PR #25 remains
+  the implementation-closure boundary; it is not merged or ready for merge
+  until its corrective review findings are independently re-reviewed.
 
 ## Deviations
 
@@ -1491,13 +1499,17 @@ request left the process.
 
 ## Completion Evidence
 
-The initial local implementation, synthetic verification, documentation
-synchronization, and sensitive-data scans are complete in draft PR #25. The
-scope/transport correction, fresh Gate 6A checkpoint, Gate 6B proof, updated
-publication evidence, and Wade acceptance remain pending.
+Gate 6A, the mandatory Wade checkpoint, and Gate 6B completed successfully.
+Wade confirmed only exact `isLive=false` and exact `brokerTitleShort=FIBO`, and
+accepted the Gate 6 execution result. No account identifier entered output or
+persistence, and the process stopped before Gate 7. Implementation closure is
+not yet complete: it remains tied to independent re-review and merge of draft
+PR #25 after its corrective findings are addressed.
 
 ## Final Outcome
 
-Provider execution is authorized with fixed `trading` scope and a non-trading
-message allowlist. Gate 6A must next run from a fresh callback attempt and stop
-at Wade's checkpoint. Gate 7 remains blocked.
+Gate 6 execution is complete and accepted by Wade under the fixed `trading`
+scope and non-trading message allowlist. Draft PR #25 remains the sole
+implementation-closure boundary and is not accepted or merged by this plan.
+Gates 7–9 remain unauthorized; no further OAuth or provider execution is part
+of this closure work.

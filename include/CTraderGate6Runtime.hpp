@@ -18,4 +18,9 @@ bool validateCTraderTokenResponseOffline(std::string_view response) noexcept;
 // a handle but performs no request and handles no credentials or tokens.
 bool validateCTraderTokenTransportConfigurationOffline() noexcept;
 
+// Offline-only validation seam for the immutable-Keychain-data ownership
+// boundary. The supplied bytes are read-only; only the process-owned copy is
+// cleared. It performs no Keychain operation.
+bool validateCTraderKeychainCopyBoundaryOffline(std::string_view input) noexcept;
+
 } // namespace tradebot::ctrader

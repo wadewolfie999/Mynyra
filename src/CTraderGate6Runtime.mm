@@ -74,7 +74,8 @@ enum class RuntimeFailure {
     AccountDiscoveryFailed,
     AccountSelectionFailed,
     CheckpointCancelled,
-    AccountAuthenticationFailed
+    AccountAuthenticationFailed,
+    ResourceExhausted
 };
 
 std::string_view safeRuntimeDiagnostic(RuntimeFailure failure) noexcept
@@ -98,6 +99,7 @@ std::string_view safeRuntimeDiagnostic(RuntimeFailure failure) noexcept
     case RuntimeFailure::AccountSelectionFailed: return "gate6_account_selection_failed";
     case RuntimeFailure::CheckpointCancelled: return "gate6_checkpoint_cancelled";
     case RuntimeFailure::AccountAuthenticationFailed: return "gate6_account_auth_failed";
+    case RuntimeFailure::ResourceExhausted: return "gate6_resource_exhausted";
     }
     return "gate6_runtime_unknown_failure";
 }
@@ -173,12 +175,43 @@ std::optional<std::string> localUserName() noexcept
     if (user == nullptr) {
         return std::nullopt;
     }
-    std::string value(user);
-    if (!isBoundedText(value, 256)) {
+    std::string value;
+    try {
+        value.assign(user);
+        if (!isBoundedText(value, 256)) {
+            secureClear(value);
+            return std::nullopt;
+        }
+        return value;
+    } catch (...) {
         secureClear(value);
         return std::nullopt;
     }
-    return value;
+}
+
+RuntimeFailure copyToOwnedSensitiveString(const UInt8* bytes,
+                                          std::size_t length,
+                                          SensitiveString& output) noexcept
+{
+    output.clear();
+    if (bytes == nullptr || length == 0 || length > 4096) {
+        return RuntimeFailure::KeychainReadFailed;
+    }
+
+    std::string ownedCopy;
+    try {
+        ownedCopy.assign(reinterpret_cast<const char*>(bytes), length);
+        if (!isBoundedText(ownedCopy, 4096)) {
+            secureClear(ownedCopy);
+            return RuntimeFailure::KeychainReadFailed;
+        }
+        output = SensitiveString(std::move(ownedCopy));
+        return RuntimeFailure::None;
+    } catch (...) {
+        secureClear(ownedCopy);
+        output.clear();
+        return RuntimeFailure::ResourceExhausted;
+    }
 }
 
 RuntimeFailure readKeychainSecret(std::string_view service,
@@ -232,25 +265,14 @@ RuntimeFailure readKeychainSecret(std::string_view service,
     const CFIndex length = CFDataGetLength(data);
     const UInt8* bytes = CFDataGetBytePtr(data);
     if (length <= 0 || length > 4096 || bytes == nullptr) {
-        if (length > 0 && bytes != nullptr) {
-            secureClearBytes(const_cast<UInt8*>(bytes),
-                             static_cast<std::size_t>(length));
-        }
         CFRelease(result);
         return RuntimeFailure::KeychainReadFailed;
     }
 
-    std::string value(reinterpret_cast<const char*>(bytes),
-                      static_cast<std::size_t>(length));
-    secureClearBytes(const_cast<UInt8*>(bytes),
-                     static_cast<std::size_t>(length));
+    const RuntimeFailure copyResult = copyToOwnedSensitiveString(
+        bytes, static_cast<std::size_t>(length), output);
     CFRelease(result);
-    if (!isBoundedText(value, 4096)) {
-        secureClear(value);
-        return RuntimeFailure::KeychainReadFailed;
-    }
-    output = SensitiveString(std::move(value));
-    return RuntimeFailure::None;
+    return copyResult;
 }
 
 RuntimeFailure writeKeychainValue(std::string_view service,
@@ -335,13 +357,19 @@ std::optional<SensitiveString> loadClientId() noexcept
     if (raw == nullptr) {
         return std::nullopt;
     }
-    std::string value(raw);
-    if (!isBoundedText(value, 512)
-        || value == "REPLACE_WITH_LOCAL_CLIENT_ID") {
+    std::string value;
+    try {
+        value.assign(raw);
+        if (!isBoundedText(value, 512)
+            || value == "REPLACE_WITH_LOCAL_CLIENT_ID") {
+            secureClear(value);
+            return std::nullopt;
+        }
+        return SensitiveString(std::move(value));
+    } catch (...) {
         secureClear(value);
         return std::nullopt;
     }
-    return SensitiveString(std::move(value));
 }
 
 bool openBrowserUrl(std::string_view url) noexcept
@@ -408,21 +436,26 @@ bool sendFixedHttpResponse(int fd, std::string_view response) noexcept
 
 bool readHttpHeaders(int fd, std::string& output) noexcept
 {
-    output.clear();
-    output.reserve(2048);
-    std::array<char, 1024> buffer{};
-    while (output.size() < MAX_HTTP_REQUEST_BYTES) {
-        const ssize_t count = ::recv(fd, buffer.data(), buffer.size(), 0);
-        if (count > 0) {
-            output.append(buffer.data(), static_cast<std::size_t>(count));
-            if (output.find("\r\n\r\n") != std::string::npos) {
-                return true;
+    try {
+        output.clear();
+        output.reserve(2048);
+        std::array<char, 1024> buffer{};
+        while (output.size() < MAX_HTTP_REQUEST_BYTES) {
+            const ssize_t count = ::recv(fd, buffer.data(), buffer.size(), 0);
+            if (count > 0) {
+                output.append(buffer.data(), static_cast<std::size_t>(count));
+                if (output.find("\r\n\r\n") != std::string::npos) {
+                    return true;
+                }
+                continue;
             }
-            continue;
+            if (count < 0 && errno == EINTR) {
+                continue;
+            }
+            return false;
         }
-        if (count < 0 && errno == EINTR) {
-            continue;
-        }
+    } catch (...) {
+        secureClear(output);
         return false;
     }
     return false;
@@ -500,32 +533,37 @@ int hexValue(char c) noexcept
 std::optional<std::string> percentDecode(std::string_view value) noexcept
 {
     std::string decoded;
-    decoded.reserve(value.size());
-    for (std::size_t i = 0; i < value.size(); ++i) {
-        if (value[i] == '%') {
-            if (i + 2 >= value.size()) {
-                secureClear(decoded);
-                return std::nullopt;
+    try {
+        decoded.reserve(value.size());
+        for (std::size_t i = 0; i < value.size(); ++i) {
+            if (value[i] == '%') {
+                if (i + 2 >= value.size()) {
+                    secureClear(decoded);
+                    return std::nullopt;
+                }
+                const int high = hexValue(value[i + 1]);
+                const int low = hexValue(value[i + 2]);
+                if (high < 0 || low < 0) {
+                    secureClear(decoded);
+                    return std::nullopt;
+                }
+                decoded.push_back(static_cast<char>((high << 4) | low));
+                i += 2;
+            } else if (value[i] == '+') {
+                decoded.push_back(' ');
+            } else {
+                decoded.push_back(value[i]);
             }
-            const int high = hexValue(value[i + 1]);
-            const int low = hexValue(value[i + 2]);
-            if (high < 0 || low < 0) {
-                secureClear(decoded);
-                return std::nullopt;
-            }
-            decoded.push_back(static_cast<char>((high << 4) | low));
-            i += 2;
-        } else if (value[i] == '+') {
-            decoded.push_back(' ');
-        } else {
-            decoded.push_back(value[i]);
         }
-    }
-    if (!isBoundedText(decoded, 4096)) {
+        if (!isBoundedText(decoded, 4096)) {
+            secureClear(decoded);
+            return std::nullopt;
+        }
+        return decoded;
+    } catch (...) {
         secureClear(decoded);
         return std::nullopt;
     }
-    return decoded;
 }
 
 std::optional<SensitiveString> extractAuthorizationCode(
@@ -560,9 +598,43 @@ std::optional<std::string> urlEncode(CURL* curl, std::string_view value) noexcep
     if (escaped == nullptr) {
         return std::nullopt;
     }
-    std::string result(escaped);
-    curl_free(escaped);
-    return result;
+    std::string result;
+    try {
+        result.assign(escaped);
+        secureClearBytes(escaped, std::strlen(escaped));
+        curl_free(escaped);
+        return result;
+    } catch (...) {
+        secureClearBytes(escaped, std::strlen(escaped));
+        curl_free(escaped);
+        secureClear(result);
+        return std::nullopt;
+    }
+}
+
+std::optional<SensitiveString> buildAuthorizationUrl(
+    std::string_view encodedClient,
+    std::string_view encodedRedirect,
+    std::string_view state) noexcept
+{
+    std::string url;
+    try {
+        url.reserve(192 + encodedClient.size() + encodedRedirect.size()
+                    + state.size());
+        url.append("https://id.ctrader.com/my/settings/openapi/grantingaccess/"
+                   "?client_id=");
+        url.append(encodedClient);
+        url.append("&redirect_uri=");
+        url.append(encodedRedirect);
+        url.append("&scope=");
+        url.append(CTraderGate6Config::OAUTH_SCOPE);
+        url.append("&product=web&state=");
+        url.append(state);
+        return SensitiveString(std::move(url));
+    } catch (...) {
+        secureClear(url);
+        return std::nullopt;
+    }
 }
 
 struct OAuthResult {
@@ -608,22 +680,25 @@ OAuthResult receiveCorrelatedAuthorizationCode(std::string_view clientId) noexce
         encoder, CTraderGate6Config::REDIRECT_URI);
     curl_easy_cleanup(encoder);
     if (!encodedClient.has_value() || !encodedRedirect.has_value()) {
+        if (encodedClient.has_value()) secureClear(*encodedClient);
+        if (encodedRedirect.has_value()) secureClear(*encodedRedirect);
         guard.cancel();
         ::close(listener);
         return {RuntimeFailure::BrowserOpenFailed, std::nullopt};
     }
 
-    std::string authorizationUrl =
-        "https://id.ctrader.com/my/settings/openapi/grantingaccess/?client_id="
-        + *encodedClient + "&redirect_uri=" + *encodedRedirect
-        + "&scope=" + std::string(CTraderGate6Config::OAUTH_SCOPE)
-        + "&product=web&state="
-        + std::string(guard.stateForAuthorizationRequest());
+    std::optional<SensitiveString> sensitiveUrl = buildAuthorizationUrl(
+        *encodedClient, *encodedRedirect, guard.stateForAuthorizationRequest());
     secureClear(*encodedClient);
     secureClear(*encodedRedirect);
-    SensitiveString sensitiveUrl(std::move(authorizationUrl));
-    const bool opened = openBrowserUrl(sensitiveUrl.view());
-    sensitiveUrl.clear();
+    if (!sensitiveUrl.has_value()) {
+        guard.cancel();
+        ::close(listener);
+        return {RuntimeFailure::ResourceExhausted, std::nullopt};
+    }
+    const bool opened = openBrowserUrl(sensitiveUrl->view());
+    sensitiveUrl->clear();
+    sensitiveUrl.reset();
     if (!opened) {
         guard.cancel();
         ::close(listener);
@@ -770,7 +845,7 @@ public:
         return position_ == input_.size();
     }
 
-    std::optional<std::string> stringValue() noexcept
+    std::optional<std::string> stringValue()
     {
         skipWhitespace();
         if (position_ >= input_.size() || input_[position_] != '"') {
@@ -778,37 +853,42 @@ public:
         }
         ++position_;
         std::string result;
-        while (position_ < input_.size()) {
-            const char c = input_[position_++];
-            if (c == '"') {
-                return result;
+        try {
+            while (position_ < input_.size()) {
+                const char c = input_[position_++];
+                if (c == '"') {
+                    return result;
+                }
+                if (static_cast<unsigned char>(c) < 0x20) {
+                    secureClear(result);
+                    return std::nullopt;
+                }
+                if (c != '\\') {
+                    result.push_back(c);
+                    continue;
+                }
+                if (position_ >= input_.size()) {
+                    secureClear(result);
+                    return std::nullopt;
+                }
+                const char escaped = input_[position_++];
+                switch (escaped) {
+                case '"': result.push_back('"'); break;
+                case '\\': result.push_back('\\'); break;
+                case '/': result.push_back('/'); break;
+                case 'b': result.push_back('\b'); break;
+                case 'f': result.push_back('\f'); break;
+                case 'n': result.push_back('\n'); break;
+                case 'r': result.push_back('\r'); break;
+                case 't': result.push_back('\t'); break;
+                default:
+                    secureClear(result);
+                    return std::nullopt;
+                }
             }
-            if (static_cast<unsigned char>(c) < 0x20) {
-                secureClear(result);
-                return std::nullopt;
-            }
-            if (c != '\\') {
-                result.push_back(c);
-                continue;
-            }
-            if (position_ >= input_.size()) {
-                secureClear(result);
-                return std::nullopt;
-            }
-            const char escaped = input_[position_++];
-            switch (escaped) {
-            case '"': result.push_back('"'); break;
-            case '\\': result.push_back('\\'); break;
-            case '/': result.push_back('/'); break;
-            case 'b': result.push_back('\b'); break;
-            case 'f': result.push_back('\f'); break;
-            case 'n': result.push_back('\n'); break;
-            case 'r': result.push_back('\r'); break;
-            case 't': result.push_back('\t'); break;
-            default:
-                secureClear(result);
-                return std::nullopt;
-            }
+        } catch (...) {
+            secureClear(result);
+            throw;
         }
         secureClear(result);
         return std::nullopt;
@@ -853,6 +933,14 @@ struct TokenEnvelope {
     int64_t expiresAtEpochSeconds{0};
 };
 
+void clearTokenEnvelope(TokenEnvelope& token) noexcept
+{
+    token.accessToken.clear();
+    token.refreshToken.clear();
+    token.tokenType.clear();
+    secureClear(token.expiresAtEpochSeconds);
+}
+
 bool tokenHasExecutionLifetime(const TokenEnvelope& token) noexcept
 {
     constexpr int64_t MINIMUM_REMAINING_SECONDS = 60;
@@ -862,7 +950,7 @@ bool tokenHasExecutionLifetime(const TokenEnvelope& token) noexcept
         && token.expiresAtEpochSeconds - now >= MINIMUM_REMAINING_SECONDS;
 }
 
-bool parseTokenResponse(std::string_view body, TokenEnvelope& output) noexcept
+bool parseTokenResponseImpl(std::string_view body, TokenEnvelope& output)
 {
     JsonCursor cursor(body);
     if (!cursor.consume('{')) return false;
@@ -946,6 +1034,18 @@ bool parseTokenResponse(std::string_view body, TokenEnvelope& output) noexcept
         && output.tokenType.view() == "bearer";
 }
 
+bool parseTokenResponse(std::string_view body, TokenEnvelope& output) noexcept
+{
+    try {
+        if (parseTokenResponseImpl(body, output)) {
+            return true;
+        }
+    } catch (...) {
+    }
+    clearTokenEnvelope(output);
+    return false;
+}
+
 std::size_t tokenWriteCallback(char* data, std::size_t size,
                                std::size_t count, void* userData) noexcept
 {
@@ -955,8 +1055,13 @@ std::size_t tokenWriteCallback(char* data, std::size_t size,
         || output->size() > MAX_TOKEN_RESPONSE_BYTES - bytes) {
         return 0;
     }
-    output->append(data, bytes);
-    return bytes;
+    try {
+        output->append(data, bytes);
+        return bytes;
+    } catch (...) {
+        secureClear(*output);
+        return 0;
+    }
 }
 
 bool configureTokenCurl(CURL* curl, const char* url, curl_slist* headers,
@@ -998,15 +1103,36 @@ RuntimeFailure exchangeAuthorizationCode(std::string_view clientId,
     std::optional<std::string> encodedSecret = urlEncode(curl, clientSecret);
     if (!encodedCode.has_value() || !encodedRedirect.has_value()
         || !encodedClient.has_value() || !encodedSecret.has_value()) {
+        if (encodedCode.has_value()) secureClear(*encodedCode);
+        if (encodedRedirect.has_value()) secureClear(*encodedRedirect);
+        if (encodedClient.has_value()) secureClear(*encodedClient);
+        if (encodedSecret.has_value()) secureClear(*encodedSecret);
         curl_easy_cleanup(curl);
         return RuntimeFailure::TokenTransportFailed;
     }
 
-    std::string url = "https://openapi.ctrader.com/apps/token?grant_type="
-        "authorization_code&code=" + *encodedCode
-        + "&redirect_uri=" + *encodedRedirect
-        + "&client_id=" + *encodedClient
-        + "&client_secret=" + *encodedSecret;
+    std::string url;
+    try {
+        url.reserve(192 + encodedCode->size() + encodedRedirect->size()
+                    + encodedClient->size() + encodedSecret->size());
+        url.append("https://openapi.ctrader.com/apps/token?grant_type="
+                   "authorization_code&code=");
+        url.append(*encodedCode);
+        url.append("&redirect_uri=");
+        url.append(*encodedRedirect);
+        url.append("&client_id=");
+        url.append(*encodedClient);
+        url.append("&client_secret=");
+        url.append(*encodedSecret);
+    } catch (...) {
+        secureClear(url);
+        secureClear(*encodedCode);
+        secureClear(*encodedRedirect);
+        secureClear(*encodedClient);
+        secureClear(*encodedSecret);
+        curl_easy_cleanup(curl);
+        return RuntimeFailure::ResourceExhausted;
+    }
     secureClear(*encodedCode);
     secureClear(*encodedRedirect);
     secureClear(*encodedClient);
@@ -1077,15 +1203,21 @@ bool appendSized(std::string& output, std::string_view value)
 
 RuntimeFailure persistTokenEnvelope(const TokenEnvelope& envelope) noexcept
 {
-    std::string serialized("TBG6TOK1", 8);
-    appendUint64(serialized,
-        static_cast<uint64_t>(envelope.expiresAtEpochSeconds));
-    if (!appendSized(serialized, CTraderGate6Config::OAUTH_SCOPE)
-        || !appendSized(serialized, envelope.tokenType.view())
-        || !appendSized(serialized, envelope.accessToken.view())
-        || !appendSized(serialized, envelope.refreshToken.view())) {
+    std::string serialized;
+    try {
+        serialized.assign("TBG6TOK1", 8);
+        appendUint64(serialized,
+            static_cast<uint64_t>(envelope.expiresAtEpochSeconds));
+        if (!appendSized(serialized, CTraderGate6Config::OAUTH_SCOPE)
+            || !appendSized(serialized, envelope.tokenType.view())
+            || !appendSized(serialized, envelope.accessToken.view())
+            || !appendSized(serialized, envelope.refreshToken.view())) {
+            secureClear(serialized);
+            return RuntimeFailure::KeychainWriteFailed;
+        }
+    } catch (...) {
         secureClear(serialized);
-        return RuntimeFailure::KeychainWriteFailed;
+        return RuntimeFailure::ResourceExhausted;
     }
     SensitiveString encoded(std::move(serialized));
     const RuntimeFailure result = writeKeychainValue(
@@ -1117,9 +1249,14 @@ public:
         hints.ai_family = AF_UNSPEC;
         hints.ai_socktype = SOCK_STREAM;
         addrinfo* resolved = nullptr;
-        const std::string port = std::to_string(CTraderGate6Config::DEMO_PORT);
-        if (::getaddrinfo(std::string(CTraderGate6Config::DEMO_HOST).c_str(),
-                          port.c_str(), &hints, &resolved) != 0) {
+        std::array<char, 6> port{};
+        const auto encodedPort = std::to_chars(
+            port.data(), port.data() + port.size() - 1,
+            CTraderGate6Config::DEMO_PORT);
+        if (encodedPort.ec != std::errc{}) return false;
+        *encodedPort.ptr = '\0';
+        if (::getaddrinfo(CTraderGate6Config::DEMO_HOST.data(), port.data(),
+                          &hints, &resolved) != 0) {
             return false;
         }
 
@@ -1228,35 +1365,47 @@ public:
             return false;
         }
         std::string payload;
-        if (!message.SerializeToString(&payload)) {
-            secureClear(payload);
-            return false;
-        }
         ProtoMessage envelope;
-        envelope.set_payloadtype(payloadType);
-        envelope.set_payload(payload);
-        envelope.set_clientmsgid(clientMsgId.data(), clientMsgId.size());
-        secureClear(payload);
         std::string serialized;
-        const bool encoded = envelope.IsInitialized()
-            && envelope.SerializeToString(&serialized)
-            && serialized.size() <= MAX_PROTO_FRAME_BYTES;
-        secureClear(*envelope.mutable_payload());
-        envelope.clear_clientmsgid();
-        envelope.Clear();
-        if (!encoded) {
+        std::string frame;
+        try {
+            if (!message.SerializeToString(&payload)) {
+                secureClear(payload);
+                return false;
+            }
+            envelope.set_payloadtype(payloadType);
+            envelope.set_payload(payload);
+            envelope.set_clientmsgid(clientMsgId.data(), clientMsgId.size());
+            secureClear(payload);
+            const bool encoded = envelope.IsInitialized()
+                && envelope.SerializeToString(&serialized)
+                && serialized.size() <= MAX_PROTO_FRAME_BYTES;
+            secureClear(*envelope.mutable_payload());
+            envelope.clear_clientmsgid();
+            envelope.Clear();
+            if (!encoded) {
+                secureClear(serialized);
+                return false;
+            }
+
+            frame.reserve(serialized.size() + 4);
+            appendUint32(frame, static_cast<uint32_t>(serialized.size()));
+            frame.append(serialized);
             secureClear(serialized);
+            const bool sent = writeExact(frame, Clock::now() + NETWORK_TIMEOUT);
+            secureClear(frame);
+            return sent;
+        } catch (...) {
+            secureClear(payload);
+            secureClear(serialized);
+            secureClear(frame);
+            if (envelope.has_payload()) {
+                secureClear(*envelope.mutable_payload());
+            }
+            envelope.clear_clientmsgid();
+            envelope.Clear();
             return false;
         }
-
-        std::string frame;
-        frame.reserve(serialized.size() + 4);
-        appendUint32(frame, static_cast<uint32_t>(serialized.size()));
-        frame.append(serialized);
-        secureClear(serialized);
-        const bool sent = writeExact(frame, Clock::now() + NETWORK_TIMEOUT);
-        secureClear(frame);
-        return sent;
     }
 
     bool receiveExpected(uint32_t expectedPayloadType,
@@ -1290,7 +1439,15 @@ public:
                 envelope.Clear();
                 return false;
             }
-            payload.assign(envelope.payload());
+            try {
+                payload.assign(envelope.payload());
+            } catch (...) {
+                secureClear(payload);
+                secureClear(*envelope.mutable_payload());
+                envelope.clear_clientmsgid();
+                envelope.Clear();
+                return false;
+            }
             secureClear(*envelope.mutable_payload());
             envelope.clear_clientmsgid();
             envelope.Clear();
@@ -1362,13 +1519,24 @@ private:
                               | (static_cast<uint32_t>(header[2]) << 8)
                               | static_cast<uint32_t>(header[3]);
         if (length == 0 || length > MAX_PROTO_FRAME_BYTES) return false;
-        std::string frame(length, '\0');
+        std::string frame;
+        try {
+            frame.resize(length, '\0');
+        } catch (...) {
+            secureClear(frame);
+            return false;
+        }
         if (!readExact(frame.data(), frame.size(), deadline)) {
             secureClear(frame);
             return false;
         }
-        const bool parsed = envelope.ParseFromString(frame)
-            && envelope.IsInitialized();
+        bool parsed = false;
+        try {
+            parsed = envelope.ParseFromString(frame)
+                && envelope.IsInitialized();
+        } catch (...) {
+            parsed = false;
+        }
         secureClear(frame);
         if (!parsed) {
             if (envelope.has_payload()) {
@@ -1391,27 +1559,27 @@ private:
 
 void clearApplicationAuthRequest(ProtoOAApplicationAuthReq& request) noexcept
 {
-    secureClear(*request.mutable_clientid());
-    secureClear(*request.mutable_clientsecret());
+    if (request.has_clientid()) secureClear(*request.mutable_clientid());
+    if (request.has_clientsecret()) secureClear(*request.mutable_clientsecret());
     request.Clear();
 }
 
 void clearAccountListRequest(ProtoOAGetAccountListByAccessTokenReq& request) noexcept
 {
-    secureClear(*request.mutable_accesstoken());
+    if (request.has_accesstoken()) secureClear(*request.mutable_accesstoken());
     request.Clear();
 }
 
 void clearAccountAuthRequest(ProtoOAAccountAuthReq& request) noexcept
 {
     request.set_ctidtraderaccountid(0);
-    secureClear(*request.mutable_accesstoken());
+    if (request.has_accesstoken()) secureClear(*request.mutable_accesstoken());
     request.Clear();
 }
 
 void clearAccountListResponse(ProtoOAGetAccountListByAccessTokenRes& response) noexcept
 {
-    secureClear(*response.mutable_accesstoken());
+    if (response.has_accesstoken()) secureClear(*response.mutable_accesstoken());
     for (ProtoOACtidTraderAccount& account :
          *response.mutable_ctidtraderaccount()) {
         account.set_ctidtraderaccountid(0);
@@ -1429,28 +1597,38 @@ bool applicationAuthenticate(StrictProtobufTransport& transport,
                              std::string_view clientSecret) noexcept
 {
     ProtoOAApplicationAuthReq request;
-    request.set_clientid(clientId.data(), clientId.size());
-    request.set_clientsecret(clientSecret.data(), clientSecret.size());
-    const std::string correlation = transport.nextCorrelation("app");
-    const bool sent = transport.send(PROTO_OA_APPLICATION_AUTH_REQ,
-                                     request, correlation);
-    clearApplicationAuthRequest(request);
-    if (!sent) return false;
-
+    std::string correlation;
     std::string payload;
-    if (!transport.receiveExpected(PROTO_OA_APPLICATION_AUTH_RES,
-                                   correlation, payload)) {
+    ProtoOAApplicationAuthRes response;
+    try {
+        request.set_clientid(clientId.data(), clientId.size());
+        request.set_clientsecret(clientSecret.data(), clientSecret.size());
+        correlation = transport.nextCorrelation("app");
+        const bool sent = transport.send(PROTO_OA_APPLICATION_AUTH_REQ,
+                                         request, correlation);
+        clearApplicationAuthRequest(request);
+        if (!sent) return false;
+
+        if (!transport.receiveExpected(PROTO_OA_APPLICATION_AUTH_RES,
+                                       correlation, payload)) {
+            secureClear(payload);
+            return false;
+        }
+        const bool parsed = response.ParseFromString(payload)
+            && response.IsInitialized()
+            && static_cast<uint32_t>(response.payloadtype())
+                == static_cast<uint32_t>(PROTO_OA_APPLICATION_AUTH_RES);
         secureClear(payload);
+        secureClear(correlation);
+        response.Clear();
+        return parsed;
+    } catch (...) {
+        clearApplicationAuthRequest(request);
+        secureClear(correlation);
+        secureClear(payload);
+        response.Clear();
         return false;
     }
-    ProtoOAApplicationAuthRes response;
-    const bool parsed = response.ParseFromString(payload)
-        && response.IsInitialized()
-        && static_cast<uint32_t>(response.payloadtype())
-            == static_cast<uint32_t>(PROTO_OA_APPLICATION_AUTH_RES);
-    secureClear(payload);
-    response.Clear();
-    return parsed;
 }
 
 std::optional<Gate6AccountListEvidence> discoverAccounts(
@@ -1458,48 +1636,58 @@ std::optional<Gate6AccountListEvidence> discoverAccounts(
     std::string_view accessToken) noexcept
 {
     ProtoOAGetAccountListByAccessTokenReq request;
-    request.set_accesstoken(accessToken.data(), accessToken.size());
-    const std::string correlation = transport.nextCorrelation("trading");
-    const bool sent = transport.send(
-        PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ, request, correlation);
-    clearAccountListRequest(request);
-    if (!sent) return std::nullopt;
-
+    std::string correlation;
     std::string payload;
-    if (!transport.receiveExpected(PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES,
-                                   correlation, payload)) {
-        secureClear(payload);
-        return std::nullopt;
-    }
     ProtoOAGetAccountListByAccessTokenRes response;
-    if (!response.ParseFromString(payload) || !response.IsInitialized()
-        || static_cast<uint32_t>(response.payloadtype())
-            != static_cast<uint32_t>(PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES)) {
+    Gate6AccountListEvidence evidence;
+    try {
+        request.set_accesstoken(accessToken.data(), accessToken.size());
+        correlation = transport.nextCorrelation("trading");
+        const bool sent = transport.send(
+            PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ, request, correlation);
+        clearAccountListRequest(request);
+        if (!sent) return std::nullopt;
+
+        if (!transport.receiveExpected(PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES,
+                                       correlation, payload)) {
+            secureClear(payload);
+            return std::nullopt;
+        }
+        if (!response.ParseFromString(payload) || !response.IsInitialized()
+            || static_cast<uint32_t>(response.payloadtype())
+                != static_cast<uint32_t>(PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES)) {
+            secureClear(payload);
+            clearAccountListResponse(response);
+            return std::nullopt;
+        }
+        secureClear(payload);
+
+        evidence.currentConnectionGeneration = transport.generation() > 0;
+        evidence.correlationMatched = true;
+        evidence.tokenOwned = constantTimeEqual(response.accesstoken(), accessToken);
+        evidence.tradingScope = response.has_permissionscope()
+            && response.permissionscope() == SCOPE_TRADE;
+        evidence.accounts.reserve(
+            static_cast<std::size_t>(response.ctidtraderaccount_size()));
+        for (const ProtoOACtidTraderAccount& account : response.ctidtraderaccount()) {
+            Gate6AccountRecord record;
+            record.accountId = account.ctidtraderaccountid();
+            if (account.has_islive()) record.isLive = account.islive();
+            if (account.has_brokertitleshort()) {
+                record.brokerTitleShort = account.brokertitleshort();
+            }
+            evidence.accounts.push_back(std::move(record));
+        }
+        secureClear(correlation);
+        clearAccountListResponse(response);
+        return evidence;
+    } catch (...) {
+        clearAccountListRequest(request);
+        secureClear(correlation);
         secureClear(payload);
         clearAccountListResponse(response);
         return std::nullopt;
     }
-    secureClear(payload);
-
-    Gate6AccountListEvidence evidence;
-    evidence.currentConnectionGeneration = transport.generation() > 0;
-    evidence.correlationMatched = true;
-    evidence.tokenOwned = constantTimeEqual(response.accesstoken(), accessToken);
-    evidence.tradingScope = response.has_permissionscope()
-        && response.permissionscope() == SCOPE_TRADE;
-    evidence.accounts.reserve(
-        static_cast<std::size_t>(response.ctidtraderaccount_size()));
-    for (const ProtoOACtidTraderAccount& account : response.ctidtraderaccount()) {
-        Gate6AccountRecord record;
-        record.accountId = account.ctidtraderaccountid();
-        if (account.has_islive()) record.isLive = account.islive();
-        if (account.has_brokertitleshort()) {
-            record.brokerTitleShort = account.brokertitleshort();
-        }
-        evidence.accounts.push_back(std::move(record));
-    }
-    clearAccountListResponse(response);
-    return evidence;
 }
 
 bool accountAuthenticate(StrictProtobufTransport& transport,
@@ -1508,35 +1696,48 @@ bool accountAuthenticate(StrictProtobufTransport& transport,
                          int64_t& responseAccountId) noexcept
 {
     ProtoOAAccountAuthReq request;
-    request.set_ctidtraderaccountid(accountId);
-    secureClear(accountId);
-    request.set_accesstoken(accessToken.data(), accessToken.size());
-    const std::string correlation = transport.nextCorrelation("account-auth");
-    const bool sent = transport.send(PROTO_OA_ACCOUNT_AUTH_REQ,
-                                     request, correlation);
-    clearAccountAuthRequest(request);
-    if (!sent) return false;
-
+    std::string correlation;
     std::string payload;
-    if (!transport.receiveExpected(PROTO_OA_ACCOUNT_AUTH_RES,
-                                   correlation, payload)) {
-        secureClear(payload);
-        return false;
-    }
     ProtoOAAccountAuthRes response;
-    const bool parsed = response.ParseFromString(payload)
-        && response.IsInitialized()
-        && static_cast<uint32_t>(response.payloadtype())
-            == static_cast<uint32_t>(PROTO_OA_ACCOUNT_AUTH_RES);
-    secureClear(payload);
-    if (!parsed) {
+    try {
+        request.set_ctidtraderaccountid(accountId);
+        secureClear(accountId);
+        request.set_accesstoken(accessToken.data(), accessToken.size());
+        correlation = transport.nextCorrelation("account-auth");
+        const bool sent = transport.send(PROTO_OA_ACCOUNT_AUTH_REQ,
+                                         request, correlation);
+        clearAccountAuthRequest(request);
+        if (!sent) return false;
+
+        if (!transport.receiveExpected(PROTO_OA_ACCOUNT_AUTH_RES,
+                                       correlation, payload)) {
+            secureClear(payload);
+            return false;
+        }
+        const bool parsed = response.ParseFromString(payload)
+            && response.IsInitialized()
+            && static_cast<uint32_t>(response.payloadtype())
+                == static_cast<uint32_t>(PROTO_OA_ACCOUNT_AUTH_RES);
+        secureClear(payload);
+        secureClear(correlation);
+        if (!parsed) {
+            response.Clear();
+            return false;
+        }
+        responseAccountId = response.ctidtraderaccountid();
+        response.set_ctidtraderaccountid(0);
         response.Clear();
+        return true;
+    } catch (...) {
+        secureClear(accountId);
+        clearAccountAuthRequest(request);
+        secureClear(correlation);
+        secureClear(payload);
+        response.set_ctidtraderaccountid(0);
+        response.Clear();
+        secureClear(responseAccountId);
         return false;
     }
-    responseAccountId = response.ctidtraderaccountid();
-    response.set_ctidtraderaccountid(0);
-    response.Clear();
-    return true;
 }
 
 RuntimeFailure performDiscovery(std::string_view clientId,
@@ -1566,6 +1767,28 @@ int fail(RuntimeFailure failure) noexcept
     std::cout << safeRuntimeDiagnostic(failure) << '\n';
     return 1;
 }
+
+class CurlGlobalSession final {
+public:
+    CurlGlobalSession() = default;
+
+    bool initialize() noexcept
+    {
+        active_ = curl_global_init(CURL_GLOBAL_DEFAULT) == CURLE_OK;
+        return active_;
+    }
+
+    ~CurlGlobalSession()
+    {
+        if (active_) curl_global_cleanup();
+    }
+
+    CurlGlobalSession(const CurlGlobalSession&) = delete;
+    CurlGlobalSession& operator=(const CurlGlobalSession&) = delete;
+
+private:
+    bool active_{false};
+};
 
 } // namespace
 
@@ -1598,33 +1821,44 @@ bool validateCTraderTokenTransportConfigurationOffline() noexcept
     return configured;
 }
 
-int runCTraderGate6Proof(bool preflightOnly)
+bool validateCTraderKeychainCopyBoundaryOffline(std::string_view input) noexcept
+{
+    SensitiveString copy;
+    const RuntimeFailure result = copyToOwnedSensitiveString(
+        reinterpret_cast<const UInt8*>(input.data()), input.size(), copy);
+    const bool matched = result == RuntimeFailure::None
+        && copy.view() == input;
+    copy.clear();
+    return matched;
+}
+
+namespace {
+
+int runCTraderGate6ProofImpl(bool preflightOnly)
 {
     std::cout << "gate6_offline_controls_verified_required" << '\n';
     if (!disableCoreDumps()) {
         return fail(RuntimeFailure::LocalHardeningFailed);
     }
-    if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
+    CurlGlobalSession curlSession;
+    if (!curlSession.initialize()) {
         return fail(RuntimeFailure::TokenTransportFailed);
     }
 
     std::optional<SensitiveString> clientId = loadClientId();
     if (!clientId.has_value()) {
-        curl_global_cleanup();
         return fail(RuntimeFailure::MissingClientId);
     }
     SensitiveString clientSecret;
     const RuntimeFailure secretResult = readKeychainSecret(
         CTraderGate6Config::CLIENT_SECRET_SERVICE, clientSecret);
     if (secretResult != RuntimeFailure::None) {
-        curl_global_cleanup();
         return fail(secretResult);
     }
     if (preflightOnly) {
         clientSecret.clear();
         clientId->clear();
         clientId.reset();
-        curl_global_cleanup();
         std::cout << "gate6_secret_prerequisites_ready" << '\n';
         std::cout << "gate6_provider_traffic_not_started" << '\n';
         return 0;
@@ -1633,7 +1867,6 @@ int runCTraderGate6Proof(bool preflightOnly)
     std::cout << "gate6_oauth_authorization_starting" << '\n';
     OAuthResult oauth = receiveCorrelatedAuthorizationCode(clientId->view());
     if (oauth.failure != RuntimeFailure::None || !oauth.code.has_value()) {
-        curl_global_cleanup();
         return fail(oauth.failure);
     }
     std::cout << "gate6_oauth_correlation_verified" << '\n';
@@ -1644,25 +1877,22 @@ int runCTraderGate6Proof(bool preflightOnly)
     oauth.code->clear();
     oauth.code.reset();
     if (tokenResult != RuntimeFailure::None) {
-        curl_global_cleanup();
         return fail(tokenResult);
     }
     if (!tokenHasExecutionLifetime(token)) {
-        curl_global_cleanup();
         return fail(RuntimeFailure::TokenResponseRejected);
     }
-    if (persistTokenEnvelope(token) != RuntimeFailure::None) {
-        curl_global_cleanup();
-        return fail(RuntimeFailure::KeychainWriteFailed);
+    const RuntimeFailure persistenceResult = persistTokenEnvelope(token);
+    if (persistenceResult != RuntimeFailure::None) {
+        return fail(persistenceResult);
     }
-    std::cout << "gate6_view_token_stored" << '\n';
+    std::cout << "gate6_trading_token_stored" << '\n';
 
     Gate6AccountListEvidence gate6aEvidence;
     RuntimeFailure runtime = performDiscovery(
         clientId->view(), clientSecret.view(), token.accessToken.view(),
         gate6aEvidence);
     if (runtime != RuntimeFailure::None) {
-        curl_global_cleanup();
         return fail(runtime);
     }
 
@@ -1670,7 +1900,6 @@ int runCTraderGate6Proof(bool preflightOnly)
     const Gate6Decision gate6a = proof.acceptGate6A(std::move(gate6aEvidence));
     if (gate6a != Gate6Decision::AwaitingWadeCheckpoint) {
         std::cout << CTraderGate6AccountProof::safeDiagnostic(gate6a) << '\n';
-        curl_global_cleanup();
         return 1;
     }
 
@@ -1689,41 +1918,35 @@ int runCTraderGate6Proof(bool preflightOnly)
         || confirmation == "CANCEL") {
         secureClear(confirmation);
         proof.cancel();
-        curl_global_cleanup();
         return fail(RuntimeFailure::CheckpointCancelled);
     }
     constexpr std::string_view prefix = "CONFIRM ";
     if (!confirmation.starts_with(prefix)) {
         secureClear(confirmation);
         proof.cancel();
-        curl_global_cleanup();
         return fail(RuntimeFailure::AccountSelectionFailed);
     }
     const std::string selectedTitle = confirmation.substr(prefix.size());
     secureClear(confirmation);
     if (proof.confirmWadeSelection(selectedTitle)
         != Gate6Decision::ReadyForGate6B) {
-        curl_global_cleanup();
         return fail(RuntimeFailure::AccountSelectionFailed);
     }
     std::cout << "gate6_wade_checkpoint_confirmed" << '\n';
 
     if (!tokenHasExecutionLifetime(token)) {
         proof.cancel();
-        curl_global_cleanup();
         return fail(RuntimeFailure::TokenResponseRejected);
     }
 
     StrictProtobufTransport gate6bTransport;
     if (!gate6bTransport.connectDemo()) {
         proof.cancel();
-        curl_global_cleanup();
         return fail(RuntimeFailure::DemoTlsConnectionFailed);
     }
     if (!applicationAuthenticate(gate6bTransport, clientId->view(),
                                  clientSecret.view())) {
         proof.cancel();
-        curl_global_cleanup();
         return fail(RuntimeFailure::ApplicationAuthFailed);
     }
     std::optional<Gate6AccountListEvidence> gate6bEvidence =
@@ -1731,20 +1954,17 @@ int runCTraderGate6Proof(bool preflightOnly)
     if (!gate6bEvidence.has_value()) {
         proof.cancel();
         gate6bTransport.close();
-        curl_global_cleanup();
         return fail(RuntimeFailure::AccountDiscoveryFailed);
     }
     if (proof.acceptGate6B(std::move(*gate6bEvidence))
         != Gate6Decision::ReadyForAccountAuthentication) {
         gate6bTransport.close();
-        curl_global_cleanup();
         return fail(RuntimeFailure::AccountSelectionFailed);
     }
     std::optional<int64_t> selectedId = proof.accountIdForAuthentication();
     if (!selectedId.has_value()) {
         proof.cancel();
         gate6bTransport.close();
-        curl_global_cleanup();
         return fail(RuntimeFailure::AccountSelectionFailed);
     }
     int64_t responseId = 0;
@@ -1760,14 +1980,23 @@ int runCTraderGate6Proof(bool preflightOnly)
             != Gate6Decision::AccountProofSucceeded) {
         secureClear(responseId);
         proof.cancel();
-        curl_global_cleanup();
         return fail(RuntimeFailure::AccountAuthenticationFailed);
     }
     secureClear(responseId);
-    curl_global_cleanup();
     std::cout << "GATE6_READ_ONLY_ACCOUNT_PROOF_SUCCEEDED" << '\n';
     std::cout << "GATE7_NOT_STARTED" << '\n';
     return 0;
+}
+
+} // namespace
+
+int runCTraderGate6Proof(bool preflightOnly)
+{
+    try {
+        return runCTraderGate6ProofImpl(preflightOnly);
+    } catch (...) {
+        return fail(RuntimeFailure::ResourceExhausted);
+    }
 }
 
 } // namespace tradebot::ctrader

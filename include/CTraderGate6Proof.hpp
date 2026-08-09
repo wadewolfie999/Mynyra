@@ -65,7 +65,8 @@ enum class Gate6Decision {
     NoEligibleDemoAccount,
     AmbiguousDemoAccount,
     WadeSelectionRejected,
-    AccountAuthenticationMismatch
+    AccountAuthenticationMismatch,
+    ResourceExhausted
 };
 
 struct Gate6AccountRecord {
@@ -132,6 +133,8 @@ private:
         std::string brokerTitleShort;
     };
 
+    Gate6Decision acceptGate6AImpl(Gate6AccountListEvidence& evidence);
+    Gate6Decision confirmWadeSelectionImpl(std::string_view brokerTitleShort);
     Gate6Decision validateEvidence(const Gate6AccountListEvidence& evidence) noexcept;
     Gate6Decision finish(Gate6Decision decision) noexcept;
     void clearAccountIdentifiers() noexcept;

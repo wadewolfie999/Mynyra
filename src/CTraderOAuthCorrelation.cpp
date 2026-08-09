@@ -306,7 +306,14 @@ bool CTraderOAuthCorrelationGuard::armWithEntropy(
         return false;
     }
 
-    state_ = base64UrlEncode(entropy);
+    try {
+        state_ = base64UrlEncode(entropy);
+    } catch (...) {
+        clearSensitiveState();
+        phase_ = Phase::Terminal;
+        lastDecision_ = Decision::EntropyUnavailable;
+        return false;
+    }
     armedAt_ = now;
     expiresAt_ = now + lifetime;
     phase_ = Phase::Armed;

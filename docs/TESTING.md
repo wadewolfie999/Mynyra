@@ -82,7 +82,8 @@ ctest --test-dir build/gate6 --output-on-failure
   `SCOPE_TRADE` account-list ownership/scope/generation predicates,
   live and missing-metadata exclusion, exact safe-metadata selection, fresh
   Gate 6B matching, account-auth response binding, terminal clearing,
-  cancellation, and bounded redacted diagnostics. Linking the runtime test
+  cancellation, immutable Keychain-data copy ownership, allocation-failure
+  termination/clearing, and bounded redacted diagnostics. Linking the runtime test
   target does not open a browser, read Keychain, or perform network traffic.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
