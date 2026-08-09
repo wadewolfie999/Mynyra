@@ -1744,19 +1744,30 @@ implementation failure.
 
 ## Completion Evidence
 
-Exact changed files, commit/head, validation commands/results, sanitized
-provider outcome, draft PR URL, report path and SHA-256, residual risks, and
-the exact next action are recorded below after closeout. No canonical symbol,
-instrument metadata, quote, or timestamp evidence exists because the provider
-session stopped before network traffic. Gates 8–9 and live trading remain
-unauthorized regardless of Gate 7 outcome.
+Implementation and controlling documentation changed only in the 21 files
+listed by the closeout report. The implementation commit is `53cc26a`
+(`feat: add Gate 7 XAUUSD market-data proof`) on
+`codex/gate7-xauusd-market-data-proof`, based on authoritative
+`origin/main` `7fc244e2f3cc5a1e406d416898807562fcf58c6d`. Draft PR:
+`https://github.com/wadewolfie999/TradeBot/pull/26`.
+
+Default CTest passed 7/7; Gate 6 opt-in CTest passed 8/8; Gate 7 opt-in CTest
+passed 8/8; Gate 5.1/Gate 6 sanitizer coverage passed 2/2; Gate 7 ASan/UBSan
+coverage passed 1/1; presence-only preflight exited 0; and `git diff --check`
+passed. The single provider process stopped before endpoint traffic at
+`gate7_keychain_permission_unresolved`, exit code 1 after safe cancellation.
+No canonical symbol, instrument metadata, quote, or timestamp evidence exists.
+Sanitized report:
+`/Users/vaheedgorgeen/SR-Workspace/SR-Res-OUTBOX/required-final-output-logs/20260809T231550Z-tradebot-gate7-xauusd-market-data-proof.md`.
+Report SHA-256 excluding its hash line:
+`651241ff4ba5ae196d05854c91506de4c4923ce92cc3500c16ada13d30cfad14`.
+Gates 8–9 and live trading remain unauthorized regardless of Gate 7 outcome.
 
 ## Final Outcome
 
 Gate 7 is incomplete — stopped safely at the evidenced blocker:
 `gate7_keychain_permission_unresolved`. Implementation, offline validation,
 documentation synchronization, commit, push, draft PR, and the canonical
-sanitized report are complete after this plan is finalized. The exact next
-action is Wade review of the draft PR/report and resolution of the local
-Keychain-access condition before any separately authorized future attempt;
-do not begin Gate 8.
+sanitized report are complete. The exact next action is Wade review of draft
+PR #26/report and resolution of the local Keychain-access condition before any
+separately authorized future attempt; do not begin Gate 8.
