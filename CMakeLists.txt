@@ -103,6 +103,93 @@ if (TRADEBOT_ENABLE_CTRADER_GATE6)
     target_link_libraries(ctrader_gate6_proof PRIVATE ctrader_gate6_runtime)
 endif()
 
+# Gate 7 is a separate, default-disabled provider proof. It intentionally has
+# its own targets so Gate 6 remains reproducible at its accepted boundary.
+option(TRADEBOT_ENABLE_CTRADER_GATE7
+    "Build the authorized local-only cTrader Gate 7 market-data proof target" OFF)
+if (TRADEBOT_ENABLE_CTRADER_GATE7)
+    if (NOT APPLE)
+        message(FATAL_ERROR
+            "Gate 7 runtime requires the authorized macOS Keychain environment")
+    endif()
+    enable_language(OBJCXX)
+    find_package(Protobuf 35.1.0 EXACT CONFIG REQUIRED)
+    find_package(CURL 8.7.1 REQUIRED)
+    find_package(OpenSSL 3.6.3 REQUIRED)
+    find_library(CTRADER_GATE7_APPKIT_FRAMEWORK AppKit)
+    find_library(CTRADER_GATE7_SECURITY_FRAMEWORK Security)
+    if (NOT CTRADER_GATE7_APPKIT_FRAMEWORK
+        OR NOT CTRADER_GATE7_SECURITY_FRAMEWORK)
+        message(FATAL_ERROR "Gate 7 requires AppKit and Security frameworks")
+    endif()
+    if (NOT Protobuf_VERSION VERSION_EQUAL "35.1.0")
+        message(FATAL_ERROR
+            "Gate 7 requires exact Protobuf package 35.1.0; found ${Protobuf_VERSION}")
+    endif()
+
+    set(CTRADER_GATE7_PROTO_DIR
+        "${CMAKE_CURRENT_SOURCE_DIR}/vendor/ctrader/openapi-proto")
+    set(CTRADER_GATE7_PROTO_FILES
+        "${CTRADER_GATE7_PROTO_DIR}/OpenApiCommonMessages.proto"
+        "${CTRADER_GATE7_PROTO_DIR}/OpenApiCommonModelMessages.proto"
+        "${CTRADER_GATE7_PROTO_DIR}/OpenApiMessages.proto"
+        "${CTRADER_GATE7_PROTO_DIR}/OpenApiModelMessages.proto")
+    set(CTRADER_GATE7_PROTO_EXPECTED_HASHES
+        "9816cd24b340dcc4eb28548eb4dd16735995d2a61889337591e5c4d8021652a2"
+        "b95d7df670a7e890a53ec08f676198ace7bb0a074a4b07ff0b493c4be00a0dea"
+        "a84df9b528e69a494e197d48e21d6291b3d76db31396663a8188721eef9fcf35"
+        "56338dcac45a149227678b7c23637d64f4e2b607f6649af82394ce5c0957fedf")
+    list(LENGTH CTRADER_GATE7_PROTO_FILES CTRADER_GATE7_PROTO_COUNT)
+    math(EXPR CTRADER_GATE7_PROTO_LAST "${CTRADER_GATE7_PROTO_COUNT} - 1")
+    foreach(CTRADER_GATE7_PROTO_INDEX RANGE ${CTRADER_GATE7_PROTO_LAST})
+        list(GET CTRADER_GATE7_PROTO_FILES ${CTRADER_GATE7_PROTO_INDEX}
+             CTRADER_GATE7_PROTO_FILE)
+        list(GET CTRADER_GATE7_PROTO_EXPECTED_HASHES
+             ${CTRADER_GATE7_PROTO_INDEX} CTRADER_GATE7_PROTO_EXPECTED_HASH)
+        file(SHA256 "${CTRADER_GATE7_PROTO_FILE}" CTRADER_GATE7_PROTO_ACTUAL_HASH)
+        if (NOT CTRADER_GATE7_PROTO_ACTUAL_HASH STREQUAL
+            CTRADER_GATE7_PROTO_EXPECTED_HASH)
+            message(FATAL_ERROR
+                "Pinned cTrader schema hash mismatch: ${CTRADER_GATE7_PROTO_FILE}")
+        endif()
+    endforeach()
+
+    protobuf_generate(
+        LANGUAGE cpp
+        OUT_VAR CTRADER_GATE7_PROTO_GENERATED
+        IMPORT_DIRS "${CTRADER_GATE7_PROTO_DIR}"
+        PROTOS ${CTRADER_GATE7_PROTO_FILES})
+    add_library(ctrader_gate7_openapi_proto STATIC
+        ${CTRADER_GATE7_PROTO_GENERATED})
+    target_include_directories(ctrader_gate7_openapi_proto PUBLIC
+        "${CMAKE_CURRENT_BINARY_DIR}")
+    target_link_libraries(ctrader_gate7_openapi_proto PUBLIC
+        protobuf::libprotobuf)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(ctrader_gate7_openapi_proto PRIVATE
+            -Wno-nullability-extension)
+    endif()
+
+    add_library(ctrader_gate7_core STATIC src/CTraderGate7Proof.cpp)
+    target_include_directories(ctrader_gate7_core PUBLIC include)
+
+    add_library(ctrader_gate7_runtime STATIC
+        src/CTraderGate7Runtime.mm
+        src/CTraderOAuthCorrelation.cpp)
+    target_include_directories(ctrader_gate7_runtime PUBLIC include)
+    target_link_libraries(ctrader_gate7_runtime PUBLIC
+        ctrader_gate7_core
+        ctrader_gate7_openapi_proto
+        CURL::libcurl
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        ${CTRADER_GATE7_APPKIT_FRAMEWORK}
+        ${CTRADER_GATE7_SECURITY_FRAMEWORK})
+
+    add_executable(ctrader_gate7_proof src/ctrader_gate7_main.cpp)
+    target_link_libraries(ctrader_gate7_proof PRIVATE ctrader_gate7_runtime)
+endif()
+
 set(CORE_SOURCES
     src/CsvReader.cpp
     src/AsyncNetworkClient.cpp
@@ -199,5 +286,11 @@ if (BUILD_TESTING)
             ctrader_gate6_runtime
         )
         add_test(NAME ctrader_gate6_tests COMMAND ctrader_gate6_tests)
+    endif()
+
+    if (TRADEBOT_ENABLE_CTRADER_GATE7)
+        add_executable(ctrader_gate7_tests tests/ctrader_gate7_tests.cpp)
+        target_link_libraries(ctrader_gate7_tests PRIVATE ctrader_gate7_core)
+        add_test(NAME ctrader_gate7_tests COMMAND ctrader_gate7_tests)
     endif()
 endif()

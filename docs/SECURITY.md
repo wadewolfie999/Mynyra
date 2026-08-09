@@ -91,6 +91,21 @@ Verified credential env names:
   attempting to authenticate one or reaching a live endpoint is a terminal
   security failure.
 
+## cTrader Open API Gate 7
+
+Gate 7 is a separate default-disabled macOS proof. Its fixed outbound
+allowlist admits only the minimum account-discovery, account-authentication,
+symbol-resolution, one-symbol spot-subscription, heartbeat, and fixed
+fail-closed error messages. It cannot construct order, position, depth,
+trendbar, historical-data, or reconnect messages and is detached from all
+production runtime modes and order/risk components.
+
+The Gate 7 process keeps response-derived account and symbol IDs, prices,
+tokens, and callback material volatile and clears them on terminal paths. Its
+sanitized provider attempt stopped before endpoint traffic at unresolved
+in-process Keychain access; no provider response or market-data evidence was
+obtained, and no retry occurred.
+
 ## Source-Control Exclusions
 
 `.gitignore` excludes:
