@@ -102,17 +102,18 @@ Architecture policy:
 
 ADR 0004 makes official cTrader Open API the sole integration path for the FIBO
 Group demo-only XAUUSD target. Gate 2 and Gate 5 were accepted by Wade on
-2026-08-07 as design evidence only. Gate 5 changes documentation and secret
-policy only; no Open API source or generated cTrader binding exists in the accepted
-baseline. Gates 1-3 now pin the official proto2 schema and define the future
-boundary without changing production behavior.
+2026-08-07 as design evidence only. Gate 5.1 is merged and accepted, and Wade
+separately authorized Gate 6. Gates 1-3 pin the official proto2 schema; the
+Gate 6 branch adds an opt-in proof target without changing production runtime
+modes or broker behavior.
 
-The future boundary must:
+The Gate 6 boundary:
 
 - keep OAuth, Keychain, provider messages, account IDs, and demo transport in a
   cTrader-specific layer below `BrokerGateway`;
-- use the fixed loopback callback and only the `accounts` scope for read-only
-  gates;
+- use the fixed loopback callback and Wade-authorized `trading` scope for Gate
+  6, while a numeric outbound allowlist prevents every trading, position,
+  symbol, market-data, and order message;
 - connect only to immutable `demo.ctraderapi.com:5035` using Protobuf over
   strict TLS/TCP with no live/configurable fallback;
 - use Gate 6A only to discover response-derived demo candidates and exact broker
@@ -131,11 +132,15 @@ The future boundary must:
   explicitly named rounding and validation policies;
 - expose no order-capable message or adapter until a later explicit directive.
 
-The offline `CTraderOAuthCorrelationGuard` is not connected to a listener,
-browser, token client, runtime mode, or broker adapter. It implements the local
-Gate 5.1 controls without claiming cTrader `state` support. Gate 6 is the
-complete umbrella `Gate 6A → mandatory Wade checkpoint → Gate 6B`; acceptance
-of Gate 2, Gate 5, or Gate 5.1 authorizes none of it.
+The accepted `CTraderOAuthCorrelationGuard` remains independently tested
+offline and is now wired only into the opt-in Gate 6 one-shot loopback runtime.
+That runtime has fixed authorization/token/demo hosts, an outbound Protobuf
+message allowlist limited to application auth, account discovery, account
+auth, and heartbeat, macOS Keychain storage, strict TLS, bounded diagnostics,
+and a volatile account-proof state machine. It is not attached to a runtime
+mode, `BrokerGateway`, market data, or order execution. The controlled provider
+callback on 2026-08-10 returned the exact correlation state, establishing that
+provider behavior for the registered loopback flow.
 
 The cTrader Algo/cBot Bridge is
 `ABANDONED — NON-CONTROLLING — OUT OF SCOPE`. It is not part of this branch's

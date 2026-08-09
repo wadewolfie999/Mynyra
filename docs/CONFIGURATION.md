@@ -43,22 +43,40 @@ Credentials may also be held in `SystemConfig` fields. Do not hardcode or docume
 - Client ID name: `TRADEBOT_CTRADER_CLIENT_ID` (identifier, not a secret).
 - Client secret: macOS Keychain service
   `TradeBot.cTraderOpenApi.client-secret`.
-- `accounts` token envelope: macOS Keychain service
-  `TradeBot.cTraderOpenApi.tokens.accounts`.
+- Gate 6 `trading` token envelope: macOS Keychain service
+  `TradeBot.cTraderOpenApi.tokens.trading`.
 
 There are no client-secret, authorization-code, access-token, refresh-token,
 account-ID, endpoint, port, or scope environment variables. `.env.example`
 contains one clearly invalid client-ID placeholder only.
 
-Gate 5 fixed values, which future code must reject attempts to override:
+Gate 5/6 fixed values, which the opt-in proof rejects attempts to override:
 
 - Redirect URI: `http://127.0.0.1:18080/ctrader/oauth/callback`.
-- OAuth scope: `accounts`.
+- OAuth scope: `trading`, explicitly authorized by Wade for Gate 6 on
+  2026-08-10. The fixed outbound message allowlist still excludes every
+  trading, order, position, symbol, and market-data request.
 - Open API host: `demo.ctraderapi.com`.
 - Open API port/transport: `5035`, Protobuf over strict TLS/TCP.
 
-`trading` scope, a live hostname, and runtime endpoint selection are not valid
-Gate 5 configuration.
+A live hostname and runtime endpoint or scope selection are not valid Gate 6
+configuration. The `trading` scope is fixed rather than configurable.
+
+### Gate 6 Opt-In Proof Target
+
+The Gate 6 proof is excluded from normal builds unless explicitly enabled:
+
+```sh
+cmake -S . -B build/gate6 -DTRADEBOT_ENABLE_CTRADER_GATE6=ON
+cmake --build build/gate6 --target ctrader_gate6_proof
+```
+
+`ctrader_gate6_proof --preflight-only` checks only that the client-ID name and
+Keychain client-secret item are available, emits fixed categories, and exits
+before opening a browser or contacting a provider. It accepts no endpoint,
+scope, account, credential, token, or identifier argument. The normal proof
+target is authorized only under the active Gate 6 directive and must not be run
+until the credential and redirect prerequisites are remediated.
 
 ## Network Defaults
 

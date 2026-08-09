@@ -51,16 +51,19 @@ Verified credential env names:
 - Fixed callback:
   `http://127.0.0.1:18080/ctrader/oauth/callback`; loopback-only, one-shot,
   exact path/host/method, and secure request-to-callback correlation are
-  mandatory. cTrader `state` round-trip support is undocumented and must be
-  verified under separate authority before OAuth execution. The offline
-  `CTraderOAuthCorrelationGuard` controls are implementation-complete and do
-  not establish provider support.
-- Initial scope is `accounts`. A `trading` token requires later explicit Wade
-  authorization and separate scope-qualified storage.
+  mandatory. cTrader `state` round-trip support is undocumented; one controlled
+  callback matched exactly on 2026-08-10. Every fresh request must still use a
+  new value and match exactly before token exchange. The accepted
+  `CTraderOAuthCorrelationGuard` controls do not establish a provider guarantee.
+- The accepted Gate 5 baseline used `accounts`. Wade explicitly superseded
+  that scope for Gate 6 on 2026-08-10 and authorized `trading` solely for the
+  demo account proof. The executable's fixed payload allowlist still prohibits
+  every trading operation and all Gates 7-9 requests.
 - Store the client secret in macOS Keychain service
   `TradeBot.cTraderOpenApi.client-secret`.
-- Store access token, refresh token, scope, token type, and expiry atomically in
-  Keychain service `TradeBot.cTraderOpenApi.tokens.accounts`.
+- Store the Gate 6 access token, refresh token, scope, token type, and expiry
+  atomically in Keychain service `TradeBot.cTraderOpenApi.tokens.trading`.
+  Never load or reuse a Playground or differently scoped token.
 - Authorization codes are memory-only and must be discarded after one exchange
   attempt or timeout. `ctidTraderAccountId`, `traderLogin`, account numbers,
   visible logins, and equivalent account-identifying values are
@@ -72,18 +75,18 @@ Verified credential env names:
   Prefix/suffix or hash redaction is not allowed for these fields.
 - Never ask an operator to paste a cTrader credential, code, token, or account
   identifier into Codex, ChatGPT, a tracked file, fixture, log, or report.
-- A future Gate 6A checkpoint may contain only exact `brokerTitleShort`
+- The authorized Gate 6A checkpoint may contain only exact `brokerTitleShort`
   presence/value, exact `isLive` presence/value, and a bounded non-identifying
   outcome category. No candidate label, per-account ordinal, visible login, or
   other account-identifying value is permitted. If present `isLive == false`
   plus exact `brokerTitleShort` cannot distinguish exactly one intended demo
   account, stop without producing a persistent selection predicate.
-- A separately authorized Gate 6B must retrieve a fresh account list,
+- Gate 6B must retrieve a fresh account list in the same volatile process,
   reproduce the approved `isLive == false` plus exact `brokerTitleShort`
   selection deterministically, keep the
   fresh identifier only in volatile process memory, and use it solely for that
   session's account-authentication request.
-- The only future runtime message endpoint is
+- The only Gate 6 runtime message endpoint is
   `demo.ctraderapi.com:5035`. Live account entries are excluded candidates;
   attempting to authenticate one or reaching a live endpoint is a terminal
   security failure.

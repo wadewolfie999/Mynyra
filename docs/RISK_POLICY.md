@@ -108,8 +108,11 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 
 - Official cTrader Open API is the sole integration path; the Algo Bridge is
   abandoned, non-controlling, and out of scope.
-- Read-only gates use `accounts` scope only. `trading` requires a later exact
-  operator authorization.
+- Wade explicitly authorized `trading` scope for the demo-only Gate 6 account
+  proof on 2026-08-10. This permission does not authorize any trading message:
+  the immutable Gate 6 allowlist remains limited to application auth, account
+  list, account auth, and heartbeat. Orders, changes, cancellations, position
+  closure, symbols, market data, and live-account access remain prohibited.
 - `demo.ctraderapi.com:5035` is the only allowed Open API message endpoint,
   with no configuration or fallback to live.
 - Live account entries are excluded from candidacy. Gate 6A may discover only
@@ -130,11 +133,13 @@ Any live-capable path must support operator-controlled halt behavior that stops 
   missing/contradictory broker metadata, zero/multiple exact matches, title
   resemblance, an attempted live selection, or exhausted reconnect budget fails
   closed before market data or order capability.
-- Gate 2 and the Gate 5 design were accepted by Wade on 2026-08-07. Wade
-  authorized only the offline Gate 5.1 controls on 2026-08-09; they are
-  implementation-complete and awaiting Wade acceptance. Provider OAuth
-  verification and the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint
-  → Gate 6B`) remain blocked and make no financial-limit or runtime-path
+- Gate 2 and the Gate 5 design were accepted by Wade on 2026-08-07. Gate 5.1
+  merged in PR #24 and Wade accepted its implementation on 2026-08-09. Wade
+  then authorized the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint →
+  Gate 6B`). Credential and redirect prerequisites are satisfied, the first
+  correlated callback succeeded, and a local libcurl option defect was
+  identified before the token request and corrected for a fresh attempt. Gate
+  6 makes no financial-limit, market-data, order-routing, or runtime-mode
   change.
 
 ## External API And Network Risk

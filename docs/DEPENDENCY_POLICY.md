@@ -13,7 +13,14 @@
 - Required library found by CMake: Threads.
 - Optional dynamic-link library lookup: `dl` when available.
 - No tracked package manifests for Python, Julia, Node, or other ecosystems were found.
-- No tracked third-party vendored dependencies were found.
+- The opt-in Gate 6 target requires exact local Protobuf package `35.1.0`
+  (runtime headers `7.35.1`), system libcurl `8.7.1` or newer, OpenSSL `3.6.3`
+  or newer, and macOS AppKit/Security frameworks. Normal builds do not require
+  these Gate 6 dependencies.
+- Gate 6 vendors only four unmodified official cTrader proto2 schema files and
+  their license at pinned upstream revision
+  `3fd8bddfbe0cfc2ecfda079623dc4e498af11e66`; configure-time SHA-256 checks
+  fail closed before binding generation.
 
 ## Addition Rules
 

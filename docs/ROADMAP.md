@@ -42,9 +42,14 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
 - Workstream I — Broker-Neutral Execution Foundation: Complete — Accepted through Phase 22.
 - Workstream II — Broker Integration Program: FIBO Group/cTrader selected;
   Gate 1 and Gate 3 revalidated; Gate 2 and Gate 5 accepted by Wade on
-  2026-08-07. Gate 5.1 offline controls were authorized on 2026-08-09 and are
-  implementation-complete awaiting Wade acceptance; provider OAuth and the
-  Gate 6 umbrella remain unauthorized.
+  2026-08-07. Gate 5.1 merged in PR #24 and Wade accepted its implementation
+  on 2026-08-09. Wade then authorized the Gate 6 umbrella and confirmed its
+  credential/redirect prerequisites. On 2026-08-10 he fixed Gate 6 OAuth to
+  `trading` scope while withholding every trading message. Gate 6A succeeded,
+  Wade confirmed exact `isLive=false` and exact `brokerTitleShort=FIBO`, Gate
+  6B account authentication succeeded, and Wade accepted the Gate 6 execution.
+  Implementation closure remains tied to draft PR #25. Gate 7 and later work
+  remain unauthorized.
 - Workstream III — Documentation & Knowledge Architecture: parallel/future unless separately activated.
 - Workstream IV — ML Optimization & Strategy Research: parallel/future unless separately activated.
 - Workstream V — Core Platform Enhancement: parallel/future unless separately activated.
@@ -52,11 +57,11 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
 - Workstream VII — Strategic Expansion Alternatives: parallel/future unless separately activated.
 
 Workstream II includes a demo validation path and a separate live-readiness path.
-Current scope ends at the Gate 5.1 offline implementation review handoff. Gate
-2/Gate 5 were accepted by Wade on 2026-08-07; provider OAuth verification,
-Gate 6A, Gate 6B, broker connection,
-external calls, credential use, account actions, demo orders, live deployment,
-and live trading remain unauthorized.
+The Gate 6 sequence completed through Gate 6A, Wade's mandatory safe-metadata
+checkpoint, and Gate 6B in one process. Wade accepted the execution result.
+Draft PR #25 remains open for implementation closure. XAUUSD requests,
+reconnect proof, demo orders, live deployment, and live trading remain
+unauthorized.
 
 ## Deterministic Phase Authority
 
@@ -67,7 +72,7 @@ This table is the canonical phase state for Workstreams I-III. `PROJECT_STATE.md
 | I — Broker-Neutral Execution Foundation | Phase 21: Infrastructure Alignment | Complete — Approved | Internal TradeBot integration architecture and boundary alignment. ADR 0003 is Accepted; Phase 21 planning artifacts are approved. |
 | I — Broker-Neutral Execution Foundation | Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness | Complete — Accepted | `PLAN-20260624-workstream-i-broker-neutral-completion` closed the provider-neutral contracts, deterministic simulation, execution/risk alignment, persistence, replay, tests, and documentation boundary. No broker or prop firm selection, connection method, connectivity, credentials, account access, real or sandbox orders, broker-dependent implementation, or live trading is authorized. |
 | II — Broker Integration Program | Phase 23: Broker Selection | Complete — Selected | Wade selected FIBO Group through cTrader for demo-only XAUUSD. OANDA is permanently cancelled. Selection does not authorize OAuth, connectivity, credentials, account access, market data, orders, or live trading. |
-| II — Broker Integration Program | Phase 24: Connection Protocol | Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted; Gate 5.1 implementation awaiting Wade acceptance | Official Open API is sole. Offline correlation controls are implemented without provider traffic. cTrader `state` verification and the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`) remain unauthorized; market data, reconnect proof, order proof, and live use require separate directives. |
+| II — Broker Integration Program | Phase 24: Connection Protocol | Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted; Gate 5.1 merged and accepted; Gate 6 execution complete and accepted; implementation closure pending PR #25 | Official Open API is sole. Gate 6 used Wade-authorized `trading` scope with an immutable non-trading message allowlist and demo-only endpoint. Market data, reconnect proof, order proof, and live use require separate directives. |
 | III — Documentation & Knowledge Architecture | Phase 25: Documentation Platform Evaluation & Selection | Not Started | Evaluate and select the documentation platform. No platform is selected. |
 | III — Documentation & Knowledge Architecture | Phase 26: Core Documentation Architecture & Drafting | Blocked | Build the core documentation structure and draft canonical documentation only after Phase 25 selection and operator approval of the documentation architecture. |
 
@@ -173,9 +178,11 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 - Scope: connection protocol only within the separately approved scope.
 - Stop/go gate: no account connection, credential use, or live trading before exact operator approval and applicable risk gates.
 - Status: Gate 1 and Gate 3 revalidated; Gate 2 and Gate 5 accepted by Wade;
-  Gate 5.1 offline controls implementation-complete awaiting Wade acceptance;
-  provider verification, the Gate 6 umbrella, and every execution gate remain
-  blocked pending separate operator approval.
+  Gate 5.1 merged and accepted. Gate 6A succeeded; Wade confirmed exact
+  `isLive=false` and exact `brokerTitleShort=FIBO`; Gate 6B account
+  authentication succeeded; and Wade accepted the Gate 6 execution.
+  Implementation closure remains tied to draft PR #25. Gate 7 and every
+  trading/live gate remain blocked pending separate operator approval.
 
 ### Phase 25: Workstream III Documentation Platform Evaluation And Selection
 
@@ -219,9 +226,7 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 
 ## Next Roadmap Action
 
-Gate 5.1 offline implementation review is the current bounded action. Stop
-before provider OAuth or read-only account proof. Provider correlation
-verification and the Gate 6 umbrella—Gate 6A discovery, Wade's mandatory
-checkpoint, then Gate 6B authentication—plus connectivity,
-credentials in use, XAUUSD data, reconnect testing, orders, live accounts, live
-trading, and risk-limit changes remain unauthorized until separately approved.
+Complete and independently re-review the narrow PR #25 corrective commit. Do
+not repeat provider OAuth, mark the PR ready, merge it, or begin XAUUSD data,
+reconnect testing, orders, live accounts, live trading, or risk-limit changes;
+those remain unauthorized.
