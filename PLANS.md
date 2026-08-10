@@ -1766,7 +1766,7 @@ quote, or timestamp evidence exists.
 Sanitized report:
 `/Users/vaheedgorgeen/SR-Workspace/SR-Res-OUTBOX/required-final-output-logs/20260809T231550Z-tradebot-gate7-xauusd-market-data-proof.md`.
 Report SHA-256 excluding its hash line:
-`a7b8b7fad3deda2ad3dde6de5a6c180c2ccebd5d277593ff398f18bc06f81124`.
+`54d40b6a54b6f832d2c302531e5b77bca53542c6d11c308653fc1e09d963f9bf`.
 Gates 8–9 and live trading remain unauthorized regardless of Gate 7 outcome.
 
 ## Final Outcome
