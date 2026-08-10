@@ -6,9 +6,10 @@
   controls merged in PR #24 and accepted by Wade on 2026-08-09; PR #25 is
   merged; Gate 6 execution was completed and accepted by Wade; and Gate 7 was
   separately authorized on 2026-08-10. Gate 7 implementation/offline
-  validation passed, but its one provider process stopped before endpoint
-  traffic at unresolved in-process Keychain access. Gate 8–9 and all trading
-  messages remain unauthorized.
+  validation passed; its initial attempt stopped at Keychain access; and its
+  one newly authorized retry stopped at `gate7_oauth_failed` before account
+  discovery or endpoint data traffic. Gate 8–9 and all trading messages remain
+  unauthorized.
 - Plans: accepted design `PLAN-20260806-ctrader-open-api-gate5`; offline
   implementation `PLAN-20260809-gate5-oauth-correlation-controls`
 - Decision: ADR 0004
@@ -529,7 +530,8 @@ before Gate 6B. Gates 7–9 remain blocked.
 KEYCHAIN-PERMISSION BLOCKER`
 
 Gate 7 was separately authorized by Wade on 2026-08-10. Its isolated
-implementation and offline validation passed. The single bounded provider
-process stopped before the fixed demo endpoint at unresolved in-process macOS
-Keychain access, so no XAUUSD symbol, metadata, quote, or timestamp evidence
-was produced. Gates 8–9, order messages, and live trading remain unauthorized.
+implementation and offline validation passed. The initial bounded process
+stopped at Keychain access; the one newly authorized retry stopped at
+`gate7_oauth_failed` before account discovery or fixed-endpoint data traffic,
+so no XAUUSD symbol, metadata, quote, or timestamp evidence was produced.
+Gates 8–9, order messages, and live trading remain unauthorized.

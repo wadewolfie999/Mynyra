@@ -102,9 +102,9 @@ production runtime modes and order/risk components.
 
 The Gate 7 process keeps response-derived account and symbol IDs, prices,
 tokens, and callback material volatile and clears them on terminal paths. Its
-sanitized provider attempt stopped before endpoint traffic at unresolved
-in-process Keychain access; no provider response or market-data evidence was
-obtained, and no retry occurred.
+initial attempt stopped at Keychain access; the one newly authorized retry
+stopped at `gate7_oauth_failed` before account discovery or endpoint data
+traffic. No provider response or market-data evidence was obtained.
 
 ## Source-Control Exclusions
 

@@ -1517,7 +1517,7 @@ of this closure work.
 # Plan: Execute cTrader Open API Gate 7 Fresh XAUUSD Market-Data Proof
 
 - Plan ID: `PLAN-20260810-ctrader-open-api-gate7-xauusd-market-data-proof`
-- Status: Implementation and offline validation complete; provider execution incomplete at the evidenced Keychain-permission blocker
+- Status: Implementation and offline validation complete; the one newly authorized retry stopped at the evidenced OAuth failure
 - Owner: Wade
 - Implementer: Codex
 - Review authority: Wade
@@ -1733,19 +1733,25 @@ made successful by reinterpretation.
   output; the same process was stopped safely after the bounded wait. No
   provider response or market-data evidence was obtained, and no retry or
   reconnect was attempted.
+- 2026-08-10: Wade authorized one new bounded retry from this checkpoint. The
+  retry passed the in-process Keychain read, entered fresh OAuth authorization,
+  emitted only `gate7_oauth_failed`, and exited with code 1 before account
+  discovery or the fixed demo data endpoint. No further retry was attempted.
 
 ## Deviations
 
-Provider execution did not reach the fixed endpoint because the actual
-Security.framework Keychain read remained unresolved in the one authorized
-process. The process was stopped safely; no provider traffic was repeated or
-reinterpreted as a pass. This is a sanitized execution blocker, not an offline
-implementation failure.
+The earlier attempt stopped at unresolved Security.framework Keychain access.
+Wade then authorized exactly one new retry. That retry passed Keychain access
+but failed at fresh OAuth authorization with `gate7_oauth_failed` before
+account discovery or the fixed demo data endpoint. It exited with code 1; no
+provider data proof, reconnect, or repeated retry occurred. This is a
+sanitized execution failure, not an offline implementation failure.
 
 ## Completion Evidence
 
 Implementation and controlling documentation changed only in the 21 files
-listed by the closeout report. The implementation commit is `53cc26a`
+listed by the original closeout report, followed by the bounded-retry status
+updates. The implementation commit is `53cc26a`
 (`feat: add Gate 7 XAUUSD market-data proof`) on
 `codex/gate7-xauusd-market-data-proof`, based on authoritative
 `origin/main` `7fc244e2f3cc5a1e406d416898807562fcf58c6d`. Draft PR:
@@ -1755,19 +1761,19 @@ Default CTest passed 7/7; Gate 6 opt-in CTest passed 8/8; Gate 7 opt-in CTest
 passed 8/8; Gate 5.1/Gate 6 sanitizer coverage passed 2/2; Gate 7 ASan/UBSan
 coverage passed 1/1; presence-only preflight exited 0; and `git diff --check`
 passed. The single provider process stopped before endpoint traffic at
-`gate7_keychain_permission_unresolved`, exit code 1 after safe cancellation.
-No canonical symbol, instrument metadata, quote, or timestamp evidence exists.
+`gate7_oauth_failed`, exit code 1. No canonical symbol, instrument metadata,
+quote, or timestamp evidence exists.
 Sanitized report:
 `/Users/vaheedgorgeen/SR-Workspace/SR-Res-OUTBOX/required-final-output-logs/20260809T231550Z-tradebot-gate7-xauusd-market-data-proof.md`.
 Report SHA-256 excluding its hash line:
-`651241ff4ba5ae196d05854c91506de4c4923ce92cc3500c16ada13d30cfad14`.
+`a7b8b7fad3deda2ad3dde6de5a6c180c2ccebd5d277593ff398f18bc06f81124`.
 Gates 8–9 and live trading remain unauthorized regardless of Gate 7 outcome.
 
 ## Final Outcome
 
 Gate 7 is incomplete — stopped safely at the evidenced blocker:
-`gate7_keychain_permission_unresolved`. Implementation, offline validation,
-documentation synchronization, commit, push, draft PR, and the canonical
-sanitized report are complete. The exact next action is Wade review of draft
-PR #26/report and resolution of the local Keychain-access condition before any
-separately authorized future attempt; do not begin Gate 8.
+`gate7_oauth_failed`. Implementation, offline validation, the one newly
+authorized retry, documentation synchronization, commit, push, draft PR, and
+the canonical sanitized report are complete. The exact next action is Wade
+review of draft PR #26/report; do not begin Gate 8 or retry provider traffic
+again within this task.

@@ -3,11 +3,12 @@
 ## Status
 
 Wade separately authorized Gate 7 on 2026-08-10. The isolated implementation
-and deterministic offline validation are complete. The single controlled
-provider process stopped safely before fixed-endpoint traffic at the sanitized
-blocker `gate7_keychain_permission_unresolved`. Gate 7 did not pass; no
-provider response, symbol metadata, quote, or timestamp evidence was obtained.
-Gates 8–9, orders, and live trading remain unauthorized.
+and deterministic offline validation are complete. The initial provider process
+stopped at Keychain access. Wade then authorized one new bounded retry; it
+reached fresh OAuth authorization and stopped at the sanitized blocker
+`gate7_oauth_failed` before account discovery or fixed-endpoint data traffic.
+Gate 7 did not pass; no provider response, symbol metadata, quote, or timestamp
+evidence was obtained. Gates 8–9, orders, and live trading remain unauthorized.
 
 ## Boundary
 
@@ -61,13 +62,13 @@ modify, cancel, or close an order. The normal build remains unchanged unless
 
 ## Provider outcome
 
-Presence-only configuration/Keychain preflight passed. Exactly one bounded
-Gate 7 process was started. It remained at the actual macOS Security.framework
-Keychain access boundary and emitted no fixed-endpoint connection or provider
-response. The same process was stopped safely after the bounded wait with exit
-code 1. No reconnect or repeated provider session occurred. No account
-identifier, credential, token, raw price, or raw payload was persisted.
+Presence-only configuration/Keychain preflight passed for the retry. Exactly
+one new bounded Gate 7 process was started. It passed the actual Keychain read,
+entered fresh OAuth authorization, emitted only `gate7_oauth_failed`, and exited
+with code 1 before account discovery or fixed-endpoint data traffic. No
+reconnect or further provider session occurred. No account identifier,
+credential, token, raw price, or raw payload was persisted.
 
 The exact next action is Wade review of the draft PR and sanitized transfer
-report, followed by resolution of the local Keychain-access condition before
-any separately authorized future attempt. Do not begin Gate 8.
+report. The one authorized retry is exhausted; do not begin Gate 8 or retry
+provider traffic again within this task.

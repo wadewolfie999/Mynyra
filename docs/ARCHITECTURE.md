@@ -174,9 +174,11 @@ arithmetic. The undocumented timestamp unit is proven only when exactly one of
 seconds, milliseconds, microseconds, or nanoseconds meets the bounded freshness
 window; otherwise the proof fails closed.
 
-The Gate 7 provider execution on 2026-08-10 stopped before fixed-endpoint
-traffic at unresolved in-process macOS Keychain access. No quote, metadata, or
-timestamp evidence was produced, and no retry or reconnect was attempted.
+The initial Gate 7 provider attempt on 2026-08-10 stopped at unresolved
+in-process macOS Keychain access. Wade then authorized one bounded retry; it
+reached fresh OAuth authorization and stopped with `gate7_oauth_failed` before
+account discovery or fixed-endpoint data traffic. No quote, metadata, or
+timestamp evidence was produced, and no reconnect occurred.
 
 ## Market-Data Boundary
 

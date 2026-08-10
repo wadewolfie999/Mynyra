@@ -49,10 +49,11 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
   Wade confirmed exact `isLive=false` and exact `brokerTitleShort=FIBO`, Gate
   6B account authentication succeeded, and Wade accepted the Gate 6 execution.
   PR #25 is merged. Wade separately authorized Gate 7; its implementation and
-  offline validation completed, but the one controlled provider process stopped
-  before fixed-endpoint traffic at unresolved in-process macOS Keychain access.
-  No XAUUSD market-data proof was obtained. Gates 8–9 and live work remain
-  unauthorized.
+  offline validation completed. The initial provider attempt stopped at
+  unresolved in-process macOS Keychain access; Wade then authorized one bounded
+  retry, which stopped at `gate7_oauth_failed` before account discovery or the
+  fixed demo data endpoint. No XAUUSD market-data proof was obtained. Gates 8–9
+  and live work remain unauthorized.
 - Workstream III — Documentation & Knowledge Architecture: parallel/future unless separately activated.
 - Workstream IV — ML Optimization & Strategy Research: parallel/future unless separately activated.
 - Workstream V — Core Platform Enhancement: parallel/future unless separately activated.
@@ -75,7 +76,7 @@ This table is the canonical phase state for Workstreams I-III. `PROJECT_STATE.md
 | I — Broker-Neutral Execution Foundation | Phase 21: Infrastructure Alignment | Complete — Approved | Internal TradeBot integration architecture and boundary alignment. ADR 0003 is Accepted; Phase 21 planning artifacts are approved. |
 | I — Broker-Neutral Execution Foundation | Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness | Complete — Accepted | `PLAN-20260624-workstream-i-broker-neutral-completion` closed the provider-neutral contracts, deterministic simulation, execution/risk alignment, persistence, replay, tests, and documentation boundary. No broker or prop firm selection, connection method, connectivity, credentials, account access, real or sandbox orders, broker-dependent implementation, or live trading is authorized. |
 | II — Broker Integration Program | Phase 23: Broker Selection | Complete — Selected | Wade selected FIBO Group through cTrader for demo-only XAUUSD. OANDA is permanently cancelled. Selection does not authorize OAuth, connectivity, credentials, account access, market data, orders, or live trading. |
-| II — Broker Integration Program | Phase 24: Connection Protocol | Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted; Gate 5.1 merged and accepted; PR #25 merged; Gate 6 execution complete and accepted; Gate 7 implementation/offline validation complete but provider execution incomplete at a Keychain-permission blocker | Official Open API is sole. Gate 7 is a separate default-disabled macOS proof with a fixed demo endpoint and non-trading allowlist. No quote evidence, reconnect proof, order proof, Gate 8–9 work, or live use is authorized. |
+| II — Broker Integration Program | Phase 24: Connection Protocol | Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted; Gate 5.1 merged and accepted; PR #25 merged; Gate 6 execution complete and accepted; Gate 7 implementation/offline validation complete but the one authorized retry stopped at `gate7_oauth_failed` | Official Open API is sole. Gate 7 is a separate default-disabled macOS proof with a fixed demo endpoint and non-trading allowlist. No quote evidence, reconnect proof, order proof, Gate 8–9 work, or live use is authorized. |
 | III — Documentation & Knowledge Architecture | Phase 25: Documentation Platform Evaluation & Selection | Not Started | Evaluate and select the documentation platform. No platform is selected. |
 | III — Documentation & Knowledge Architecture | Phase 26: Core Documentation Architecture & Drafting | Blocked | Build the core documentation structure and draft canonical documentation only after Phase 25 selection and operator approval of the documentation architecture. |
 
@@ -184,9 +185,9 @@ The Foundation through Phase 19 entries below are historical context reconstruct
   Gate 5.1 merged and accepted. Gate 6A succeeded; Wade confirmed exact
   `isLive=false` and exact `brokerTitleShort=FIBO`; Gate 6B account
   authentication succeeded; and Wade accepted the Gate 6 execution.
-  PR #25 is merged. Gate 7 implementation and offline validation are complete,
-  but the one controlled provider process stopped before endpoint traffic at
-  `gate7_keychain_permission_unresolved`; no market-data evidence was produced.
+  PR #25 is merged. Gate 7 implementation and offline validation are complete;
+  its one newly authorized retry stopped before account discovery or endpoint
+  data traffic at `gate7_oauth_failed`; no market-data evidence was produced.
   Gates 8–9 and every trading/live gate remain blocked.
 
 ### Phase 25: Workstream III Documentation Platform Evaluation And Selection
@@ -231,8 +232,7 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 
 ## Next Roadmap Action
 
-Review the Gate 7 draft PR and sanitized incomplete report, and resolve the
-local Keychain-access condition before any separately authorized future
-attempt. Do not repeat provider traffic, mark the PR ready, merge it, or begin
-Gate 8, reconnect testing, orders, live accounts, live trading, or risk-limit
-changes.
+Review the Gate 7 draft PR and sanitized incomplete report. The one authorized
+retry is exhausted. Do not repeat provider traffic, mark the PR ready, merge
+it, or begin Gate 8, reconnect testing, orders, live accounts, live trading, or
+risk-limit changes.

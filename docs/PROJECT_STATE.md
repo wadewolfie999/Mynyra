@@ -32,10 +32,12 @@ This document represents current state only. Historical execution belongs in Git
   `isLive=false` and exact `brokerTitleShort=FIBO`, Gate 6B account
   authentication succeeded, and Wade accepted the Gate 6 execution. Wade then
   explicitly authorized Gate 7. The isolated Gate 7 implementation and offline
-  validation passed, but its one controlled provider process stopped before
-  fixed-endpoint traffic at unresolved in-process macOS Keychain access. No
-  XAUUSD market-data evidence was obtained. Gates 8–9 and live trading remain
-  unauthorized.
+  validation passed. The initial provider attempt stopped at unresolved
+  in-process macOS Keychain access; Wade then authorized one new bounded retry.
+  That retry reached fresh OAuth authorization but stopped with sanitized
+  `gate7_oauth_failed` before account discovery or the fixed demo data endpoint.
+  No XAUUSD market-data evidence was obtained. Gates 8–9 and live trading
+  remain unauthorized.
 - Workstreams III–VII: parallel/future domains unless separately activated.
 - Phase 21: Complete — Approved; ADR 0003 is Accepted.
 - Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness; Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`.
@@ -44,9 +46,9 @@ This document represents current state only. Historical execution belongs in Git
   by Wade on 2026-08-07; Gate 5.1 is merged and accepted; PR #25 is merged;
   and Gate 6 execution completed successfully and Wade accepted it on
   2026-08-10. Gate 7 implementation and offline validation are complete, but
-  Gate 7 execution is incomplete at the evidenced Keychain-permission blocker
-  before provider traffic. No market-data proof was produced. Gates 8–9,
-  orders, and live use remain unauthorized.
+  Gate 7 execution is incomplete at the evidenced `gate7_oauth_failed` result
+  before account discovery or the fixed demo data endpoint. No market-data
+  proof was produced. Gates 8–9, orders, and live use remain unauthorized.
 - Phase 25: Not Started; no documentation platform is selected.
 - Phase 26: Blocked pending Phase 25 selection and operator-approved documentation architecture.
 - Live trading: disabled and unauthorized.
@@ -72,9 +74,10 @@ This document represents current state only. Historical execution belongs in Git
 - Gate 7 review closeout under
   `PLAN-20260810-ctrader-open-api-gate7-xauusd-market-data-proof`. The target is
   default-disabled, macOS-only, detached from production runtime modes and
-  order/risk paths, and offline validation passed. The one provider attempt
-  stopped safely at `gate7_keychain_permission_unresolved` before the fixed
-  endpoint; no retry is permitted in this task.
+  order/risk paths, and offline validation passed. The initial attempt stopped
+  at Keychain access; the one authorized retry stopped at
+  `gate7_oauth_failed` before account discovery or the fixed endpoint. No
+  further retry is permitted in this task.
 
 ## Blocked Or Constrained Work
 
@@ -83,10 +86,11 @@ This document represents current state only. Historical execution belongs in Git
   fallback and is not to be investigated under Gate 5.
 - OANDA is permanently cancelled.
 - Gate 6 provider execution completed and Wade accepted its result. PR #25 is
-  merged. Gate 7's separate allowlist/validator implementation is reviewable,
-  but its provider execution stopped before network traffic at unresolved
-  Keychain access. XAUUSD metadata/quotes, reconnect proof, every order
-  operation, live accounts, and live trading remain Blocked / NO-GO.
+  merged. Gate 7's separate allowlist/validator implementation is reviewable.
+  Its initial attempt stopped at Keychain access; the one authorized retry
+  stopped at `gate7_oauth_failed` before account discovery or the fixed endpoint.
+  XAUUSD metadata/quotes, reconnect proof, every order operation, live accounts,
+  and live trading remain Blocked / NO-GO.
 - Gates 1-3 now control protocol fit, numeric mapping, and pre-implementation
   baseline integrity. Homebrew Protobuf 35.1 is installed locally; the Gate 6
   opt-in build generates bindings only inside the build tree from SHA-256-
@@ -153,9 +157,11 @@ Results:
   UndefinedBehaviorSanitizer: 2 tests, 0 failed.
 - Gate 7 opt-in configure/build passed; its full CTest suite passed: 8 tests,
   0 failed. The Gate 7 targeted sanitizer test passed: 1 test, 0 failed.
-- Gate 7 presence-only configuration/Keychain preflight passed. The single
+- Gate 7 presence-only configuration/Keychain preflight passed. The initial
   bounded provider process stopped at the in-process Keychain permission
-  boundary before endpoint traffic, with exit code 1 after safe cancellation.
+  boundary. Wade's one authorized retry reached fresh OAuth authorization and
+  stopped with `gate7_oauth_failed`, exit code 1, before account discovery or
+  endpoint data traffic.
 - Gate 6 regression coverage includes immutable Keychain-copy ownership and
   fail-closed allocation injection for correlation, account state, and token
   parsing.
@@ -169,12 +175,11 @@ Results:
 
 ## Next Safe Action
 
-Review the Gate 7 draft PR and sanitized report, then resolve the local
-Keychain-access condition before any separately authorized future attempt. Do
-not repeat provider traffic in this task, mark the PR ready, merge it, or begin
-Gate 8.
+Review the Gate 7 draft PR and sanitized report. The single authorized retry is
+exhausted; do not repeat provider traffic in this task, mark the PR ready,
+merge it, or begin Gate 8.
 
 ## Next Professional Halting Point
 
-Stop after the Gate 7 incomplete handoff. Gate 7 provider rerun, reconnect
+Stop after the Gate 7 incomplete handoff. Further provider attempts, reconnect
 testing, orders, Gates 8–9, and live use require separate future authority.
