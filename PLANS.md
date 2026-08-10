@@ -1513,3 +1513,267 @@ scope and non-trading message allowlist. Draft PR #25 remains the sole
 implementation-closure boundary and is not accepted or merged by this plan.
 Gates 7–9 remain unauthorized; no further OAuth or provider execution is part
 of this closure work.
+
+# Plan: Execute cTrader Open API Gate 7 Fresh XAUUSD Market-Data Proof
+
+- Plan ID: `PLAN-20260810-ctrader-open-api-gate7-xauusd-market-data-proof`
+- Status: Implementation and offline validation complete; the one newly authorized retry stopped at the evidenced OAuth failure
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Workstream II, Phase 24, Gate 7 only
+- Related issue or decision: Wade Gate 7 Fresh XAUUSD Market-Data Proof Directive; ADR 0004; accepted Gate 2 numeric contract
+- Created: 2026-08-10
+- Updated: 2026-08-10
+
+## Objective
+
+Implement and execute one isolated, default-disabled, macOS-only cTrader
+Open API proof that discovers a fresh FIBO demo account, resolves exactly one
+response-derived canonical XAUUSD symbol, validates complete runtime metadata,
+subscribes to only that symbol's spot stream, proves one current fresh BBO,
+converts it deterministically into broker-neutral values, clears volatile
+provider state, and stops before Gate 8.
+
+Success requires one controlled process to use only the fixed demo endpoint,
+fresh response-derived account and symbol identifiers, the Gate 7 outbound and
+inbound allowlists, the accepted Gate 2 integer contract, and the bounded
+timestamp-unit proof. No cached identifier, live account, order-capable path,
+runtime mode, or reconnect may be used.
+
+## Context
+
+The authoritative base is merged `origin/main` commit
+`7fc244e2f3cc5a1e406d416898807562fcf58c6d`, which contains the accepted Gate 6
+implementation from PR #25. Existing current-state wording that still calls
+PR #25 draft/unmerged or Gate 7 unauthorized is stale relative to Wade's
+explicit 2026-08-10 directive and will be corrected without erasing history.
+Gate 6 remains an immutable account-proof boundary; its executable and
+allowlist must remain reproducible and unchanged in behavior.
+
+The provider spot timestamp is documented only as Unix time without a unit.
+Gate 7 must evaluate seconds, milliseconds, microseconds, and nanoseconds
+against the local receipt time and fail closed unless exactly one interpretation
+is within the allowed past/future bounds.
+
+## Scope
+
+- Create or safely resume worktree `/Users/vaheedgorgeen/TradeBot-gate7` on branch `codex/gate7-xauusd-market-data-proof` from exact `origin/main`.
+- Record this active plan and synchronize the controlling Gate 7 authority, architecture, configuration, testing, risk, residual-gap, roadmap, project-state, and relevant ADR/index wording.
+- Add a separate `TRADEBOT_ENABLE_CTRADER_GATE7` default-off macOS-only proof target reusing Gate 6 transport, Keychain, OAuth, framing, correlation, and authentication boundaries where safe.
+- Add narrow provider-boundary state, message allowlists, current-generation/correlation checks, XAUUSD canonical resolution, complete symbol metadata validation, deterministic Decimal64 conversion, spot subscription, timestamp proof, bounded timeout, sanitized evidence, and volatile-state clearing.
+- Add deterministic synthetic tests for every specified acceptance and fail-closed condition, including an explicit proof that no order/position/depth/trendbar/historical/reconnect message can be emitted.
+- Run the required offline validation, sanitizer coverage, sensitive-data scan, and presence-only Keychain/configuration preflight before one provider session.
+- Execute exactly one bounded Gate 7 provider session, record only sanitized evidence, and stop immediately after the first usable fresh BBO or the first terminal failure.
+- Commit only Gate 7 files, push this branch, open a draft PR against `main`, and create the canonical sanitized transfer report.
+
+## Out of Scope
+
+- Any Gate 8 or Gate 9 implementation, reconnect/recovery experiment, depth,
+  trendbar, historical tick/data, positions, balances, margins, deals, order
+  state, order placement/modification/cancellation/closure, or live account.
+- Any live hostname, live mode, broker adapter, `BrokerGateway`,
+  `LiveDataAdapter`, `ExecutionEngine`, `RiskEngine`, `SystemConfig`,
+  `BACKTEST`, `PAPER`, or `LIVE` attachment.
+- Any modification of Gate 6's immutable allowlist, accepted behavior, or
+  historical evidence beyond accurate current-state references.
+- Any hardcoded account or symbol identifier, broker suffix/alias, cached
+  provider identifier, token reuse from Playground, credential inspection,
+  persistence, logging, hashing, or reporting.
+- Worktree deletion, cleanup, relocation, reset, branch deletion, history
+  rewrite, PR merge, approval, ready-for-merge state, or auto-merge.
+
+## Preconditions
+
+- `origin/main` has been fetched and verified at exact commit
+  `7fc244e2f3cc5a1e406d416898807562fcf58c6d`.
+- Permanent workspace `/Users/vaheedgorgeen/TradeBot` is clean of uncommitted
+  operator work; existing unrelated worktrees remain untouched.
+- Wade's directive authorizes authority reconciliation, implementation,
+  offline/provider validation, documentation, commit, push, draft PR, and
+  sanitized report within this exact Gate 7 scope.
+- Fixed endpoint is `demo.ctraderapi.com:5035`; fixed callback and accepted
+  local Keychain/configuration boundaries remain unchanged.
+- Provider credentials/configuration are available only through the accepted
+  local presence-only preflight; no secret value may enter output or files.
+
+## Assumptions
+
+- Homebrew Protobuf, curl, OpenSSL, AppKit, Security, and the pinned vendored
+  proto2 schemas used by Gate 6 remain locally available; if the exact reviewed
+  dependency contract is unavailable, offline execution stops before provider
+  traffic.
+- Gate 6 helper boundaries are reused only where they preserve Gate 7's stricter
+  scope, and any shared source changes preserve Gate 6 behavior and tests.
+- The provider returns account, symbol, and spot metadata with proto2 presence
+  bits available; absent safety-relevant fields are not interpreted as defaults.
+- The first usable fresh BBO is sufficient evidence; no second quote, reconnect,
+  or recovery attempt is permitted.
+
+## Invariants
+
+- Only `demo.ctraderapi.com:5035` is representable and reachable.
+- Every provider account and symbol ID is fresh, response-derived,
+  process-local, positive, checked, and securely cleared on every terminal
+  path; no identifier is persisted, logged, hashed, encoded, or reported.
+- Account selection is exactly present `isLive=false` plus present exact
+  `brokerTitleShort=FIBO`; zero or multiple matches fail closed.
+- Symbol selection canonicalizes only ASCII case and removes at most one `/`;
+  only `XAUUSD` and `XAU/USD` forms are eligible, never `GOLD`, suffixes, or
+  substring matches.
+- Complete `InstrumentSpec` construction occurs only after every required
+  light/full metadata, scale, volume, lot, contradiction, and checked-arithmetic
+  rule in the accepted Gate 2 contract passes.
+- Only heartbeat, application auth, token-account-list, account auth,
+  non-archived symbol list, full symbol by response-derived ID, one-symbol spot
+  subscription/unsubscription, and required fixed heartbeat/error responses are
+  admitted. All trading/order/position/depth/trendbar/historical payloads are
+  rejected before serialization or socket write.
+- Spot events are accepted only from the current connection generation and
+  after matching subscription response, with matching account/symbol IDs,
+  present positive bounded bid/ask, exact and normalized non-crossing, checked
+  spread, and exactly one proven timestamp unit.
+- Provider scale-5 prices are converted only by checked integer arithmetic using
+  `NearestTiesAwayFromZero` for scale reduction and checked multiplication for
+  expansion; no `double`, locale parsing, saturation, or unchecked cast is used.
+- Raw prices, exact pre-rounded values, tokens, codes, callback queries, and all
+  sensitive provider material remain ephemeral. Final evidence is sanitized.
+- The target is opt-in and detached from all normal runtime modes and order/risk
+  paths; default configure/build/test remain offline.
+
+## Expected Files Or Subsystems
+
+- `CMakeLists.txt` and new Gate 7 headers/source/runtime/main/test files under
+  the existing isolated cTrader proof surface.
+- `PLANS.md` and only the controlling current-state, roadmap, architecture,
+  configuration, testing, risk/security, Gate 7, residual-gap, and relevant ADR
+  documentation required by the observed implementation and outcome.
+- Canonical sanitized report under
+  `~/SR-Workspace/SR-Res-OUTBOX/required-final-output-logs/` (outside the Git
+  worktree and never containing credentials or account identifiers).
+
+## Implementation Steps
+
+1. Reconcile authority, phase/ADR status, Git/worktree safety, Gate 6 source,
+   pinned schemas, and local dependency/configuration boundaries.
+2. Add the opt-in Gate 7 provider-boundary implementation with a strict
+   pre-serialization outbound allowlist and response dispatcher.
+3. Add fresh account selection, symbol resolution, metadata/volume/scale
+   validation, timestamp-unit classifier, BBO conversion, timeout, and secure
+   terminal cleanup.
+4. Add synthetic tests for all requested happy paths, rejection paths,
+   allocation/cancellation/malformed-frame/provider-error paths, and no-order
+   capability proof.
+5. Run default build/CTest, Gate 5.1, Gate 6 opt-in, Gate 7 suite, sanitizer
+   coverage, diff/documentation/security audits, and presence-only preflight.
+6. Run exactly one controlled provider session; do not reconnect or retry.
+7. Synchronize current documentation and plan outcome, rerun applicable checks,
+   run PR-readiness/hygiene/handoff review, commit, push, open draft PR, and
+   write/hash the sanitized report.
+
+## Verification
+
+Required evidence includes:
+
+```sh
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+cmake -S . -B build/gate6 -DTRADEBOT_ENABLE_CTRADER_GATE6=ON
+cmake --build build/gate6
+ctest --test-dir build/gate6 --output-on-failure
+cmake -S . -B build/gate7 -DTRADEBOT_ENABLE_CTRADER_GATE7=ON
+cmake --build build/gate7
+ctest --test-dir build/gate7 --output-on-failure
+git diff --check
+```
+
+Also run the Gate 5.1 targeted suite, relevant Gate 6/Gate 7 ASan/UBSan
+coverage, documentation audits, tracked/in-scope-untracked sensitive-data
+scans, and presence-only Keychain/configuration preflight. Provider execution
+is forbidden until all required offline checks pass.
+
+## Risks And Decision Points
+
+- Missing or ambiguous spot timestamp units are a terminal `timestamp_unit_unproven`
+  outcome, not a reason to guess or broaden the freshness window.
+- Contradictory or incomplete metadata, cross-market values, wrong generation,
+  payload/correlation mismatch, malformed frames, allocation failure, provider
+  error, timeout, cancellation, or missing quote side fail closed.
+- Any secret/account-identifier exposure, unexpected outbound payload,
+  live-endpoint possibility, Gate 6 regression, or source-scope expansion is a
+  safety blocker requiring stop and report.
+- Provider failure does not authorize reconnect, repeated session, fallback,
+  live use, or a weaker validator. The implementation may still be committed
+  and proposed if its offline evidence is complete and the failure is sanitized.
+
+## Rollback
+
+With operator approval, revert only the Gate 7 branch commit(s); do not delete
+or alter any existing worktree, credential, Keychain item, provider account,
+or external state. No provider session in this gate may mutate external trading
+state. A failed proof must remain recorded as a sanitized outcome and cannot be
+made successful by reinterpretation.
+
+## Progress Log
+
+- 2026-08-10: Wade authorized complete Gate 7 execution in one goal.
+- 2026-08-10: Verified clean permanent `main` at authoritative merge commit
+  `7fc244e`; existing worktrees are preserved; created isolated Gate 7
+  worktree/branch from exact `origin/main`.
+- 2026-08-10: Authority audit found stale Gate 7/PR #25 wording that will be
+  corrected as current-state documentation without erasing historical records.
+- 2026-08-10: Default-disabled Gate 7 implementation and deterministic offline
+  coverage completed. Default, Gate 5.1, Gate 6, Gate 7, and sanitizer
+  validation passed; the only observed build warnings are existing warnings in
+  `AsyncNetworkClient.cpp` and `RiskEngine.cpp`.
+- 2026-08-10: Presence-only Keychain/configuration preflight passed. Exactly
+  one bounded Gate 7 provider process was started. It remained at the
+  in-process macOS Keychain access boundary without fixed-endpoint network
+  output; the same process was stopped safely after the bounded wait. No
+  provider response or market-data evidence was obtained, and no retry or
+  reconnect was attempted.
+- 2026-08-10: Wade authorized one new bounded retry from this checkpoint. The
+  retry passed the in-process Keychain read, entered fresh OAuth authorization,
+  emitted only `gate7_oauth_failed`, and exited with code 1 before account
+  discovery or the fixed demo data endpoint. No further retry was attempted.
+
+## Deviations
+
+The earlier attempt stopped at unresolved Security.framework Keychain access.
+Wade then authorized exactly one new retry. That retry passed Keychain access
+but failed at fresh OAuth authorization with `gate7_oauth_failed` before
+account discovery or the fixed demo data endpoint. It exited with code 1; no
+provider data proof, reconnect, or repeated retry occurred. This is a
+sanitized execution failure, not an offline implementation failure.
+
+## Completion Evidence
+
+Implementation and controlling documentation changed only in the 21 files
+listed by the original closeout report, followed by the bounded-retry status
+updates. The implementation commit is `53cc26a`
+(`feat: add Gate 7 XAUUSD market-data proof`) on
+`codex/gate7-xauusd-market-data-proof`, based on authoritative
+`origin/main` `7fc244e2f3cc5a1e406d416898807562fcf58c6d`. Draft PR:
+`https://github.com/wadewolfie999/TradeBot/pull/26`.
+
+Default CTest passed 7/7; Gate 6 opt-in CTest passed 8/8; Gate 7 opt-in CTest
+passed 8/8; Gate 5.1/Gate 6 sanitizer coverage passed 2/2; Gate 7 ASan/UBSan
+coverage passed 1/1; presence-only preflight exited 0; and `git diff --check`
+passed. The single provider process stopped before endpoint traffic at
+`gate7_oauth_failed`, exit code 1. No canonical symbol, instrument metadata,
+quote, or timestamp evidence exists.
+Sanitized report:
+`/Users/vaheedgorgeen/SR-Workspace/SR-Res-OUTBOX/required-final-output-logs/20260809T231550Z-tradebot-gate7-xauusd-market-data-proof.md`.
+Report SHA-256 excluding its hash line:
+`54d40b6a54b6f832d2c302531e5b77bca53542c6d11c308653fc1e09d963f9bf`.
+Gates 8–9 and live trading remain unauthorized regardless of Gate 7 outcome.
+
+## Final Outcome
+
+Gate 7 is incomplete — stopped safely at the evidenced blocker:
+`gate7_oauth_failed`. Implementation, offline validation, the one newly
+authorized retry, documentation synchronization, commit, push, draft PR, and
+the canonical sanitized report are complete. The exact next action is Wade
+review of draft PR #26/report; do not begin Gate 8 or retry provider traffic
+again within this task.

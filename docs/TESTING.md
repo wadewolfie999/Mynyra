@@ -24,6 +24,8 @@ Tests are evidence, not ceremony. TradeBot is financial-sensitive, so tests must
   - `ctrader_gate5_1_tests`
 - The opt-in Gate 6 configuration additionally registers
   `ctrader_gate6_tests`; normal builds remain unchanged.
+- The opt-in Gate 7 configuration additionally registers
+  `ctrader_gate7_tests`; normal builds remain unchanged.
 - All test executables link against `tradebot_core_lib`.
 - Some tests create temporary files under `/tmp`.
 
@@ -62,6 +64,19 @@ cmake --build build/gate6
 ctest --test-dir build/gate6 --output-on-failure
 ```
 
+Opt-in Gate 7 offline suite:
+
+```sh
+cmake -S . -B build/gate7 -DTRADEBOT_ENABLE_CTRADER_GATE7=ON
+cmake --build build/gate7 --parallel 4
+ctest --test-dir build/gate7 --output-on-failure
+```
+
+The Gate 7 suite is synthetic and performs no Keychain read, browser flow,
+socket connection, provider request, account access, market-data request, or
+order operation. Relevant sanitizer coverage is run from a separate
+`build/gate7-sanitize` configuration.
+
 ## Test Layers
 
 - Unit-style tests: direct class behavior inside phase test executables.
@@ -85,6 +100,13 @@ ctest --test-dir build/gate6 --output-on-failure
   cancellation, immutable Keychain-data copy ownership, allocation-failure
   termination/clearing, and bounded redacted diagnostics. Linking the runtime test
   target does not open a browser, read Keychain, or perform network traffic.
+- Gate 7 proof tests: `ctrader_gate7_tests` uses synthetic account, light/full
+  symbol, metadata, scale, volume, quote, timestamp, generation, correlation,
+  allowlist, malformed-frame, allocation-failure, timeout, cancellation,
+  provider-error, and terminal-clearing inputs. It proves the target cannot
+  construct trading/order/position/depth/trendbar/historical/reconnect
+  payloads. The single provider attempt is reported separately and is not a
+  substitute for offline tests.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
 ## Required Coverage By Change Type

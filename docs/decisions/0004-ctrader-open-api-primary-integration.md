@@ -4,9 +4,12 @@
 
 Accepted architecture direction; Gate 2 and Gate 5 were accepted by Wade on
 2026-08-07; Gate 5.1 merged in PR #24 and Wade accepted its implementation on
-2026-08-09. Gate 6 is separately authorized and executing under Wade's
-2026-08-10 `trading`-scope override. Gate 7, trading messages, and later gates
-remain blocked
+2026-08-09; PR #25 is merged; and Gate 6 execution was completed and accepted
+by Wade on 2026-08-10. Gate 7 was separately authorized: its implementation and
+offline validation passed; the initial attempt stopped at Keychain access; and
+the one newly authorized retry stopped at `gate7_oauth_failed` before account
+discovery or fixed-endpoint data traffic. Gate 7 execution is incomplete; Gate
+8, Gate 9, trading messages, and live use remain blocked.
 
 ## Context
 
@@ -82,6 +85,13 @@ risk, portfolio, replay, or analytics code.
 - Gate 5.1 source/testing authority is limited to the offline guard. It does
   not authorize a provider callback, OAuth, Gate 6A, Gate 6B, connectivity,
   account requests, market data, orders, merge, or live behavior.
+- Gate 7 is a separate default-disabled macOS-only proof target. It may use
+  only the fixed demo endpoint and a minimal non-trading market-data allowlist;
+  it must not attach to `BrokerGateway`, `LiveDataAdapter`, execution, risk, or
+  runtime modes. The initial Gate 7 attempt stopped at the local Keychain
+  permission boundary; the one newly authorized retry stopped at
+  `gate7_oauth_failed` before account discovery or fixed-endpoint data traffic.
+  No provider response or market-data evidence exists.
 
 ## Alternatives Considered
 
@@ -143,6 +153,11 @@ Costs and risks:
   exchange, cTrader connection, account request, market-data request, or order
   operation. The separately authorized Gate 6 runtime records only sanitized
   outcome categories.
+- Gate 7 offline tests cover its strict allowlist, fresh account/symbol
+  selection, numeric/timestamp validation, fail-closed state transitions, and
+  no-order capability. The initial attempt stopped at Keychain access; its one
+  authorized retry stopped at `gate7_oauth_failed` before endpoint data traffic.
+  No live, trading, reconnect, or Gate 8–9 action occurred.
 
 ## Reversal Conditions
 

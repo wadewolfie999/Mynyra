@@ -78,6 +78,27 @@ scope, account, credential, token, or identifier argument. The normal proof
 target is authorized only under the active Gate 6 directive and must not be run
 until the credential and redirect prerequisites are remediated.
 
+### Gate 7 Opt-In Proof Target
+
+The Gate 7 target is separate from Gate 6, default-disabled, macOS-only, and
+detached from `SystemConfig`, `BACKTEST`, `PAPER`, `LIVE`, `BrokerGateway`,
+`LiveDataAdapter`, `ExecutionEngine`, and `RiskEngine`:
+
+```sh
+cmake -S . -B build/gate7 -DTRADEBOT_ENABLE_CTRADER_GATE7=ON
+cmake --build build/gate7 --target ctrader_gate7_proof
+build/gate7/ctrader_gate7_proof --preflight
+```
+
+It represents only the fixed demo endpoint `demo.ctraderapi.com:5035`, the
+fixed loopback callback, and the `trading` scope. The outbound allowlist is
+limited to heartbeat, application authentication, fresh account discovery,
+account authentication, non-archived symbol discovery, full-symbol lookup,
+one-symbol spot subscription/unsubscription, and required fixed error flows.
+It cannot construct order, position, depth, trendbar, historical-data, or
+reconnect payloads. `--preflight` is presence-only and must exit before browser
+or provider traffic.
+
 ## Network Defaults
 
 `SystemConfig` contains default endpoint strings:

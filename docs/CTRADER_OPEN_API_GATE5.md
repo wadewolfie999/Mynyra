@@ -3,9 +3,13 @@
 ## Document Control
 
 - Status: Gate 5 design accepted by Wade on 2026-08-07; Gate 5.1 offline
-  controls merged in PR #24 and accepted by Wade on 2026-08-09; Gate 6 is
-  separately authorized and executing under Wade's 2026-08-10 `trading`
-  scope override; Gate 7 and all trading messages remain unauthorized
+  controls merged in PR #24 and accepted by Wade on 2026-08-09; PR #25 is
+  merged; Gate 6 execution was completed and accepted by Wade; and Gate 7 was
+  separately authorized on 2026-08-10. Gate 7 implementation/offline
+  validation passed; its initial attempt stopped at Keychain access; and its
+  one newly authorized retry stopped at `gate7_oauth_failed` before account
+  discovery or endpoint data traffic. Gate 8–9 and all trading messages remain
+  unauthorized.
 - Plans: accepted design `PLAN-20260806-ctrader-open-api-gate5`; offline
   implementation `PLAN-20260809-gate5-oauth-correlation-controls`
 - Decision: ADR 0004
@@ -522,4 +526,12 @@ with `trading` scope while withholding all trading-message authority. No exact
 FIBO title is required before Gate 6A; it must be observed there and approved
 before Gate 6B. Gates 7–9 remain blocked.
 
-`GATE 5.1 ACCEPTED — GATE 6 EXECUTION AUTHORIZED`
+`GATE 5.1 ACCEPTED — PR #25 MERGED — GATE 6 ACCEPTED — GATE 7 INCOMPLETE AT
+KEYCHAIN-PERMISSION BLOCKER`
+
+Gate 7 was separately authorized by Wade on 2026-08-10. Its isolated
+implementation and offline validation passed. The initial bounded process
+stopped at Keychain access; the one newly authorized retry stopped at
+`gate7_oauth_failed` before account discovery or fixed-endpoint data traffic,
+so no XAUUSD symbol, metadata, quote, or timestamp evidence was produced.
+Gates 8–9, order messages, and live trading remain unauthorized.

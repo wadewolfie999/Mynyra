@@ -141,6 +141,13 @@ Any live-capable path must support operator-controlled halt behavior that stops 
   identified before the token request and corrected for a fresh attempt. Gate
   6 makes no financial-limit, market-data, order-routing, or runtime-mode
   change.
+- PR #25 is merged. Wade separately authorized Gate 7 on 2026-08-10. Gate 7
+  remains a default-disabled macOS-only proof with a minimal non-trading
+  allowlist and no production-runtime attachment. The initial attempt stopped
+  at Keychain access; the one newly authorized retry stopped at
+  `gate7_oauth_failed` before account discovery or endpoint data traffic. No
+  account, symbol, quote, or timestamp evidence was obtained. No reconnect,
+  order, position, depth, historical-data, Gate 8–9, or live action occurred.
 
 ## External API And Network Risk
 

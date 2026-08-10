@@ -146,6 +146,40 @@ The cTrader Algo/cBot Bridge is
 `ABANDONED — NON-CONTROLLING — OUT OF SCOPE`. It is not part of this branch's
 runtime architecture or evidence base.
 
+### Gate 7 Fresh XAUUSD Proof Boundary
+
+Gate 7 is a separate, default-disabled, macOS-only proof target. It is not a
+provider adapter and is not attached to `BrokerGateway`, `LiveDataAdapter`,
+`ExecutionEngine`, `RiskEngine`, `SystemConfig`, or any `BACKTEST`, `PAPER`, or
+`LIVE` runtime mode. It reuses reviewed transport, framing, OAuth-correlation,
+Keychain, and authentication boundaries only where the stricter Gate 7
+controls remain intact.
+
+Its fixed outbound allowlist admits only heartbeat, application authentication,
+access-token account-list discovery, account authentication, non-archived symbol
+list retrieval, full-symbol lookup by a fresh response-derived ID, exactly one
+symbol's spot subscription/unsubscription, and required fixed error handling.
+Every order, position, depth, trendbar, historical-data, and reconnect payload
+is rejected before serialization or socket write. The dispatcher accepts only
+the corresponding responses, spot events, heartbeat, and fixed fail-closed
+provider errors.
+
+The state machine keeps account and symbol identifiers process-local and fresh.
+It requires exactly one present `isLive=false` and exact `brokerTitleShort=FIBO`
+account, canonicalizes only `XAUUSD`/`XAU/USD`, validates complete light/full
+metadata under the accepted Gate 2 integer contract, and accepts a spot event
+only after subscription acknowledgement and current-generation/account/symbol
+matching. Provider scale-5 bid/ask values are converted with checked integer
+arithmetic. The undocumented timestamp unit is proven only when exactly one of
+seconds, milliseconds, microseconds, or nanoseconds meets the bounded freshness
+window; otherwise the proof fails closed.
+
+The initial Gate 7 provider attempt on 2026-08-10 stopped at unresolved
+in-process macOS Keychain access. Wade then authorized one bounded retry; it
+reached fresh OAuth authorization and stopped with `gate7_oauth_failed` before
+account discovery or fixed-endpoint data traffic. No quote, metadata, or
+timestamp evidence was produced, and no reconnect occurred.
+
 ## Market-Data Boundary
 
 `CsvReader` and `LocalDataReplayAdapter` handle local data. `LiveDataAdapter` handles live-like and live-capable market data. Strategy, portfolio, and risk components should consume normalized candles or replay ticks through explicit interfaces rather than parsing external payloads directly.

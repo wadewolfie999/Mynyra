@@ -61,6 +61,9 @@ Financial safety and operator authority cannot be silently overridden by any doc
 - `CTRADER_OPEN_API_GATE3_BASELINE_INTEGRITY.md`: accepted-base,
   contamination, design-only diff, invariant, and future source-surface proof.
 - `CTRADER_OPEN_API_GATE5.md`: controlling OAuth, macOS Keychain, redaction, demo-only endpoint, account-ID, failure, and subsequent read-only proof design.
+- `CTRADER_OPEN_API_GATE7.md`: Gate 7's isolated fresh-XAUUSD proof boundary,
+  allowlist, numeric/timestamp validation, offline evidence, and sanitized
+  incomplete provider outcome.
 - `RESIDUAL_GAPS_BACKLOG.md`: current residual engineering and Open API proof gates; it does not authorize OAuth execution, connectivity, credentials in use, account access, orders, or live trading.
 - `decisions/`: permanent architecture decision records.
 
