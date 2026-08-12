@@ -174,11 +174,31 @@ arithmetic. The undocumented timestamp unit is proven only when exactly one of
 seconds, milliseconds, microseconds, or nanoseconds meets the bounded freshness
 window; otherwise the proof fails closed.
 
+The remaining Gate 7 transport corridor uses Gate-7-only typed outcomes for
+send, receive, provider category, correlation, malformed input, disconnect,
+token/account invalidation, and resource failure. Only fixed local diagnostic
+literals may leave the runtime; raw provider codes, descriptions, retry values,
+maintenance timestamps, correlations, identifiers, and payloads are cleared.
+The response and spot waits send only the already-allowed heartbeat on a
+nine-second monotonic cadence bounded by the original absolute deadline; they
+never reconnect or extend the wait.
+
+A well-formed current-generation/account/symbol spot event that omits a side or
+timestamp is incomplete, not accepted. Gate 7 retains no side or timestamp from
+that event and continues only inside the existing absolute spot deadline. The
+first single event containing both positive sides and a timestamp must pass all
+raw/normalized crossing, arithmetic, unit, and freshness checks. Wrong
+identity, malformed input, invalid prices, crossed markets, and protocol errors
+remain immediately terminal.
+
 The initial Gate 7 provider attempt on 2026-08-10 stopped at unresolved
-in-process macOS Keychain access. Wade then authorized one bounded retry; it
-reached fresh OAuth authorization and stopped with `gate7_oauth_failed` before
-account discovery or fixed-endpoint data traffic. No quote, metadata, or
-timestamp evidence was produced, and no reconnect occurred.
+in-process macOS Keychain access. A later generic OAuth failure was followed by
+an OAuth-hardened `gate7_oauth_callback_timeout`. The latest authorized process
+advanced through OAuth, the fixed demo TLS endpoint, application/account
+authentication, canonical XAUUSD resolution, and full metadata validation,
+then stopped at `gate7_subscription_failed`. The subscription subcause remains
+unclassified; no accepted subscription, quote, or timestamp evidence exists,
+and no reconnect occurred.
 
 ## Market-Data Boundary
 

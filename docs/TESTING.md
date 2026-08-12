@@ -114,15 +114,19 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
   target does not open a browser, read Keychain, or perform network traffic.
 - Gate 7 proof tests: `ctrader_gate7_tests` uses synthetic account, light/full
   symbol, metadata, scale, volume, quote, timestamp, generation, correlation,
-  allowlist, malformed-frame, allocation-failure, timeout, cancellation,
-  provider-error, terminal-clearing, and fixed OAuth listener/browser/timeout,
-  callback, denial, and state-correlation diagnostic inputs. It also verifies
-  the callback inactivity deadline is capped by the absolute correlation
-  deadline and injects callback-buffer allocation failure to prove the fixed
-  resource-exhaustion result. It proves the target cannot construct trading/
-  order/position/depth/trendbar/historical/reconnect payloads. The single
-  provider attempt is reported separately and is not a substitute for offline
-  tests.
+  allowlist, malformed-frame, allocation-failure, typed send/receive outcomes,
+  provider-error categories, disconnect/token/account controls, timeout,
+  cancellation, partial-event continuation, first-single-complete-BBO,
+  timestamp stale/future classification, heartbeat cadence, terminal-clearing,
+  and fixed OAuth listener/browser/timeout, callback, denial, and
+  state-correlation diagnostic inputs. It verifies that neither OAuth nor
+  residual diagnostics contain value-like or provider-supplied material. It
+  also verifies the callback inactivity deadline is capped by the absolute
+  correlation deadline, injects callback-buffer allocation failure to prove
+  the fixed resource-exhaustion result, and proves the heartbeat wait cannot
+  extend the absolute deadline. It proves the target cannot construct trading/
+  order/position/depth/trendbar/historical/reconnect payloads. Provider
+  execution is reported separately and is never a substitute for offline tests.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
 ## Required Coverage By Change Type
@@ -136,6 +140,13 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
   no-callback expiry, explicit cancellation, exact matching, single use,
   mismatch/replay rejection, state clearing, code discard, and fixed
   non-sensitive diagnostics.
+- Gate 7 residual transport changes: every typed send/receive result, closed
+  provider-category mapping, fixed diagnostic redaction, account/client/token
+  disconnect handling, exact subscription correlation/account proof,
+  incomplete-event non-retention, first-single-complete-BBO behavior, raw and
+  normalized crossing, timestamp missing/stale/future/unit ambiguity, bounded
+  heartbeat cadence, absolute deadlines, terminal clearing, and allocation
+  failure.
 - Analytics/output changes: generated CSV path, schema, reproducibility, and no secret leakage.
 - Documentation-only changes: `git diff --check`, doc grep audit, and index review.
 

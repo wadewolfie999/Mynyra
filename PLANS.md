@@ -1886,3 +1886,319 @@ Offline Gate 7 OAuth diagnostic hardening and its authorized review corrections
 are complete. Gate 7 provider execution remains incomplete at the historical
 `gate7_oauth_failed` outcome. No provider retry, account discovery, market-data
 proof, Gate 8, Gate 9, or live action is authorized by this plan.
+
+# Plan: Complete Gate 7 Residual Diagnostics and Proof
+
+- Plan ID: `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`
+- Status: Blocked at provider-execution checkpoint — bounded offline
+  implementation, final review, and verification complete; Wade authorized one
+  local commit and exact-commit rebuild, while provider execution still requires
+  bounded clock-skew evidence, passing local preflight, clear immediate
+  port/process state, and separate exact Wade approval
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Workstream II, Phase 24, Gate 7 only
+- Related issue or decision: Gate 7 failure-boundary and residual-risk inquest;
+  ADR 0004; accepted Gate 2 numeric contract
+- Created: 2026-08-13
+- Updated: 2026-08-13
+
+## Objective
+
+Classify the current subscription-transition failure, remove the known
+single-event BBO ambiguity, instrument the remaining subscription-to-quote
+corridor with fixed redacted outcomes, and prepare a reviewed evidence contract
+for one later separately authorized provider process. Success for the offline
+stage requires deterministic coverage and the complete verification matrix;
+success for Gate 7 itself still requires one reviewed process to emit
+`gate7_provider_sequence_complete` and `gate7_exit_code=0`.
+
+## Context
+
+The merged Gate 7 implementation and OAuth hardening are present at
+`origin/main` commit `f63a03b63a81d37203376d1e2dea267ece115c89`. A later
+operator-observed process advanced beyond OAuth, fixed demo TLS, application
+authentication, fresh demo-account selection and authentication, canonical
+XAUUSD resolution, and full metadata validation, then emitted
+`gate7_subscription_failed`. The current boolean transport collapses send,
+timeout, disconnect, provider-error, unexpected-payload, correlation, parsing,
+and proof-rejection outcomes. The spot path also terminally rejects the first
+provider-documented partial event instead of waiting within the existing
+absolute deadline for the first single complete BBO event.
+
+## Scope
+
+- Reconcile current-state documentation with the callback-timeout history and
+  latest subscription-boundary evidence without erasing earlier attempts.
+- Add Gate-7-only typed send/receive/provider-error outcomes for the remaining
+  subscription and spot path.
+- Map vetted provider error codes into closed fixed non-sensitive categories;
+  never print provider text, code, retry value, maintenance timestamp,
+  correlation, identifier, or payload.
+- Distinguish subscription state, send, timeout, transport, provider,
+  correlation, malformed response, account mismatch, proof, and resource
+  failures.
+- Accept only the first single spot event containing both positive sides and a
+  valid timestamp; never merge quote sides across events.
+- Continue past well-formed incomplete spot events only within the existing
+  absolute spot deadline, then emit a fixed incomplete-BBO timeout category.
+- Distinguish spot transport, payload, identity, numeric, crossing, timestamp,
+  arithmetic, incomplete-event, and resource outcomes.
+- Send only the already-allowed heartbeat on a bounded monotonic cadence while
+  waiting, without reconnecting or extending an absolute deadline.
+- Add deterministic tests for every new outcome, mapping, state transition,
+  redaction invariant, heartbeat deadline, and allocation path.
+- Prepare a persistent sanitized evidence template under the local TradeBot
+  handoff/evidence directory, never under `/tmp`.
+
+## Out of Scope
+
+- Gate 8, Gate 9, reconnect, recovery, retry within a process, or endpoint
+  fallback.
+- Any live hostname, live account, order, position, balance, margin, deal,
+  depth, trendbar, historical-data, or production runtime path.
+- `BrokerGateway`, `LiveDataAdapter`, `ExecutionEngine`, `RiskEngine`,
+  `SystemConfig`, financial limits, or runtime-mode coupling.
+- Gate 6 source, executable, allowlist, behavior, or accepted evidence.
+- Credential inspection, export, logging, copying, modification, or new
+  storage.
+- The independent OAuth completion-page defect.
+- Provider execution before a separate post-review Wade approval.
+- Commit, push, PR publication, merge, or release in this task unless Wade
+  issues an exact later instruction.
+
+## Preconditions
+
+- Work starts from clean tracked commit
+  `f63a03b63a81d37203376d1e2dea267ece115c89`, equal to `origin/main`, on the
+  scoped branch `codex/gate7-residual-diagnostics-and-proof`.
+- Wade's 2026-08-13 directions authorize the bounded offline plan,
+  implementation, final review, one local commit, and exact-commit rebuild
+  before the separate provider-run checkpoint.
+- Gate 7 remains default-disabled, macOS-only, demo-only, and detached from all
+  production modes and order/risk paths.
+- The provider execution gate remains NO-GO until source, tests, sanitizers,
+  diff, evidence template, port/process preconditions, and non-sensitive local
+  clock-health evidence are reviewed.
+
+## Assumptions
+
+- The operator-supplied latest markers and control-flow boundary are current
+  execution evidence; no credential or provider payload is required to record
+  that boundary.
+- The pinned official proto2 schema remains unchanged and locally available.
+- `ProtoMessage.clientMsgId` is expected to echo request correlation on the
+  subscription response; mismatch remains a terminal protocol anomaly.
+- Provider spot fields are optional, so an identity-valid event missing a
+  quote side or timestamp is incomplete rather than successful.
+
+## Invariants
+
+- Authorization, token, callback, and fixed demo endpoints remain unchanged.
+- OAuth scope remains `trading`; no trading message becomes representable.
+- The outbound allowlist is unchanged. The inbound allowlist may add only the
+  documented account-disconnect control event needed for fail-closed
+  classification.
+- Fresh response-derived account and symbol identifiers stay volatile,
+  positive, exact, and unreported.
+- Diagnostics are fixed literals only; raw provider text and payloads are
+  cleared before return.
+- Exact correlation, generation, account, symbol, scale, timestamp, and
+  arithmetic checks remain fail closed.
+- Incomplete spot events never contribute a side or timestamp to a later
+  event.
+- Heartbeats do not reconnect, widen message scope, or extend an absolute
+  deadline.
+- Default builds/tests remain offline and Gate 7 remains default-disabled.
+- Gate 6 files and behavior remain unchanged.
+
+## Files Expected to Change
+
+- `include/CTraderGate7Proof.hpp`, `src/CTraderGate7Proof.cpp`,
+  `src/CTraderGate7Runtime.mm`, and `tests/ctrader_gate7_tests.cpp`.
+- `PLANS.md`, `docs/PROJECT_STATE.md`, `docs/ROADMAP.md`,
+  `docs/ARCHITECTURE.md`, `docs/RISK_POLICY.md`, `docs/SECURITY.md`,
+  `docs/TESTING.md`, `docs/CTRADER_OPEN_API_GATE5.md`,
+  `docs/CTRADER_OPEN_API_GATE7.md`,
+  `docs/WORKSTREAM_ARCHITECTURE.md`, `docs/RESIDUAL_GAPS_BACKLOG.md`, and ADR
+  0004.
+- One ignored local sanitized evidence template under `handoffs/`.
+
+`src/CTraderGate6Runtime.mm`, Gate 6 headers/tests, normal runtime components,
+and financial-risk code are explicitly unchanged.
+
+## Implementation Steps
+
+1. Record the latest incomplete execution history and this bounded plan.
+2. Define typed Gate-7-only send, receive, provider-category, residual-failure,
+   timestamp, and heartbeat contracts.
+3. Implement subscription classification with immediate payload clearing.
+4. Implement first-single-complete-BBO handling within the existing absolute
+   spot deadline without combining events.
+5. Add bounded outbound heartbeats during response/spot waits.
+6. Add deterministic outcome, redaction, state-machine, allocation, malformed,
+   partial-event, deadline, and timestamp tests.
+7. Create and inspect the persistent sanitized evidence template.
+8. Run default, Gate 6, Gate 7, sanitizer, security, scope, and documentation
+   verification; inspect the complete diff.
+9. Stop and obtain separate Wade approval for exactly one provider process.
+10. After that future run, preserve/hash the sanitized evidence, synchronize
+    the observed outcome, and obtain Wade acceptance before marking Gate 7
+    complete.
+
+## Verification
+
+```sh
+git status --short
+git diff --name-status
+git diff --cached --name-status
+git diff --name-status origin/main
+git diff --check
+git diff --cached --check
+git diff --exit-code origin/main -- src/CTraderGate6Runtime.mm
+cmake -S . -B build
+cmake --build build --parallel 4
+ctest --test-dir build --output-on-failure
+cmake -S . -B build/gate6 -DTRADEBOT_ENABLE_CTRADER_GATE6=ON
+cmake --build build/gate6 --parallel 4
+ctest --test-dir build/gate6 --output-on-failure
+cmake -S . -B build/gate7 -DTRADEBOT_ENABLE_CTRADER_GATE7=ON
+cmake --build build/gate7 --parallel 4
+ctest --test-dir build/gate7 --output-on-failure
+cmake -S . -B build/gate7-sanitize \
+  -DTRADEBOT_ENABLE_CTRADER_GATE7=ON \
+  -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_OBJCXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+cmake --build build/gate7-sanitize --target ctrader_gate7_tests --parallel 4
+ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-failure
+```
+
+Also verify every runtime diagnostic against the closed fixed set, confirm the
+synthetic tests perform no browser/Keychain/DNS/TLS/provider operation, run
+Gate 7 `--preflight` only, scan tracked in-scope material without opening
+ignored credential files, record pre-existing warnings separately, and verify
+the evidence template contains no secret/identifier value or value-bearing
+field intended to capture one.
+
+## Risks
+
+- Typed diagnostics narrow a category but cannot independently prove a
+  provider-side root cause.
+- Incorrect error-code mapping could misclassify an external condition; unknown
+  codes therefore remain a fixed generic provider rejection.
+- Heartbeat scheduling inside a partial frame read must preserve frame state
+  and the original absolute deadline.
+- Partial-event continuation could become unsafe if sides or timestamps are
+  cached; the proof retains none of them between events.
+- Local wall-clock correctness remains required for freshness proof and must be
+  established before a provider run.
+- A provider run can still stop at OAuth, transport, subscription, partial BBO,
+  or timestamp failure and never authorizes a retry.
+
+## Rollback
+
+With Wade approval, revert only this residual Gate 7 patch. Do not reset
+history, delete unrelated work, alter Gate 6, remove credentials, or modify
+provider/account state. The independent OAuth completion-page repair remains a
+separate reversible change.
+
+## Progress Log
+
+- 2026-08-13: The residual-diagnostics plan was first defined as `Proposed` by
+  the operator-supplied failure-boundary inquest.
+- 2026-08-13: Wade directed Codex to execute the attachment, authorizing the
+  bounded offline plan and implementation while the attachment's separate
+  post-review provider-execution approval remains mandatory.
+- 2026-08-13: Verified clean tracked branch
+  `codex/gate7-merged-verification` at `f63a03b`, equal to `origin/main`, and
+  created `codex/gate7-residual-diagnostics-and-proof` without disturbing
+  ignored build, data, credential-like, or handoff artifacts.
+- 2026-08-13: Implemented Gate-7-only typed subscription/spot send, receive,
+  provider, disconnect, timeout, protocol, identity, proof, and resource
+  outcomes; fixed-literal redacted diagnostics; bounded heartbeat cadence; and
+  first-single-complete-BBO handling without cross-event aggregation.
+- 2026-08-13: Added deterministic mapping, diagnostic-set, timestamp,
+  heartbeat, partial-event, identity, and allocation tests; synchronized the
+  authoritative Gate 7, roadmap, architecture, risk, security, testing,
+  workstream, backlog, project-state, and ADR consequence records.
+- 2026-08-13: Created and reviewed the ignored persistent sanitized evidence
+  template at
+  `handoffs/PLAN-20260813-gate7-provider-evidence-template.md`; it contains no
+  credential, account-ID, symbol-ID, raw payload, raw provider value, or raw
+  quote value and no value-bearing field intended to capture one.
+- 2026-08-13: Completed default, Gate 6, Gate 7, and Gate 7 sanitizer builds
+  and tests with zero failures. The final Gate 7 build and full eight-test
+  suite, plus the targeted sanitizer test, passed after the last source edit.
+- 2026-08-13: Ran only the local `--preflight` proof mode. It emitted
+  `gate7_client_id_missing` and started no provider traffic. A privileged
+  network-time query was unavailable; the running local time daemon alone
+  does not prove bounded wall-clock skew. Provider execution therefore remains
+  NO-GO.
+- 2026-08-13: Wade accepted the offline implementation, verification, risks,
+  and NO-GO boundary, then authorized one final review, concrete in-scope
+  corrections, one local commit, and an exact-commit rebuild. Provider traffic,
+  credential-value access, publication, Gates 8–9, and live/order/risk changes
+  remain prohibited.
+- 2026-08-13: Final review added terminal clearing to caller-side residual
+  subscription/spot evidence copies and corrected commit-state wording that
+  would otherwise become stale immediately after the authorized local commit.
+  The targeted Gate 7 build/test and sanitizer test passed after this change.
+- 2026-08-13: Concurrent CTest runs in three build trees caused the shared
+  offline Phase 17 local-CA test to fail in the default and Gate 7 trees while
+  the identical Gate 6 test passed. Sequential default and Gate 7 reruns passed
+  7/7 and 8/8 respectively, confirming cross-build local-test resource
+  contention rather than a Gate 7 regression.
+
+## Deviations
+
+- The proposed provider process was not run. This is the required safe
+  deviation because local preflight failed, bounded clock skew was not proved,
+  immediate port/process state must be rechecked at launch time, and no separate
+  exact provider-process approval was issued. The authorized local
+  commit/rebuild checkpoint does not authorize provider traffic.
+- macOS `systemsetup` clock-source queries required administrator access and
+  were not escalated. The observed running `timed` daemon was recorded only as
+  partial local state, not accepted as clock-skew evidence.
+
+## Completion Evidence
+
+- Base commit:
+  `f63a03b63a81d37203376d1e2dea267ece115c89`, equal to `origin/main`; scoped
+  branch `codex/gate7-residual-diagnostics-and-proof`. The resulting authorized
+  local commit SHA and post-commit binary hash are recorded in the ignored
+  handoff rather than self-referenced in this tracked plan.
+- Default build: configure/build succeeded; CTest passed 7/7.
+- Gate 6 opt-in build: configure/build succeeded; CTest passed 8/8.
+- Gate 7 opt-in build: configure/build succeeded; CTest passed 8/8.
+- Gate 7 AddressSanitizer/UndefinedBehaviorSanitizer target: build succeeded;
+  targeted `ctrader_gate7_tests` passed 1/1.
+- Final-review Gate 7 targeted test passed 1/1, sanitizer targeted test passed
+  1/1, and the sequential full Gate 7 suite passed 8/8. The sequential default
+  suite passed 7/7 after the concurrent Phase 17 contention described above.
+- Pre-commit candidate binary SHA-256, superseded by the exact-commit rebuild:
+  `b3a5c831a6719c9a940c2554bf3dc76466a5bbc4bd74c20f76737986d2d3c38f`.
+- Evidence-template SHA-256:
+  `e74208ac5dd609f190f0c08f1a509f54314ad863b5b9e172c5119857d443b50c`.
+- CMake 4.4.0, Apple clang 21.0.0 for arm64-apple-darwin25.5.0,
+  libprotoc 35.1, pinned proto provenance commit
+  `3fd8bddfbe0cfc2ecfda079623dc4e498af11e66`, and all four recorded proto
+  source hashes matched.
+- Gate 6 sources/tests, vendor proto inputs, default CMake behavior,
+  `SystemConfig`, `BrokerGateway`, `LiveDataAdapter`, `ExecutionEngine`, and
+  `RiskEngine` have no diff from `origin/main`.
+- `git diff --check` passed; the complete final hygiene and documentation audit
+  is recorded in the plan handoff.
+
+## Final Outcome
+
+The bounded offline residual-diagnostics and proof patch is complete and
+verified. Gate 7 itself remains incomplete at the last evidenced subscription
+transition because no reviewed post-patch provider process was run. Provider
+execution is blocked by failed local preflight, unproved bounded clock skew,
+the required immediate port/process recheck, and the still-required separate
+Wade approval. The authorized local commit and exact-commit rebuild establish
+reviewable source/binary identity only; they do not grant provider authority.
+Gates 8–9, orders, live accounts, production runtime coupling, and live trading
+remain blocked regardless of this offline result.

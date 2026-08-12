@@ -4,12 +4,17 @@
 
 Wade separately authorized Gate 7 on 2026-08-10. The isolated implementation,
 deterministic offline validation, and subsequent offline-only OAuth diagnostic
-hardening are complete. The initial provider process stopped at Keychain
-access. Wade then authorized one new bounded retry; it reached fresh OAuth
-authorization and stopped at the sanitized blocker `gate7_oauth_failed` before
-account discovery or fixed-endpoint data traffic. Gate 7 did not pass; no
-provider response, symbol metadata, quote, or timestamp evidence was obtained.
-Gates 8–9, orders, and live trading remain unauthorized.
+hardening are complete. Historical processes stopped at Keychain access,
+generic OAuth failure, and a fixed `gate7_oauth_callback_timeout`. The latest
+authorized process advanced beyond OAuth, the fixed demo TLS connection,
+application authentication, fresh demo-account selection/authentication,
+canonical XAUUSD resolution, and full metadata validation, then emitted
+`gate7_subscription_failed`. Gate 7 did not pass; the subscription subcause is
+unclassified and no accepted subscription, quote, or timestamp evidence exists.
+Bounded residual diagnostics and first-single-complete-BBO work are authorized
+offline under `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`.
+Provider execution remains separately blocked. Gates 8–9, orders, and live
+trading remain unauthorized.
 
 ## Boundary
 
@@ -27,6 +32,14 @@ fixed provider error/heartbeat handling needed to fail closed. Trading, order,
 position, depth, trendbar, historical-data, and reconnect payloads are rejected
 before serialization or socket write. Gate 6's immutable boundary remains
 separate and unchanged.
+
+The residual Gate 7 path adds the documented account-disconnect event to the
+inbound fail-closed controls. It does not broaden the outbound allowlist. Typed
+transport outcomes distinguish local send failure, timeout, TLS/peer closure,
+common/Open API provider error category, token invalidation, account/client
+disconnect, unexpected allowed payload, correlation mismatch, malformed
+envelope, rejected inbound type, and resource exhaustion. Raw provider values
+are cleared and only fixed reviewed diagnostics are emitted.
 
 ## Selection and validation rules
 
@@ -46,35 +59,55 @@ separate and unchanged.
   scale-5 bid/ask, exact and normalized non-crossing, and checked spread are
   required. Prices use checked integer conversion and ties-away-from-zero scale
   reduction; no floating-point or saturation path is used.
+- A well-formed exact-identity event missing one side or timestamp is
+  incomplete, never successful. No side or timestamp is retained or combined
+  across events. Gate 7 continues only inside the unchanged absolute spot
+  deadline and accepts the first single event satisfying the complete BBO and
+  timestamp contract. Wrong identity, malformed input, invalid/overflowing
+  prices, raw/normalized crossing, and protocol violations remain immediately
+  terminal.
 - The provider timestamp is tested as seconds, milliseconds, microseconds, and
   nanoseconds. Exactly one interpretation must be within 120 seconds old and 5
-  seconds future of bounded local receipt time; otherwise the result is
-  `timestamp_unit_unproven`.
+  seconds future of bounded local receipt time. Stale, future, and ambiguous/
+  overflowing interpretations remain distinct fixed outcomes.
+- During response and spot waits, only the already-allowed heartbeat may be
+  sent on a nine-second monotonic cadence. It cannot reconnect or extend the
+  original absolute deadline.
 
 ## Offline evidence
 
 `ctrader_gate7_tests` covers allowlists, endpoint pinning, fresh account and
 canonical symbol selection, metadata and volume rules, integer arithmetic and
 overflow, crossed/missing/oversized quotes, generation/correlation/order,
-subscription ordering, timestamp classification, malformed/provider/timeout/
-cancellation/allocation failures, fixed OAuth listener/browser/timeout/callback/
-denial/state-correlation diagnostics, state clearing, and the inability to
-place, modify, cancel, or close an order. The callback runtime uses the actual
-accepted loopback peer address, a nonblocking accepted socket, and a two-second
-inactivity deadline capped by the absolute correlation deadline. Callback
-buffer allocation failure emits only the fixed resource-exhaustion category.
-The normal build remains unchanged unless
+subscription ordering, every typed send/receive/provider mapping, disconnect
+controls, partial-event continuation, first-single-complete-BBO behavior,
+timestamp classification, heartbeat deadline bounds, malformed/provider/
+timeout/cancellation/allocation failures, fixed OAuth listener/browser/timeout/
+callback/denial/state-correlation diagnostics, state clearing, and the
+inability to place, modify, cancel, or close an order. Both OAuth and residual
+diagnostic sets are checked for fixed, bounded, value-free literals. The
+callback runtime uses the actual accepted loopback peer address, a nonblocking
+accepted socket, and a two-second inactivity deadline capped by the absolute
+correlation deadline. Callback buffer allocation failure emits only the fixed
+resource-exhaustion category. The normal build remains unchanged unless
 `TRADEBOT_ENABLE_CTRADER_GATE7=ON` is supplied.
 
 ## Provider outcome
 
-Presence-only configuration/Keychain preflight passed for the retry. Exactly
-one new bounded Gate 7 process was started. It passed the actual Keychain read,
-entered fresh OAuth authorization, emitted only `gate7_oauth_failed`, and exited
-with code 1 before account discovery or fixed-endpoint data traffic. No
-reconnect or further provider session occurred. No account identifier,
-credential, token, raw price, or raw payload was persisted.
+The execution chronology is cumulative: Keychain boundary; generic OAuth
+boundary; hardened callback timeout; then latest subscription transition. The
+latest process's progress beyond dedicated earlier failure markers is
+control-flow evidence that it passed OAuth, fixed demo TLS, application/account
+authentication, canonical XAUUSD resolution, and full metadata validation. It
+is not evidence that the subscription request was written or accepted, or that
+a spot event was received. No account identifier, credential, token, raw price,
+or raw payload belongs in repository evidence.
 
-The exact next action is Wade review of the draft PR and updated offline
-evidence. The one authorized provider retry is exhausted; do not begin Gate 8
-or retry provider traffic again within this task.
+The residual offline patch, full verification matrix, final review, and
+sanitized persistent evidence template are complete. Wade authorized one local
+commit and exact-commit rebuild; their identities are recorded in the ignored
+handoff and do not authorize provider traffic. The provider checkpoint is still
+NO-GO because local `--preflight` stops at `gate7_client_id_missing`, bounded
+clock skew has not been established, immediate port/process state must be
+rechecked, and separate exact Wade approval is still required. Stop on the
+first fixed terminal result or complete success; do not retry or begin Gate 8.

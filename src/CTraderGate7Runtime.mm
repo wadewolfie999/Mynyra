@@ -105,9 +105,6 @@ enum class RuntimeFailure {
     AccountAuthentication,
     SymbolList,
     FullSymbol,
-    Subscription,
-    SpotTimeout,
-    SpotProof,
     ResourceExhausted
 };
 
@@ -131,9 +128,6 @@ std::string_view diagnostic(RuntimeFailure failure) noexcept
     case RuntimeFailure::AccountAuthentication: return "gate7_account_auth_failed";
     case RuntimeFailure::SymbolList: return "gate7_symbol_list_failed";
     case RuntimeFailure::FullSymbol: return "gate7_full_symbol_failed";
-    case RuntimeFailure::Subscription: return "gate7_subscription_failed";
-    case RuntimeFailure::SpotTimeout: return "gate7_spot_timeout";
-    case RuntimeFailure::SpotProof: return "gate7_spot_proof_failed";
     case RuntimeFailure::ResourceExhausted: return "gate7_resource_exhausted";
     }
     return "gate7_unknown_failure";
@@ -148,6 +142,12 @@ int fail(RuntimeFailure failure) noexcept
 int failOAuth(Gate7OAuthFailure failure) noexcept
 {
     std::cout << safeOAuthDiagnostic(failure) << '\n';
+    return 1;
+}
+
+int failResidual(Gate7ResidualFailure failure) noexcept
+{
+    std::cout << safeGate7ResidualDiagnostic(failure) << '\n';
     return 1;
 }
 
@@ -713,6 +713,35 @@ bool waitForFd(int fd, short events, Clock::time_point deadline) noexcept
     return false;
 }
 
+enum class WaitOutcome {
+    Ready,
+    Timeout,
+    Closed,
+    Failed
+};
+
+WaitOutcome waitForFdDetailed(int fd, short events,
+                              Clock::time_point deadline) noexcept
+{
+    while (Clock::now() < deadline) {
+        const auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+            deadline - Clock::now());
+        const int timeout = static_cast<int>(std::clamp<std::int64_t>(
+            remaining.count(), 1, 1000));
+        pollfd descriptor{fd, events, 0};
+        const int result = ::poll(&descriptor, 1, timeout);
+        if (result > 0) {
+            if ((descriptor.revents & (POLLERR | POLLHUP | POLLNVAL)) != 0) {
+                return WaitOutcome::Closed;
+            }
+            if ((descriptor.revents & events) != 0) return WaitOutcome::Ready;
+        } else if (result < 0 && errno != EINTR) {
+            return WaitOutcome::Failed;
+        }
+    }
+    return WaitOutcome::Timeout;
+}
+
 bool sendAll(int fd, std::string_view bytes) noexcept
 {
     std::size_t offset = 0;
@@ -1181,87 +1210,161 @@ public:
             + std::to_string(++sequence_) + "-" + std::string(step);
     }
 
-    bool send(std::uint32_t payloadType,
-              const google::protobuf::MessageLite& message,
-              std::string_view correlation) noexcept
+    Gate7SendOutcome sendDetailed(
+        std::uint32_t payloadType,
+        const google::protobuf::MessageLite& message,
+        std::string_view correlation,
+        Clock::time_point absoluteDeadline = Clock::time_point{}) noexcept
     {
-        if (!connected_ || !CTraderGate7Config::isAllowedOutboundPayload(payloadType)
-            || correlation.empty() || correlation.size() > 128
-            || !message.IsInitialized()) return false;
+        if (!connected_) return Gate7SendOutcome::InactiveConnection;
+        if (!CTraderGate7Config::isAllowedOutboundPayload(payloadType)) {
+            return Gate7SendOutcome::PayloadRejected;
+        }
+        if (correlation.empty() || correlation.size() > 128) {
+            return Gate7SendOutcome::CorrelationRejected;
+        }
+        if (!message.IsInitialized()) {
+            return Gate7SendOutcome::MessageUninitialized;
+        }
         std::string payload;
         std::string encoded;
         std::string frame;
         ProtoMessage envelope;
         try {
-            if (!message.SerializeToString(&payload)) return false;
+            if (!message.SerializeToString(&payload)) {
+                return Gate7SendOutcome::SerializationFailed;
+            }
             envelope.set_payloadtype(payloadType);
             envelope.set_payload(payload);
             envelope.set_clientmsgid(correlation.data(), correlation.size());
             secureClear(payload);
             if (!envelope.IsInitialized()
-                || !envelope.SerializeToString(&encoded)
-                || encoded.empty() || encoded.size() > MAX_PROTO_FRAME_BYTES) {
+                || !envelope.SerializeToString(&encoded)) {
                 secureClear(encoded);
                 envelope.Clear();
-                return false;
+                return Gate7SendOutcome::SerializationFailed;
+            }
+            if (encoded.empty() || encoded.size() > MAX_PROTO_FRAME_BYTES) {
+                secureClear(encoded);
+                envelope.Clear();
+                return Gate7SendOutcome::FrameTooLarge;
             }
             frame.reserve(encoded.size() + 4);
             appendUint32(frame, static_cast<std::uint32_t>(encoded.size()));
             frame.append(encoded);
             secureClear(encoded);
-            const bool result = writeExact(frame, Clock::now() + NETWORK_TIMEOUT);
+            const Clock::time_point deadline = absoluteDeadline
+                    == Clock::time_point{}
+                ? Clock::now() + NETWORK_TIMEOUT : absoluteDeadline;
+            const Gate7SendOutcome result = writeExactDetailed(frame, deadline);
             secureClear(frame);
             envelope.Clear();
+            if (result == Gate7SendOutcome::Sent) {
+                heartbeatCadence_.markOutbound(Clock::now());
+            }
             return result;
         } catch (...) {
             secureClear(payload); secureClear(encoded); secureClear(frame);
             envelope.Clear();
-            return false;
+            return Gate7SendOutcome::ResourceExhausted;
         }
+    }
+
+    bool send(std::uint32_t payloadType,
+              const google::protobuf::MessageLite& message,
+              std::string_view correlation) noexcept
+    {
+        return sendDetailed(payloadType, message, correlation)
+            == Gate7SendOutcome::Sent;
     }
 
     bool receiveExpected(std::uint32_t expected, std::string_view correlation,
                          std::string& payload) noexcept
     {
-        const auto deadline = Clock::now() + NETWORK_TIMEOUT;
-        while (Clock::now() < deadline) {
-            std::uint32_t type = 0;
-            std::string receivedCorrelation;
-            if (!receiveOne(type, receivedCorrelation, payload, deadline)) return false;
-            if (type == HEARTBEAT_EVENT) {
-                secureClear(receivedCorrelation); secureClear(payload);
-                continue;
-            }
-            const bool matched = type == expected
-                && receivedCorrelation == correlation;
-            secureClear(receivedCorrelation);
-            if (!matched) {
-                secureClear(payload);
-                return false;
-            }
-            return true;
-        }
-        return false;
+        Gate7ProviderErrorCategory providerCategory =
+            Gate7ProviderErrorCategory::None;
+        return receiveExpectedDetailed(expected, correlation, payload,
+                                       providerCategory)
+            == Gate7TransportOutcome::Expected;
     }
 
-    bool receiveSpot(std::string& payload, Clock::time_point deadline) noexcept
+    Gate7TransportOutcome receiveExpectedDetailed(
+        std::uint32_t expected,
+        std::string_view expectedCorrelation,
+        std::string& payload,
+        Gate7ProviderErrorCategory& providerCategory) noexcept
     {
+        const auto deadline = Clock::now() + NETWORK_TIMEOUT;
+        providerCategory = Gate7ProviderErrorCategory::None;
         while (Clock::now() < deadline) {
             std::uint32_t type = 0;
             std::string correlation;
-            if (!receiveOne(type, correlation, payload, deadline)) return false;
+            const Gate7TransportOutcome received = receiveOneDetailed(
+                type, correlation, payload, deadline);
+            if (received != Gate7TransportOutcome::Expected) return received;
+            if (type == HEARTBEAT_EVENT) {
+                secureClear(correlation);
+                secureClear(payload);
+                continue;
+            }
+            const Gate7TransportOutcome control = classifyControlPayload(
+                type, payload, providerCategory);
+            if (control != Gate7TransportOutcome::Expected) {
+                secureClear(correlation);
+                secureClear(payload);
+                return control;
+            }
+            if (type != expected) {
+                secureClear(correlation);
+                secureClear(payload);
+                return Gate7TransportOutcome::UnexpectedAllowedPayload;
+            }
+            if (correlation != expectedCorrelation) {
+                secureClear(correlation);
+                secureClear(payload);
+                return Gate7TransportOutcome::CorrelationMismatch;
+            }
             secureClear(correlation);
+            return Gate7TransportOutcome::Expected;
+        }
+        return Gate7TransportOutcome::Timeout;
+    }
+
+    Gate7TransportOutcome receiveSpotDetailed(
+        std::string& payload,
+        Clock::time_point deadline,
+        Gate7ProviderErrorCategory& providerCategory) noexcept
+    {
+        providerCategory = Gate7ProviderErrorCategory::None;
+        while (Clock::now() < deadline) {
+            std::uint32_t type = 0;
+            std::string correlation;
+            const Gate7TransportOutcome received = receiveOneDetailed(
+                type, correlation, payload, deadline);
+            secureClear(correlation);
+            if (received != Gate7TransportOutcome::Expected) return received;
             if (type == HEARTBEAT_EVENT) {
                 secureClear(payload);
                 continue;
             }
-            return type == PROTO_OA_SPOT_EVENT;
+            const Gate7TransportOutcome control = classifyControlPayload(
+                type, payload, providerCategory);
+            if (control != Gate7TransportOutcome::Expected) {
+                secureClear(payload);
+                return control;
+            }
+            if (type != PROTO_OA_SPOT_EVENT) {
+                secureClear(payload);
+                return Gate7TransportOutcome::UnexpectedAllowedPayload;
+            }
+            return Gate7TransportOutcome::Expected;
         }
-        return false;
+        return Gate7TransportOutcome::Timeout;
     }
 
 private:
-    bool writeExact(std::string_view bytes, Clock::time_point deadline) noexcept
+    Gate7SendOutcome writeExactDetailed(
+        std::string_view bytes, Clock::time_point deadline) noexcept
     {
         std::size_t offset = 0;
         while (offset < bytes.size() && Clock::now() < deadline) {
@@ -1274,19 +1377,76 @@ private:
             }
             const int error = SSL_get_error(ssl_, count);
             if (error == SSL_ERROR_WANT_READ) {
-                if (!waitForFd(fd_, POLLIN, deadline)) return false;
+                const WaitOutcome wait = waitForFdDetailed(fd_, POLLIN, deadline);
+                if (wait == WaitOutcome::Timeout) {
+                    return Gate7SendOutcome::WriteTimeout;
+                }
+                if (wait == WaitOutcome::Closed) {
+                    return Gate7SendOutcome::TransportClosed;
+                }
+                if (wait != WaitOutcome::Ready) {
+                    return Gate7SendOutcome::WriteFailed;
+                }
             } else if (error == SSL_ERROR_WANT_WRITE) {
-                if (!waitForFd(fd_, POLLOUT, deadline)) return false;
-            } else return false;
+                const WaitOutcome wait = waitForFdDetailed(fd_, POLLOUT, deadline);
+                if (wait == WaitOutcome::Timeout) {
+                    return Gate7SendOutcome::WriteTimeout;
+                }
+                if (wait == WaitOutcome::Closed) {
+                    return Gate7SendOutcome::TransportClosed;
+                }
+                if (wait != WaitOutcome::Ready) {
+                    return Gate7SendOutcome::WriteFailed;
+                }
+            } else if (error == SSL_ERROR_ZERO_RETURN
+                       || (error == SSL_ERROR_SYSCALL && count == 0)) {
+                return Gate7SendOutcome::TransportClosed;
+            } else {
+                return Gate7SendOutcome::WriteFailed;
+            }
         }
-        return offset == bytes.size();
+        return offset == bytes.size() ? Gate7SendOutcome::Sent
+                                      : Gate7SendOutcome::WriteTimeout;
     }
 
-    bool readExact(char* bytes, std::size_t size,
-                   Clock::time_point deadline) noexcept
+    Gate7SendOutcome sendHeartbeat(Clock::time_point deadline) noexcept
+    {
+        ProtoHeartbeatEvent heartbeat;
+        std::string correlation;
+        try {
+            correlation = nextCorrelation("heartbeat");
+            const Gate7SendOutcome sent = sendDetailed(
+                HEARTBEAT_EVENT, heartbeat, correlation, deadline);
+            secureClear(correlation);
+            heartbeat.Clear();
+            return sent;
+        } catch (...) {
+            secureClear(correlation);
+            heartbeat.Clear();
+            return Gate7SendOutcome::ResourceExhausted;
+        }
+    }
+
+    Gate7TransportOutcome readExactDetailed(
+        char* bytes, std::size_t size,
+        Clock::time_point deadline) noexcept
     {
         std::size_t offset = 0;
         while (offset < size && Clock::now() < deadline) {
+            if (heartbeatCadence_.due(Clock::now())) {
+                const Gate7SendOutcome heartbeat = sendHeartbeat(deadline);
+                if (heartbeat == Gate7SendOutcome::ResourceExhausted) {
+                    return Gate7TransportOutcome::ResourceExhausted;
+                }
+                if (heartbeat == Gate7SendOutcome::WriteTimeout) {
+                    return Gate7TransportOutcome::Timeout;
+                }
+                if (heartbeat != Gate7SendOutcome::Sent) {
+                    return Gate7TransportOutcome::TransportClosed;
+                }
+            }
+            const Clock::time_point waitDeadline =
+                heartbeatCadence_.boundedWaitDeadline(deadline, Clock::now());
             const int count = SSL_read(ssl_, bytes + offset,
                 static_cast<int>(std::min<std::size_t>(
                     size - offset, static_cast<std::size_t>(INT_MAX))));
@@ -1296,47 +1456,172 @@ private:
             }
             const int error = SSL_get_error(ssl_, count);
             if (error == SSL_ERROR_WANT_READ) {
-                if (!waitForFd(fd_, POLLIN, deadline)) return false;
+                const WaitOutcome wait = waitForFdDetailed(
+                    fd_, POLLIN, waitDeadline);
+                if (wait == WaitOutcome::Timeout) {
+                    if (Clock::now() >= deadline) {
+                        return Gate7TransportOutcome::Timeout;
+                    }
+                    continue;
+                }
+                if (wait == WaitOutcome::Closed) {
+                    return Gate7TransportOutcome::TransportClosed;
+                }
+                if (wait != WaitOutcome::Ready) {
+                    return Gate7TransportOutcome::TransportClosed;
+                }
             } else if (error == SSL_ERROR_WANT_WRITE) {
-                if (!waitForFd(fd_, POLLOUT, deadline)) return false;
-            } else return false;
+                const WaitOutcome wait = waitForFdDetailed(
+                    fd_, POLLOUT, waitDeadline);
+                if (wait == WaitOutcome::Timeout) {
+                    if (Clock::now() >= deadline) {
+                        return Gate7TransportOutcome::Timeout;
+                    }
+                    continue;
+                }
+                if (wait == WaitOutcome::Closed) {
+                    return Gate7TransportOutcome::TransportClosed;
+                }
+                if (wait != WaitOutcome::Ready) {
+                    return Gate7TransportOutcome::TransportClosed;
+                }
+            } else if (error == SSL_ERROR_ZERO_RETURN
+                       || (error == SSL_ERROR_SYSCALL && count == 0)) {
+                return Gate7TransportOutcome::TransportClosed;
+            } else {
+                return Gate7TransportOutcome::TransportClosed;
+            }
         }
-        return offset == size;
+        return offset == size ? Gate7TransportOutcome::Expected
+                              : Gate7TransportOutcome::Timeout;
     }
 
-    bool receiveOne(std::uint32_t& type, std::string& correlation,
-                    std::string& payload, Clock::time_point deadline) noexcept
+    Gate7TransportOutcome receiveOneDetailed(
+        std::uint32_t& type,
+        std::string& correlation,
+        std::string& payload,
+        Clock::time_point deadline) noexcept
     {
         std::array<unsigned char, 4> header{};
-        if (!readExact(reinterpret_cast<char*>(header.data()), header.size(), deadline)) return false;
+        const Gate7TransportOutcome headerRead = readExactDetailed(
+            reinterpret_cast<char*>(header.data()), header.size(), deadline);
+        if (headerRead != Gate7TransportOutcome::Expected) return headerRead;
         const std::uint32_t length = (static_cast<std::uint32_t>(header[0]) << 24)
             | (static_cast<std::uint32_t>(header[1]) << 16)
             | (static_cast<std::uint32_t>(header[2]) << 8)
             | static_cast<std::uint32_t>(header[3]);
-        if (length == 0 || length > MAX_PROTO_FRAME_BYTES) return false;
+        if (length == 0 || length > MAX_PROTO_FRAME_BYTES) {
+            return Gate7TransportOutcome::MalformedEnvelope;
+        }
         std::string frame;
         try {
             frame.resize(length, '\0');
-            if (!readExact(frame.data(), frame.size(), deadline)) {
+            const Gate7TransportOutcome frameRead = readExactDetailed(
+                frame.data(), frame.size(), deadline);
+            if (frameRead != Gate7TransportOutcome::Expected) {
                 secureClear(frame);
-                return false;
+                return frameRead;
             }
             ProtoMessage envelope;
-            if (!envelope.ParseFromString(frame) || !envelope.IsInitialized()
-                || !CTraderGate7Config::isAllowedInboundPayload(
+            if (!envelope.ParseFromString(frame) || !envelope.IsInitialized()) {
+                secureClear(frame);
+                envelope.Clear();
+                return Gate7TransportOutcome::MalformedEnvelope;
+            }
+            if (!CTraderGate7Config::isAllowedInboundPayload(
                     envelope.payloadtype())) {
                 secureClear(frame);
-                return false;
+                envelope.Clear();
+                return Gate7TransportOutcome::InboundTypeRejected;
             }
             type = envelope.payloadtype();
             if (envelope.has_clientmsgid()) correlation = envelope.clientmsgid();
             if (envelope.has_payload()) payload = envelope.payload();
             secureClear(frame);
             envelope.Clear();
-            return true;
+            return Gate7TransportOutcome::Expected;
         } catch (...) {
             secureClear(frame); secureClear(correlation); secureClear(payload);
-            return false;
+            return Gate7TransportOutcome::ResourceExhausted;
+        }
+    }
+
+    Gate7TransportOutcome classifyControlPayload(
+        std::uint32_t type,
+        std::string& payload,
+        Gate7ProviderErrorCategory& providerCategory) noexcept
+    {
+        try {
+            if (type == ERROR_RES) {
+                ProtoErrorRes error;
+                if (!error.ParseFromString(payload) || !error.IsInitialized()) {
+                    error.Clear();
+                    return Gate7TransportOutcome::MalformedEnvelope;
+                }
+                providerCategory = classifyGate7ProviderError(error.errorcode());
+                if (error.has_errorcode()) secureClear(*error.mutable_errorcode());
+                if (error.has_description()) secureClear(*error.mutable_description());
+                if (error.has_maintenanceendtimestamp()) {
+                    error.set_maintenanceendtimestamp(0);
+                }
+                error.Clear();
+                return Gate7TransportOutcome::CommonProviderError;
+            }
+            if (type == PROTO_OA_ERROR_RES) {
+                ProtoOAErrorRes error;
+                if (!error.ParseFromString(payload) || !error.IsInitialized()) {
+                    error.Clear();
+                    return Gate7TransportOutcome::MalformedEnvelope;
+                }
+                providerCategory = classifyGate7ProviderError(error.errorcode());
+                if (error.has_errorcode()) secureClear(*error.mutable_errorcode());
+                if (error.has_description()) secureClear(*error.mutable_description());
+                error.set_ctidtraderaccountid(0);
+                if (error.has_maintenanceendtimestamp()) {
+                    error.set_maintenanceendtimestamp(0);
+                }
+                if (error.has_retryafter()) error.set_retryafter(0);
+                error.Clear();
+                return Gate7TransportOutcome::OpenApiProviderError;
+            }
+            if (type == PROTO_OA_ACCOUNTS_TOKEN_INVALIDATED_EVENT) {
+                ProtoOAAccountsTokenInvalidatedEvent event;
+                if (!event.ParseFromString(payload) || !event.IsInitialized()) {
+                    event.Clear();
+                    return Gate7TransportOutcome::MalformedEnvelope;
+                }
+                for (int index = 0;
+                     index < event.ctidtraderaccountids_size(); ++index) {
+                    event.set_ctidtraderaccountids(index, 0);
+                }
+                event.clear_ctidtraderaccountids();
+                if (event.has_reason()) secureClear(*event.mutable_reason());
+                event.Clear();
+                return Gate7TransportOutcome::TokenInvalidated;
+            }
+            if (type == PROTO_OA_ACCOUNT_DISCONNECT_EVENT) {
+                ProtoOAAccountDisconnectEvent event;
+                if (!event.ParseFromString(payload) || !event.IsInitialized()) {
+                    event.Clear();
+                    return Gate7TransportOutcome::MalformedEnvelope;
+                }
+                event.set_ctidtraderaccountid(0);
+                event.Clear();
+                return Gate7TransportOutcome::AccountDisconnected;
+            }
+            if (type == PROTO_OA_CLIENT_DISCONNECT_EVENT) {
+                ProtoOAClientDisconnectEvent event;
+                if (!event.ParseFromString(payload) || !event.IsInitialized()) {
+                    event.Clear();
+                    return Gate7TransportOutcome::MalformedEnvelope;
+                }
+                if (event.has_reason()) secureClear(*event.mutable_reason());
+                event.Clear();
+                return Gate7TransportOutcome::ClientDisconnected;
+            }
+            return Gate7TransportOutcome::Expected;
+        } catch (...) {
+            return Gate7TransportOutcome::ResourceExhausted;
         }
     }
 
@@ -1347,6 +1632,7 @@ private:
     SSL_CTX* context_{nullptr};
     SSL* ssl_{nullptr};
     bool connected_{false};
+    Gate7HeartbeatCadence heartbeatCadence_;
 };
 
 void clearApplicationRequest(ProtoOAApplicationAuthReq& request) noexcept
@@ -1578,7 +1864,12 @@ std::optional<Gate7FullSymbolEvidence> requestFullSymbol(
     }
 }
 
-std::optional<Gate7SubscriptionEvidence> subscribeToSpot(
+struct Gate7SubscriptionResult final {
+    Gate7ResidualFailure failure{Gate7ResidualFailure::None};
+    std::optional<Gate7SubscriptionEvidence> evidence;
+};
+
+Gate7SubscriptionResult subscribeToSpot(
     StrictTransport& transport, std::int64_t accountId,
     std::int64_t symbolId) noexcept
 {
@@ -1591,25 +1882,49 @@ std::optional<Gate7SubscriptionEvidence> subscribeToSpot(
         request.add_symbolid(symbolId);
         request.set_subscribetospottimestamp(true);
         correlation = transport.nextCorrelation("spot-subscription");
-        const bool sent = transport.send(PROTO_OA_SUBSCRIBE_SPOTS_REQ,
-                                         request, correlation);
+        const Gate7SendOutcome sent = transport.sendDetailed(
+            PROTO_OA_SUBSCRIBE_SPOTS_REQ, request, correlation);
         request.set_ctidtraderaccountid(0); request.clear_symbolid(); request.Clear();
-        if (!sent || !transport.receiveExpected(PROTO_OA_SUBSCRIBE_SPOTS_RES,
-                                                 correlation, payload)) return std::nullopt;
+        if (sent != Gate7SendOutcome::Sent) {
+            secureClear(correlation);
+            return {classifyGate7SubscriptionSendFailure(sent), std::nullopt};
+        }
+        Gate7ProviderErrorCategory providerCategory =
+            Gate7ProviderErrorCategory::None;
+        const Gate7TransportOutcome received = transport.receiveExpectedDetailed(
+            PROTO_OA_SUBSCRIBE_SPOTS_RES, correlation, payload,
+            providerCategory);
+        if (received != Gate7TransportOutcome::Expected) {
+            secureClear(payload);
+            secureClear(correlation);
+            return {classifyGate7SubscriptionReceiveFailure(
+                        received, providerCategory),
+                    std::nullopt};
+        }
         if (!response.ParseFromString(payload) || !response.IsInitialized()
             || response.payloadtype() != PROTO_OA_SUBSCRIBE_SPOTS_RES) {
-            secureClear(payload); response.Clear(); return std::nullopt;
+            secureClear(payload); secureClear(correlation); response.Clear();
+            return {Gate7ResidualFailure::SubscriptionResponseMalformed,
+                    std::nullopt};
+        }
+        if (response.ctidtraderaccountid() != accountId
+            || response.ctidtraderaccountid() <= 0) {
+            secureClear(payload); secureClear(correlation);
+            response.set_ctidtraderaccountid(0); response.Clear();
+            return {Gate7ResidualFailure::SubscriptionAccountMismatch,
+                    std::nullopt};
         }
         Gate7SubscriptionEvidence evidence{
             transport.generation(), true, true,
             response.ctidtraderaccountid(), symbolId, 1};
         secureClear(payload); secureClear(correlation);
         response.set_ctidtraderaccountid(0); response.Clear();
-        return evidence;
+        return {Gate7ResidualFailure::None, std::move(evidence)};
     } catch (...) {
         secureClear(payload); secureClear(correlation); response.Clear();
         request.set_ctidtraderaccountid(0); request.clear_symbolid(); request.Clear();
-        return std::nullopt;
+        return {Gate7ResidualFailure::SubscriptionResourceExhausted,
+                std::nullopt};
     }
 }
 
@@ -1620,47 +1935,103 @@ std::uint64_t systemTimestampNs() noexcept
     return nanos <= 0 ? 0 : static_cast<std::uint64_t>(nanos);
 }
 
-bool receiveFirstSpot(StrictTransport& transport, std::int64_t accountId,
-                     std::int64_t symbolId, CTraderGate7Proof& proof,
-                     Gate7Decision& decision) noexcept
+Gate7ResidualFailure receiveFirstCompleteSpot(
+    StrictTransport& transport,
+    std::int64_t accountId,
+    std::int64_t symbolId,
+    CTraderGate7Proof& proof,
+    Gate7Decision& decision) noexcept
 {
     const auto deadline = Clock::now() + SPOT_TIMEOUT;
-    std::string payload;
-    if (!transport.receiveSpot(payload, deadline)) {
-        secureClear(accountId); secureClear(symbolId);
-        return false;
-    }
-    ProtoOASpotEvent event;
-    try {
-        if (!event.ParseFromString(payload) || !event.IsInitialized()
-            || event.payloadtype() != PROTO_OA_SPOT_EVENT) {
-            secureClear(payload); event.Clear();
+    bool sawIncompleteSide = false;
+    bool sawMissingTimestamp = false;
+    while (Clock::now() < deadline) {
+        std::string payload;
+        Gate7ProviderErrorCategory providerCategory =
+            Gate7ProviderErrorCategory::None;
+        const Gate7TransportOutcome received = transport.receiveSpotDetailed(
+            payload, deadline, providerCategory);
+        if (received != Gate7TransportOutcome::Expected) {
+            secureClear(payload);
             secureClear(accountId); secureClear(symbolId);
-            return false;
+            if (received == Gate7TransportOutcome::Timeout) {
+                if (sawIncompleteSide && sawMissingTimestamp) {
+                    return Gate7ResidualFailure::SpotCompleteBboTimeout;
+                }
+                if (sawIncompleteSide) {
+                    return Gate7ResidualFailure::SpotIncompleteSideTimeout;
+                }
+                if (sawMissingTimestamp) {
+                    return Gate7ResidualFailure::SpotTimestampMissingTimeout;
+                }
+            }
+            return classifyGate7SpotReceiveFailure(received, providerCategory);
         }
-        Gate7SpotEvidence evidence{
-            transport.generation(), true, true,
-            event.ctidtraderaccountid(), event.symbolid(),
-            event.has_bid() ? std::optional<std::uint64_t>(event.bid()) : std::nullopt,
-            event.has_ask() ? std::optional<std::uint64_t>(event.ask()) : std::nullopt,
-            event.has_timestamp() ? std::optional<std::int64_t>(event.timestamp()) : std::nullopt,
-            systemTimestampNs()};
-        secureClear(payload); event.set_ctidtraderaccountid(0);
-        event.set_symbolid(0); event.Clear();
-        if (evidence.accountId != accountId || evidence.symbolId != symbolId) {
-            decision = Gate7Decision::InvalidAccountIdentifier;
-        } else {
+        ProtoOASpotEvent event;
+        try {
+            if (!event.ParseFromString(payload) || !event.IsInitialized()
+                || event.payloadtype() != PROTO_OA_SPOT_EVENT
+                || event.trendbar_size() != 0 || event.has_sessionclose()) {
+                secureClear(payload); event.Clear();
+                secureClear(accountId); secureClear(symbolId);
+                return Gate7ResidualFailure::SpotResponseMalformed;
+            }
+            Gate7SpotEvidence evidence{
+                transport.generation(), true, true,
+                event.ctidtraderaccountid(), event.symbolid(),
+                event.has_bid()
+                    ? std::optional<std::uint64_t>(event.bid()) : std::nullopt,
+                event.has_ask()
+                    ? std::optional<std::uint64_t>(event.ask()) : std::nullopt,
+                event.has_timestamp()
+                    ? std::optional<std::int64_t>(event.timestamp()) : std::nullopt,
+                systemTimestampNs()};
+            secureClear(payload); event.set_ctidtraderaccountid(0);
+            event.set_symbolid(0); event.Clear();
+            if (evidence.accountId != accountId || evidence.accountId <= 0) {
+                secureClear(accountId); secureClear(symbolId);
+                return Gate7ResidualFailure::SpotAccountMismatch;
+            }
+            if (evidence.symbolId != symbolId || evidence.symbolId <= 0) {
+                secureClear(accountId); secureClear(symbolId);
+                return Gate7ResidualFailure::SpotSymbolMismatch;
+            }
             decision = proof.acceptSpot(std::move(evidence));
+            if (decision == Gate7Decision::QuoteProofSucceeded) {
+                secureClear(accountId); secureClear(symbolId);
+                return Gate7ResidualFailure::None;
+            }
+            if (decision == Gate7Decision::IncompleteSpotSide) {
+                sawIncompleteSide = true;
+                continue;
+            }
+            if (decision == Gate7Decision::IncompleteSpotTimestamp) {
+                sawMissingTimestamp = true;
+                continue;
+            }
+            secureClear(accountId); secureClear(symbolId);
+            return decision == Gate7Decision::ResourceExhausted
+                ? Gate7ResidualFailure::SpotResourceExhausted
+                : Gate7ResidualFailure::SpotProofRejected;
+        } catch (...) {
+            secureClear(payload); event.set_ctidtraderaccountid(0);
+            event.set_symbolid(0); event.Clear();
+            secureClear(accountId); secureClear(symbolId);
+            decision = Gate7Decision::ResourceExhausted;
+            return Gate7ResidualFailure::SpotResourceExhausted;
         }
-        secureClear(accountId); secureClear(symbolId);
-        return decision == Gate7Decision::QuoteProofSucceeded;
-    } catch (...) {
-        secureClear(payload); event.set_ctidtraderaccountid(0);
-        event.set_symbolid(0); event.Clear();
-        secureClear(accountId); secureClear(symbolId);
-        decision = Gate7Decision::ResourceExhausted;
-        return false;
     }
+    secureClear(accountId); secureClear(symbolId);
+    if (sawIncompleteSide && sawMissingTimestamp) {
+        return Gate7ResidualFailure::SpotCompleteBboTimeout;
+    }
+    if (sawIncompleteSide) {
+        return Gate7ResidualFailure::SpotIncompleteSideTimeout;
+    }
+    if (sawMissingTimestamp) {
+        return Gate7ResidualFailure::SpotTimestampMissingTimeout;
+    }
+    return Gate7ResidualFailure::SpotResponseTimeout;
 }
 
 std::string decimalEvidence(const Decimal64& value)
@@ -1876,31 +2247,44 @@ int runCTraderGate7Proof(bool preflightOnly)
         auto subscriptionSymbol = proof.symbolIdForSubscription();
         if (!subscriptionSymbol.has_value()) {
             transport.close(); clearToken(token); clientSecret.clear(); clientId->clear(); clientId.reset(); curl_global_cleanup();
-            return fail(RuntimeFailure::Subscription);
+            return failResidual(
+                Gate7ResidualFailure::SubscriptionStateUnavailable);
         }
         VolatileId subscribedSymbol{*subscriptionSymbol};
         secureClear(*subscriptionSymbol);
         subscriptionSymbol.reset();
-        auto subscription = subscribeToSpot(transport, requestAccount.value,
-                                            subscribedSymbol.value);
-        if (!subscription.has_value()
-            || proof.acceptSubscription(std::move(*subscription))
-                != Gate7Decision::SubscriptionReady) {
+        Gate7SubscriptionResult subscription = subscribeToSpot(
+            transport, requestAccount.value, subscribedSymbol.value);
+        if (subscription.failure != Gate7ResidualFailure::None) {
             transport.close(); clearToken(token); clientSecret.clear(); clientId->clear(); clientId.reset(); curl_global_cleanup();
-            return fail(RuntimeFailure::Subscription);
+            return failResidual(subscription.failure);
+        }
+        if (!subscription.evidence.has_value()
+            || proof.acceptSubscription(std::move(*subscription.evidence))
+                != Gate7Decision::SubscriptionReady) {
+            transport.close(); clearToken(token); clientSecret.clear();
+            clientId->clear(); clientId.reset(); curl_global_cleanup();
+            return failResidual(
+                Gate7ResidualFailure::SubscriptionProofRejected);
         }
         Gate7Decision quoteDecision = Gate7Decision::Timeout;
-        const bool received = receiveFirstSpot(transport, requestAccount.value,
-                                               subscribedSymbol.value, proof,
-                                               quoteDecision);
+        const Gate7ResidualFailure quoteFailure = receiveFirstCompleteSpot(
+            transport, requestAccount.value, subscribedSymbol.value, proof,
+            quoteDecision);
         transport.close();
         const auto quote = proof.quoteEvidence();
         clearToken(token); clientSecret.clear(); clientId->clear(); clientId.reset();
         curl_global_cleanup();
-        if (!received || quoteDecision != Gate7Decision::QuoteProofSucceeded
+        if (quoteFailure != Gate7ResidualFailure::None
+            || quoteDecision != Gate7Decision::QuoteProofSucceeded
             || !quote.has_value()) {
-            return fail(received ? RuntimeFailure::SpotProof
-                                 : RuntimeFailure::SpotTimeout);
+            if (quoteFailure == Gate7ResidualFailure::SpotProofRejected) {
+                std::cout << CTraderGate7Proof::safeDiagnostic(quoteDecision)
+                          << '\n';
+                return 1;
+            }
+            return failResidual(quoteFailure == Gate7ResidualFailure::None
+                ? Gate7ResidualFailure::SpotProofRejected : quoteFailure);
         }
 
         std::cout << "gate7_provider_sequence_complete\n"

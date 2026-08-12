@@ -143,11 +143,25 @@ Any live-capable path must support operator-controlled halt behavior that stops 
   change.
 - PR #25 is merged. Wade separately authorized Gate 7 on 2026-08-10. Gate 7
   remains a default-disabled macOS-only proof with a minimal non-trading
-  allowlist and no production-runtime attachment. The initial attempt stopped
-  at Keychain access; the one newly authorized retry stopped at
-  `gate7_oauth_failed` before account discovery or endpoint data traffic. No
-  account, symbol, quote, or timestamp evidence was obtained. No reconnect,
-  order, position, depth, historical-data, Gate 8–9, or live action occurred.
+  allowlist and no production-runtime attachment. Historical attempts stopped
+  at Keychain access, generic OAuth failure, and a fixed OAuth callback timeout.
+  The latest authorized process passed OAuth, fixed demo TLS,
+  application/account authentication, canonical XAUUSD resolution, and full
+  metadata validation before `gate7_subscription_failed`. Its subcause remains
+  unclassified; no accepted subscription, quote, or timestamp evidence exists.
+  No reconnect, order, position, depth, historical-data, Gate 8–9, or live
+  action occurred.
+- Gate 7 residual work must classify subscription/spot transport outcomes using
+  fixed local categories and clear provider material before return. A partial
+  spot event is never accepted, cached, or combined with another event. The
+  proof may continue only within its unchanged absolute deadline for a single
+  event containing both positive sides and a valid timestamp. Heartbeats must
+  use the existing allowlist, monotonic cadence, and original deadline without
+  reconnect or retry.
+- The next provider process is NO-GO until the residual plan, diff, full offline
+  and sanitizer matrix, diagnostic redaction, persistent sanitized evidence
+  template, local clock health, port/process preconditions, exact binary/commit,
+  and a separate one-process Wade approval are all reviewed.
 
 ## External API And Network Risk
 

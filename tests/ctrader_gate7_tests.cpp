@@ -74,11 +74,16 @@ using tradebot::ctrader::Gate7AccountRecord;
 using tradebot::ctrader::Gate7Decision;
 using tradebot::ctrader::Gate7FullSymbol;
 using tradebot::ctrader::Gate7FullSymbolEvidence;
+using tradebot::ctrader::Gate7HeartbeatCadence;
 using tradebot::ctrader::Gate7LightSymbol;
+using tradebot::ctrader::Gate7ProviderErrorCategory;
+using tradebot::ctrader::Gate7ResidualFailure;
+using tradebot::ctrader::Gate7SendOutcome;
 using tradebot::ctrader::Gate7SpotEvidence;
 using tradebot::ctrader::Gate7SubscriptionEvidence;
 using tradebot::ctrader::Gate7SymbolsListEvidence;
 using tradebot::ctrader::Gate7TimestampUnit;
+using tradebot::ctrader::Gate7TransportOutcome;
 
 constexpr std::uint64_t GENERATION = 77;
 constexpr std::int64_t ACCOUNT = 101;
@@ -202,8 +207,189 @@ void test_endpoint_and_allowlist()
             "spot event not admitted inbound");
     require(CTraderGate7Config::isAllowedInboundPayload(2142),
             "provider error not admitted inbound");
+    require(CTraderGate7Config::isAllowedInboundPayload(2164),
+            "account disconnect event not admitted inbound");
     require(!CTraderGate7Config::isAllowedInboundPayload(2126),
             "execution event admitted inbound");
+}
+
+void test_residual_transport_and_provider_classification()
+{
+    struct ProviderCase {
+        std::string_view code;
+        Gate7ProviderErrorCategory expected;
+    };
+    constexpr std::array<ProviderCase, 6> providerCases = {{
+        {"ACCOUNT_NOT_AUTHORIZED", Gate7ProviderErrorCategory::AccountRejected},
+        {"CH_ACCESS_TOKEN_INVALID", Gate7ProviderErrorCategory::TokenInvalidated},
+        {"SYMBOL_NOT_FOUND", Gate7ProviderErrorCategory::SymbolRejected},
+        {"BLOCKED_PAYLOAD_TYPE", Gate7ProviderErrorCategory::RateLimited},
+        {"SERVER_IS_UNDER_MAINTENANCE",
+         Gate7ProviderErrorCategory::ProviderUnavailable},
+        {"PRIVATE_TEXT", Gate7ProviderErrorCategory::Other}
+    }};
+    for (const auto& testCase : providerCases) {
+        require(tradebot::ctrader::classifyGate7ProviderError(testCase.code)
+                    == testCase.expected,
+                "provider error code was misclassified");
+    }
+
+    struct SendCase {
+        Gate7SendOutcome outcome;
+        Gate7ResidualFailure expected;
+    };
+    constexpr std::array<SendCase, 11> sendCases = {{
+        {Gate7SendOutcome::Sent, Gate7ResidualFailure::None},
+        {Gate7SendOutcome::InactiveConnection,
+         Gate7ResidualFailure::SubscriptionTransportClosed},
+        {Gate7SendOutcome::PayloadRejected,
+         Gate7ResidualFailure::SubscriptionSendFailed},
+        {Gate7SendOutcome::CorrelationRejected,
+         Gate7ResidualFailure::SubscriptionSendFailed},
+        {Gate7SendOutcome::MessageUninitialized,
+         Gate7ResidualFailure::SubscriptionSendFailed},
+        {Gate7SendOutcome::SerializationFailed,
+         Gate7ResidualFailure::SubscriptionSendFailed},
+        {Gate7SendOutcome::FrameTooLarge,
+         Gate7ResidualFailure::SubscriptionSendFailed},
+        {Gate7SendOutcome::WriteTimeout,
+         Gate7ResidualFailure::SubscriptionSendFailed},
+        {Gate7SendOutcome::TransportClosed,
+         Gate7ResidualFailure::SubscriptionTransportClosed},
+        {Gate7SendOutcome::WriteFailed,
+         Gate7ResidualFailure::SubscriptionSendFailed},
+        {Gate7SendOutcome::ResourceExhausted,
+         Gate7ResidualFailure::SubscriptionResourceExhausted}
+    }};
+    for (const auto& testCase : sendCases) {
+        require(tradebot::ctrader::classifyGate7SubscriptionSendFailure(
+                    testCase.outcome) == testCase.expected,
+                "subscription send outcome was misclassified");
+    }
+
+    struct ReceiveCase {
+        Gate7TransportOutcome outcome;
+        Gate7ProviderErrorCategory provider;
+        Gate7ResidualFailure subscription;
+        Gate7ResidualFailure spot;
+    };
+    constexpr std::array<ReceiveCase, 13> receiveCases = {{
+        {Gate7TransportOutcome::Expected, Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::None, Gate7ResidualFailure::None},
+        {Gate7TransportOutcome::Timeout, Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionResponseTimeout,
+         Gate7ResidualFailure::SpotResponseTimeout},
+        {Gate7TransportOutcome::TransportClosed,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionTransportClosed,
+         Gate7ResidualFailure::SpotTransportClosed},
+        {Gate7TransportOutcome::CommonProviderError,
+         Gate7ProviderErrorCategory::AccountRejected,
+         Gate7ResidualFailure::SubscriptionAccountRejected,
+         Gate7ResidualFailure::SpotAccountRejected},
+        {Gate7TransportOutcome::OpenApiProviderError,
+         Gate7ProviderErrorCategory::SymbolRejected,
+         Gate7ResidualFailure::SubscriptionSymbolRejected,
+         Gate7ResidualFailure::SpotSymbolRejected},
+        {Gate7TransportOutcome::TokenInvalidated,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionTokenInvalidated,
+         Gate7ResidualFailure::SpotTokenInvalidated},
+        {Gate7TransportOutcome::AccountDisconnected,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionTransportClosed,
+         Gate7ResidualFailure::SpotTransportClosed},
+        {Gate7TransportOutcome::ClientDisconnected,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionTransportClosed,
+         Gate7ResidualFailure::SpotTransportClosed},
+        {Gate7TransportOutcome::UnexpectedAllowedPayload,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionUnexpectedPayload,
+         Gate7ResidualFailure::SpotUnexpectedPayload},
+        {Gate7TransportOutcome::CorrelationMismatch,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionCorrelationRejected,
+         Gate7ResidualFailure::SpotUnexpectedPayload},
+        {Gate7TransportOutcome::MalformedEnvelope,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionResponseMalformed,
+         Gate7ResidualFailure::SpotResponseMalformed},
+        {Gate7TransportOutcome::InboundTypeRejected,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionUnexpectedPayload,
+         Gate7ResidualFailure::SpotUnexpectedPayload},
+        {Gate7TransportOutcome::ResourceExhausted,
+         Gate7ProviderErrorCategory::None,
+         Gate7ResidualFailure::SubscriptionResourceExhausted,
+         Gate7ResidualFailure::SpotResourceExhausted}
+    }};
+    for (const auto& testCase : receiveCases) {
+        require(tradebot::ctrader::classifyGate7SubscriptionReceiveFailure(
+                    testCase.outcome, testCase.provider)
+                    == testCase.subscription,
+                "subscription receive outcome was misclassified");
+        require(tradebot::ctrader::classifyGate7SpotReceiveFailure(
+                    testCase.outcome, testCase.provider) == testCase.spot,
+                "spot receive outcome was misclassified");
+    }
+
+    struct ProviderMappingCase {
+        Gate7ProviderErrorCategory category;
+        Gate7ResidualFailure subscription;
+        Gate7ResidualFailure spot;
+    };
+    constexpr std::array<ProviderMappingCase, 6> providerMappings = {{
+        {Gate7ProviderErrorCategory::AccountRejected,
+         Gate7ResidualFailure::SubscriptionAccountRejected,
+         Gate7ResidualFailure::SpotAccountRejected},
+        {Gate7ProviderErrorCategory::TokenInvalidated,
+         Gate7ResidualFailure::SubscriptionTokenInvalidated,
+         Gate7ResidualFailure::SpotTokenInvalidated},
+        {Gate7ProviderErrorCategory::SymbolRejected,
+         Gate7ResidualFailure::SubscriptionSymbolRejected,
+         Gate7ResidualFailure::SpotSymbolRejected},
+        {Gate7ProviderErrorCategory::RateLimited,
+         Gate7ResidualFailure::SubscriptionRateLimited,
+         Gate7ResidualFailure::SpotRateLimited},
+        {Gate7ProviderErrorCategory::ProviderUnavailable,
+         Gate7ResidualFailure::SubscriptionProviderUnavailable,
+         Gate7ResidualFailure::SpotProviderUnavailable},
+        {Gate7ProviderErrorCategory::Other,
+         Gate7ResidualFailure::SubscriptionProviderRejected,
+         Gate7ResidualFailure::SpotProviderRejected}
+    }};
+    for (const auto& testCase : providerMappings) {
+        require(tradebot::ctrader::classifyGate7SubscriptionReceiveFailure(
+                    Gate7TransportOutcome::OpenApiProviderError,
+                    testCase.category) == testCase.subscription,
+                "subscription provider category was misclassified");
+        require(tradebot::ctrader::classifyGate7SpotReceiveFailure(
+                    Gate7TransportOutcome::OpenApiProviderError,
+                    testCase.category) == testCase.spot,
+                "spot provider category was misclassified");
+    }
+}
+
+void test_heartbeat_cadence_is_bounded()
+{
+    using Clock = Gate7HeartbeatCadence::Clock;
+    Gate7HeartbeatCadence cadence;
+    const auto now = Clock::time_point{} + std::chrono::seconds(100);
+    require(!cadence.due(now), "unarmed heartbeat cadence was due");
+    cadence.markOutbound(now);
+    require(!cadence.due(now + std::chrono::seconds(8)),
+            "heartbeat cadence fired early");
+    require(cadence.due(now + std::chrono::seconds(9)),
+            "heartbeat cadence missed its bounded interval");
+    require(cadence.boundedWaitDeadline(
+                now + std::chrono::seconds(20), now)
+                == now + std::chrono::seconds(9),
+            "heartbeat wait did not stop at the cadence deadline");
+    require(cadence.boundedWaitDeadline(
+                now + std::chrono::seconds(5), now)
+                == now + std::chrono::seconds(5),
+            "heartbeat cadence extended the absolute deadline");
 }
 
 void test_oauth_diagnostics_are_fixed_and_complete()
@@ -501,10 +687,18 @@ void test_integer_price_conversion_and_timestamp_proof()
                 static_cast<std::uint64_t>(TIMESTAMP_SECONDS - 121), RECEIPT_NS)
                 .has_value(),
             "stale timestamp accepted");
+    require(CTraderGate7Proof::classifyTimestampDetailed(
+                static_cast<std::uint64_t>(TIMESTAMP_SECONDS - 121), RECEIPT_NS)
+                .decision == Gate7Decision::TimestampStale,
+            "stale timestamp did not retain its fixed category");
     require(!CTraderGate7Proof::classifyTimestamp(
                 static_cast<std::uint64_t>(TIMESTAMP_SECONDS + 6), RECEIPT_NS)
                 .has_value(),
             "future timestamp accepted");
+    require(CTraderGate7Proof::classifyTimestampDetailed(
+                static_cast<std::uint64_t>(TIMESTAMP_SECONDS + 6), RECEIPT_NS)
+                .decision == Gate7Decision::TimestampFuture,
+            "future timestamp did not retain its fixed category");
     require(!CTraderGate7Proof::classifyTimestamp(1, 1000000000ULL)
                 .has_value(),
             "ambiguous timestamp unit accepted");
@@ -530,12 +724,34 @@ void test_spot_proof_and_terminal_clearing()
                 && proof.quoteEvidence()->instrument.complete,
             "sanitized normalized quote evidence was incomplete");
 
+    CTraderGate7Proof partialSide(GENERATION);
+    prepareForSpot(partialSide);
+    require(partialSide.acceptSpot(spotEvidence(std::nullopt, 23456800))
+                == Gate7Decision::IncompleteSpotSide,
+            "partial provider spot event was not classified as incomplete");
+    require(!partialSide.isTerminal(),
+            "partial spot event terminally consumed the proof");
+    require(partialSide.acceptSpot(spotEvidence())
+                == Gate7Decision::QuoteProofSucceeded,
+            "later single complete BBO was not accepted");
+
+    CTraderGate7Proof partialTimestamp(GENERATION);
+    prepareForSpot(partialTimestamp);
+    require(partialTimestamp.acceptSpot(
+                spotEvidence(23456789, 23456800, std::nullopt))
+                == Gate7Decision::IncompleteSpotTimestamp,
+            "timestamp-free event was not classified as incomplete");
+    require(!partialTimestamp.isTerminal(),
+            "timestamp-free event terminally consumed the proof");
+    require(partialTimestamp.acceptSpot(spotEvidence())
+                == Gate7Decision::QuoteProofSucceeded,
+            "complete event after missing timestamp was not accepted");
+
     for (const auto& invalidSpot : {
-             spotEvidence(std::nullopt, 23456800),
              spotEvidence(0, 23456800),
              spotEvidence(std::numeric_limits<std::uint64_t>::max(), 23456800),
              spotEvidence(23456800, 23456789),
-             spotEvidence(23456789, 23456800, std::nullopt)}) {
+             spotEvidence(23456800, 23456789, std::nullopt)}) {
         CTraderGate7Proof rejected(GENERATION);
         prepareForSpot(rejected);
         const Gate7Decision decision = rejected.acceptSpot(invalidSpot);
@@ -554,11 +770,27 @@ void test_spot_proof_and_terminal_clearing()
     require(mismatch.acceptSpot(std::move(wrong))
                 == Gate7Decision::SubscriptionMismatch,
             "subscription mismatch accepted");
+
+    CTraderGate7Proof wrongAccount(GENERATION);
+    prepareForSpot(wrongAccount);
+    auto accountMismatch = spotEvidence();
+    accountMismatch.accountId = ACCOUNT + 1;
+    require(wrongAccount.acceptSpot(std::move(accountMismatch))
+                == Gate7Decision::SpotAccountMismatch,
+            "spot account mismatch was not distinguished");
+
+    CTraderGate7Proof wrongSymbol(GENERATION);
+    prepareForSpot(wrongSymbol);
+    auto symbolMismatch = spotEvidence();
+    symbolMismatch.symbolId = SYMBOL + 1;
+    require(wrongSymbol.acceptSpot(std::move(symbolMismatch))
+                == Gate7Decision::SpotSymbolMismatch,
+            "spot symbol mismatch was not distinguished");
 }
 
 void test_terminal_errors_and_sanitized_diagnostics()
 {
-    constexpr std::array<Gate7Decision, 33> decisions = {
+    constexpr std::array<Gate7Decision, 36> decisions = {
         Gate7Decision::Ready,
         Gate7Decision::AccountAuthenticationReady,
         Gate7Decision::SymbolListReady,
@@ -580,7 +812,10 @@ void test_terminal_errors_and_sanitized_diagnostics()
         Gate7Decision::FullSymbolMismatch,
         Gate7Decision::SymbolMetadataRejected,
         Gate7Decision::SubscriptionMismatch,
-        Gate7Decision::MissingSpotSide,
+        Gate7Decision::IncompleteSpotSide,
+        Gate7Decision::IncompleteSpotTimestamp,
+        Gate7Decision::SpotAccountMismatch,
+        Gate7Decision::SpotSymbolMismatch,
         Gate7Decision::InvalidSpot,
         Gate7Decision::CrossedMarket,
         Gate7Decision::CheckedArithmeticFailed,
@@ -597,8 +832,9 @@ void test_terminal_errors_and_sanitized_diagnostics()
         const std::string_view diagnostic = CTraderGate7Proof::safeDiagnostic(decision);
         require(!diagnostic.empty() && diagnostic.size() <= 64,
                 "diagnostic was empty or unbounded");
-        require(diagnostic.find('=') == std::string_view::npos,
-                "diagnostic contained a value-like assignment");
+        require(diagnostic.find_first_of("=?& \t\r\n")
+                    == std::string_view::npos,
+                "diagnostic contained value-like/provider text");
         require(diagnostic.find("FIBO") == std::string_view::npos,
                 "diagnostic contained provider metadata");
     }
@@ -619,6 +855,52 @@ void test_terminal_errors_and_sanitized_diagnostics()
                     && !proof.symbolIdForSubscription().has_value(),
                 "terminal failure retained volatile state");
     }
+
+    constexpr std::array<Gate7ResidualFailure, 34> residualFailures = {
+        Gate7ResidualFailure::None,
+        Gate7ResidualFailure::SubscriptionStateUnavailable,
+        Gate7ResidualFailure::SubscriptionSendFailed,
+        Gate7ResidualFailure::SubscriptionResponseTimeout,
+        Gate7ResidualFailure::SubscriptionTransportClosed,
+        Gate7ResidualFailure::SubscriptionAccountRejected,
+        Gate7ResidualFailure::SubscriptionTokenInvalidated,
+        Gate7ResidualFailure::SubscriptionSymbolRejected,
+        Gate7ResidualFailure::SubscriptionRateLimited,
+        Gate7ResidualFailure::SubscriptionProviderUnavailable,
+        Gate7ResidualFailure::SubscriptionProviderRejected,
+        Gate7ResidualFailure::SubscriptionUnexpectedPayload,
+        Gate7ResidualFailure::SubscriptionCorrelationRejected,
+        Gate7ResidualFailure::SubscriptionResponseMalformed,
+        Gate7ResidualFailure::SubscriptionAccountMismatch,
+        Gate7ResidualFailure::SubscriptionProofRejected,
+        Gate7ResidualFailure::SubscriptionResourceExhausted,
+        Gate7ResidualFailure::SpotResponseTimeout,
+        Gate7ResidualFailure::SpotTransportClosed,
+        Gate7ResidualFailure::SpotAccountRejected,
+        Gate7ResidualFailure::SpotTokenInvalidated,
+        Gate7ResidualFailure::SpotSymbolRejected,
+        Gate7ResidualFailure::SpotRateLimited,
+        Gate7ResidualFailure::SpotProviderUnavailable,
+        Gate7ResidualFailure::SpotProviderRejected,
+        Gate7ResidualFailure::SpotUnexpectedPayload,
+        Gate7ResidualFailure::SpotResponseMalformed,
+        Gate7ResidualFailure::SpotAccountMismatch,
+        Gate7ResidualFailure::SpotSymbolMismatch,
+        Gate7ResidualFailure::SpotIncompleteSideTimeout,
+        Gate7ResidualFailure::SpotTimestampMissingTimeout,
+        Gate7ResidualFailure::SpotCompleteBboTimeout,
+        Gate7ResidualFailure::SpotProofRejected,
+        Gate7ResidualFailure::SpotResourceExhausted
+    };
+    for (const auto failure : residualFailures) {
+        const std::string_view diagnostic =
+            tradebot::ctrader::safeGate7ResidualDiagnostic(failure);
+        require(!diagnostic.empty() && diagnostic.size() <= 64,
+                "residual diagnostic was empty or unbounded");
+        require(diagnostic.find_first_of("=?& \t\r\n")
+                    == std::string_view::npos,
+                "residual diagnostic contained value-like/provider text");
+    }
 }
 
 } // namespace
@@ -631,6 +913,10 @@ int main()
     test_oauth_diagnostics_are_fixed_and_complete();
     std::cerr << "[ctrader_gate7_tests] OAuth callback read hardening...\n";
     test_oauth_callback_read_hardening();
+    std::cerr << "[ctrader_gate7_tests] residual transport outcomes...\n";
+    test_residual_transport_and_provider_classification();
+    std::cerr << "[ctrader_gate7_tests] heartbeat cadence...\n";
+    test_heartbeat_cadence_is_bounded();
     std::cerr << "[ctrader_gate7_tests] canonical symbol rule...\n";
     test_canonical_symbol_rule();
     std::cerr << "[ctrader_gate7_tests] account selection...\n";
