@@ -1,5 +1,6 @@
 #include "CTraderGate7Runtime.hpp"
 
+#include "CTraderGate7OAuthDiagnostics.hpp"
 #include "CTraderGate7Proof.hpp"
 #include "CTraderOAuthCorrelation.hpp"
 #include "OpenApiCommonMessages.pb.h"
@@ -95,7 +96,6 @@ enum class RuntimeFailure {
     KeychainRead,
     TokenUnavailable,
     TokenRefreshFailed,
-    OAuthFailed,
     TokenExchangeFailed,
     TokenRejected,
     DemoTlsConnection,
@@ -122,7 +122,6 @@ std::string_view diagnostic(RuntimeFailure failure) noexcept
     case RuntimeFailure::KeychainRead: return "gate7_keychain_read_failed";
     case RuntimeFailure::TokenUnavailable: return "gate7_token_unavailable";
     case RuntimeFailure::TokenRefreshFailed: return "gate7_token_refresh_failed";
-    case RuntimeFailure::OAuthFailed: return "gate7_oauth_failed";
     case RuntimeFailure::TokenExchangeFailed: return "gate7_token_exchange_failed";
     case RuntimeFailure::TokenRejected: return "gate7_token_rejected";
     case RuntimeFailure::DemoTlsConnection: return "gate7_demo_tls_connection_failed";
@@ -143,6 +142,12 @@ std::string_view diagnostic(RuntimeFailure failure) noexcept
 int fail(RuntimeFailure failure) noexcept
 {
     std::cout << diagnostic(failure) << '\n';
+    return 1;
+}
+
+int failOAuth(Gate7OAuthFailure failure) noexcept
+{
+    std::cout << safeOAuthDiagnostic(failure) << '\n';
     return 1;
 }
 
@@ -834,34 +839,52 @@ bool openBrowserUrl(std::string_view url) noexcept
     }
 }
 
-std::optional<Sensitive> authorizeInBrowser(std::string_view clientId) noexcept
+std::optional<Sensitive> authorizeInBrowser(
+    std::string_view clientId, Gate7OAuthFailure& failure) noexcept
 {
+    failure = Gate7OAuthFailure::None;
+    const auto reject = [&failure](Gate7OAuthFailure reason) noexcept
+        -> std::optional<Sensitive> {
+        failure = reason;
+        return std::nullopt;
+    };
+
     int listener = ::socket(AF_INET, SOCK_STREAM, 0);
-    if (listener < 0) return std::nullopt;
+    if (listener < 0) return reject(Gate7OAuthFailure::ListenerSocketFailed);
     int reuse = 1;
     (void)::setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_port = htons(CTraderOAuthCorrelationGuard::LOOPBACK_PORT);
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-    if (::bind(listener, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0
-        || ::listen(listener, 1) != 0 || !setNonBlocking(listener)) {
+    if (::bind(listener, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
         ::close(listener);
-        return std::nullopt;
+        return reject(Gate7OAuthFailure::ListenerBindFailed);
+    }
+    if (::listen(listener, 1) != 0) {
+        ::close(listener);
+        return reject(Gate7OAuthFailure::ListenerListenFailed);
+    }
+    if (!setNonBlocking(listener)) {
+        ::close(listener);
+        return reject(Gate7OAuthFailure::ListenerNonBlockingFailed);
     }
 
     CTraderOAuthCorrelationGuard guard;
     const auto armed = Clock::now();
     if (!guard.arm({CTraderOAuthCorrelationGuard::LOOPBACK_ADDRESS,
                     CTraderOAuthCorrelationGuard::LOOPBACK_PORT}, armed)) {
+        const Gate7OAuthFailure reason = classifyOAuthCorrelationFailure(
+            guard.lastDecision());
         ::close(listener);
-        return std::nullopt;
+        return reject(reason == Gate7OAuthFailure::None
+                          ? Gate7OAuthFailure::CorrelationArmFailed : reason);
     }
     CURL* encoder = curl_easy_init();
     if (encoder == nullptr) {
         guard.cancel();
         ::close(listener);
-        return std::nullopt;
+        return reject(Gate7OAuthFailure::AuthorizationUrlFailed);
     }
     auto encodedClient = urlEncode(encoder, clientId);
     auto encodedRedirect = urlEncode(encoder, CTraderGate7Config::REDIRECT_URI);
@@ -871,7 +894,7 @@ std::optional<Sensitive> authorizeInBrowser(std::string_view clientId) noexcept
         ::close(listener);
         if (encodedClient.has_value()) secureClear(*encodedClient);
         if (encodedRedirect.has_value()) secureClear(*encodedRedirect);
-        return std::nullopt;
+        return reject(Gate7OAuthFailure::AuthorizationUrlFailed);
     }
     Sensitive url;
     try {
@@ -888,58 +911,152 @@ std::optional<Sensitive> authorizeInBrowser(std::string_view clientId) noexcept
         guard.cancel();
         ::close(listener);
         secureClear(*encodedClient); secureClear(*encodedRedirect);
-        return std::nullopt;
+        return reject(Gate7OAuthFailure::AuthorizationUrlFailed);
     }
     secureClear(*encodedClient);
     secureClear(*encodedRedirect);
     if (!openBrowserUrl(url.view())) {
         url.clear(); guard.cancel(); ::close(listener);
-        return std::nullopt;
+        return reject(Gate7OAuthFailure::BrowserLaunchFailed);
     }
 
     std::string rawRequest;
     Sensitive code;
+    Gate7OAuthFailure terminalFailure = Gate7OAuthFailure::None;
     const auto deadline = armed + CTraderOAuthCorrelationGuard::CORRELATION_LIFETIME;
     while (Clock::now() < deadline) {
-        if (!waitForFd(listener, POLLIN, deadline)) break;
-        const int client = ::accept(listener, nullptr, nullptr);
-        if (client < 0) continue;
-        std::array<char, 2048> buffer{};
-        while (rawRequest.size() < MAX_HTTP_REQUEST_BYTES) {
-            const ssize_t count = ::recv(client, buffer.data(), buffer.size(), 0);
-            if (count > 0) {
-                rawRequest.append(buffer.data(), static_cast<std::size_t>(count));
-                if (rawRequest.find("\r\n\r\n") != std::string::npos) break;
-                continue;
-            }
+        if (!waitForFd(listener, POLLIN, deadline)) {
+            terminalFailure = Clock::now() >= deadline
+                ? Gate7OAuthFailure::CallbackTimeout
+                : Gate7OAuthFailure::CallbackWaitFailed;
             break;
         }
-        const auto request = parseHttpRequest(rawRequest);
-        CTraderOAuthCorrelationGuard::Decision decision =
-            request.has_value()
-                ? guard.consume({"127.0.0.1", request->method, request->host,
-                                 request->path, request->query}, Clock::now())
-                : guard.cancel();
-        if (decision == CTraderOAuthCorrelationGuard::Decision::
-                CorrelationMatchedCodeDiscarded && request.has_value()) {
-            auto extracted = extractCode(request->query);
-            if (extracted.has_value()) code = std::move(*extracted);
-            (void)sendAll(client,
-                "HTTP/1.1 303 See Other\r\nLocation: /ctrader/oauth/complete\r\n"
-                "Content-Length: 0\r\nConnection: close\r\n\r\n");
-        } else {
+        sockaddr_in remote{};
+        socklen_t remoteLength = sizeof(remote);
+        const int client = ::accept(
+            listener, reinterpret_cast<sockaddr*>(&remote), &remoteLength);
+        if (client < 0) {
+            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK) continue;
+            terminalFailure = Gate7OAuthFailure::CallbackAcceptFailed;
+            break;
+        }
+
+        if (!setNonBlocking(client)) {
+            terminalFailure = Gate7OAuthFailure::CallbackReadFailed;
             (void)sendAll(client,
                 "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n"
                 "Connection: close\r\n\r\n");
+            ::close(client);
+            break;
         }
+
+        std::array<char, 2048> buffer{};
+        bool requestComplete = false;
+        while (rawRequest.size() < MAX_HTTP_REQUEST_BYTES) {
+            const auto readDeadline = gate7OAuthCallbackReadDeadline(
+                deadline, Clock::now());
+            if (!waitForFd(client, POLLIN, readDeadline)) {
+                terminalFailure = Clock::now() >= deadline
+                    ? Gate7OAuthFailure::CallbackTimeout
+                    : Gate7OAuthFailure::CallbackReadFailed;
+                break;
+            }
+            const ssize_t count = ::recv(client, buffer.data(), buffer.size(), 0);
+            if (count > 0) {
+                const Gate7OAuthFailure appendFailure =
+                    appendGate7OAuthCallbackBytes(
+                        rawRequest,
+                        {buffer.data(), static_cast<std::size_t>(count)},
+                        MAX_HTTP_REQUEST_BYTES);
+                if (appendFailure != Gate7OAuthFailure::None) {
+                    terminalFailure = appendFailure;
+                    break;
+                }
+                if (rawRequest.find("\r\n\r\n") != std::string::npos) {
+                    requestComplete = true;
+                    break;
+                }
+                continue;
+            }
+            if (count < 0 && errno == EINTR) continue;
+            terminalFailure = count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)
+                ? Gate7OAuthFailure::CallbackReadFailed
+                : Gate7OAuthFailure::CallbackMalformed;
+            break;
+        }
+        if (!requestComplete && terminalFailure == Gate7OAuthFailure::None) {
+            terminalFailure = Gate7OAuthFailure::CallbackMalformed;
+        }
+
+        const auto request = requestComplete
+            ? parseHttpRequest(rawRequest) : std::optional<HttpRequest>{};
+        if (!request.has_value()) {
+            guard.cancel();
+            (void)sendAll(client,
+                "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n"
+                "Connection: close\r\n\r\n");
+            ::close(client);
+            break;
+        }
+
+        char remoteText[INET_ADDRSTRLEN]{};
+        const char* converted = ::inet_ntop(AF_INET, &remote.sin_addr,
+                                            remoteText, sizeof(remoteText));
+        const std::string_view remoteAddress = converted == nullptr
+            ? std::string_view{} : std::string_view(remoteText);
+        const auto decision = guard.consume(
+            {remoteAddress, request->method, request->host, request->path,
+             request->query}, Clock::now());
+        if (decision != CTraderOAuthCorrelationGuard::Decision::
+                CorrelationMatchedCodeDiscarded) {
+            terminalFailure = classifyOAuthCorrelationFailure(decision);
+            (void)sendAll(client,
+                "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n"
+                "Connection: close\r\n\r\n");
+            ::close(client);
+            break;
+        }
+
+        auto extracted = extractCode(request->query);
+        if (!extracted.has_value()) {
+            terminalFailure = Gate7OAuthFailure::CodeExtractionFailed;
+            (void)sendAll(client,
+                "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n"
+                "Connection: close\r\n\r\n");
+            ::close(client);
+            break;
+        }
+        code = std::move(*extracted);
+        (void)sendAll(client,
+            "HTTP/1.1 303 See Other\r\nLocation: /ctrader/oauth/complete\r\n"
+            "Content-Length: 0\r\nConnection: close\r\n\r\n");
         ::close(client);
         break;
     }
-    if (Clock::now() >= deadline) guard.expireIfDue(Clock::now());
+    const auto now = Clock::now();
+    if (code.empty()) {
+        if (now >= deadline) {
+            (void)guard.expireIfDue(now);
+            if (terminalFailure == Gate7OAuthFailure::None) {
+                terminalFailure = Gate7OAuthFailure::CallbackTimeout;
+            }
+        } else if (!guard.isTerminal()) {
+            (void)guard.cancel();
+            if (terminalFailure == Gate7OAuthFailure::None) {
+                terminalFailure = Gate7OAuthFailure::CallbackWaitFailed;
+            }
+        }
+    }
     secureClear(rawRequest);
     url.clear();
     ::close(listener);
-    return code.empty() ? std::nullopt : std::optional<Sensitive>(std::move(code));
+    if (code.empty()) {
+        failure = terminalFailure == Gate7OAuthFailure::None
+            ? Gate7OAuthFailure::ResourceExhausted : terminalFailure;
+        return std::nullopt;
+    }
+    failure = Gate7OAuthFailure::None;
+    return std::optional<Sensitive>(std::move(code));
 }
 
 void appendUint32(std::string& output, std::uint32_t value)
@@ -1642,11 +1759,12 @@ int runCTraderGate7Proof(bool preflightOnly)
         } else {
             clearToken(stored);
             std::cout << "gate7_oauth_authorization_starting\n";
-            auto code = authorizeInBrowser(clientId->view());
+            Gate7OAuthFailure oauthFailure = Gate7OAuthFailure::None;
+            auto code = authorizeInBrowser(clientId->view(), oauthFailure);
             if (!code.has_value()) {
                 clientSecret.clear(); clientId->clear(); clientId.reset();
                 curl_global_cleanup();
-                return fail(RuntimeFailure::OAuthFailed);
+                return failOAuth(oauthFailure);
             }
             CURL* encoder = curl_easy_init();
             auto encodedCode = encoder == nullptr

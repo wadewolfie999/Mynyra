@@ -77,6 +77,18 @@ socket connection, provider request, account access, market-data request, or
 order operation. Relevant sanitizer coverage is run from a separate
 `build/gate7-sanitize` configuration.
 
+Gate 7 ASan/UBSan diagnostic coverage:
+
+```sh
+cmake -S . -B build/gate7-sanitize \
+  -DTRADEBOT_ENABLE_CTRADER_GATE7=ON \
+  -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_OBJCXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+cmake --build build/gate7-sanitize --target ctrader_gate7_tests --parallel 4
+ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-failure
+```
+
 ## Test Layers
 
 - Unit-style tests: direct class behavior inside phase test executables.
@@ -103,10 +115,14 @@ order operation. Relevant sanitizer coverage is run from a separate
 - Gate 7 proof tests: `ctrader_gate7_tests` uses synthetic account, light/full
   symbol, metadata, scale, volume, quote, timestamp, generation, correlation,
   allowlist, malformed-frame, allocation-failure, timeout, cancellation,
-  provider-error, and terminal-clearing inputs. It proves the target cannot
-  construct trading/order/position/depth/trendbar/historical/reconnect
-  payloads. The single provider attempt is reported separately and is not a
-  substitute for offline tests.
+  provider-error, terminal-clearing, and fixed OAuth listener/browser/timeout,
+  callback, denial, and state-correlation diagnostic inputs. It also verifies
+  the callback inactivity deadline is capped by the absolute correlation
+  deadline and injects callback-buffer allocation failure to prove the fixed
+  resource-exhaustion result. It proves the target cannot construct trading/
+  order/position/depth/trendbar/historical/reconnect payloads. The single
+  provider attempt is reported separately and is not a substitute for offline
+  tests.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
 ## Required Coverage By Change Type
