@@ -7,9 +7,12 @@ Accepted architecture direction; Gate 2 and Gate 5 were accepted by Wade on
 2026-08-09; PR #25 is merged; and Gate 6 execution was completed and accepted
 by Wade on 2026-08-10. Gate 7 was separately authorized: its implementation and
 offline validation passed; the initial attempt stopped at Keychain access; and
-the one newly authorized retry stopped at `gate7_oauth_failed` before account
-discovery or fixed-endpoint data traffic. Gate 7 execution is incomplete; Gate
-8, Gate 9, trading messages, and live use remain blocked.
+later attempts stopped at generic OAuth failure and a fixed OAuth callback
+timeout. The latest authorized process advanced through OAuth, fixed demo TLS,
+application/account authentication, canonical XAUUSD resolution, and full
+metadata validation before `gate7_subscription_failed`. Gate 7 execution is
+incomplete; residual diagnostics are authorized offline, while provider
+execution, Gate 8, Gate 9, trading messages, and live use remain blocked.
 
 ## Context
 
@@ -89,9 +92,17 @@ risk, portfolio, replay, or analytics code.
   only the fixed demo endpoint and a minimal non-trading market-data allowlist;
   it must not attach to `BrokerGateway`, `LiveDataAdapter`, execution, risk, or
   runtime modes. The initial Gate 7 attempt stopped at the local Keychain
-  permission boundary; the one newly authorized retry stopped at
-  `gate7_oauth_failed` before account discovery or fixed-endpoint data traffic.
-  No provider response or market-data evidence exists.
+  permission boundary; later attempts stopped at generic OAuth failure and a
+  fixed callback timeout. The latest authorized process reached the
+  subscription transition after full XAUUSD metadata validation and emitted
+  `gate7_subscription_failed`. No accepted subscription, quote, or timestamp
+  evidence exists.
+- Gate 7 residual diagnostics remain inside that isolated proof boundary. They
+  may classify the documented account-disconnect inbound control, send/receive
+  failures, closed provider-error categories, partial spot events, timestamps,
+  and bounded heartbeats without adding any outbound trading capability,
+  reconnect, runtime-mode attachment, or provider-run authority. A partial
+  event is never accepted or combined with another event.
 
 ## Alternatives Considered
 
@@ -154,10 +165,11 @@ Costs and risks:
   operation. The separately authorized Gate 6 runtime records only sanitized
   outcome categories.
 - Gate 7 offline tests cover its strict allowlist, fresh account/symbol
-  selection, numeric/timestamp validation, fail-closed state transitions, and
-  no-order capability. The initial attempt stopped at Keychain access; its one
-  authorized retry stopped at `gate7_oauth_failed` before endpoint data traffic.
-  No live, trading, reconnect, or Gate 8–9 action occurred.
+  selection, typed residual outcomes, partial-event policy, bounded heartbeat,
+  numeric/timestamp validation, fixed diagnostic redaction, fail-closed state
+  transitions, and no-order capability. The latest provider evidence stops at
+  `gate7_subscription_failed` after full metadata validation. No accepted
+  subscription, quote, live, trading, reconnect, or Gate 8–9 action occurred.
 
 ## Reversal Conditions
 

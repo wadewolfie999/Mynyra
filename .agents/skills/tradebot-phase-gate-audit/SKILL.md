@@ -1,6 +1,6 @@
 ---
 name: tradebot-phase-gate-audit
-description: Audit TradeBot phase and workstream transitions, entry and exit criteria, approval status, GO or NO-GO state, and unauthorized implementation risk. Use before Workstream II/Phase 23 scoping, phase transition claims, roadmap updates, implementation planning, or review handoffs.
+description: Audit TradeBot phase, workstream, and gate transitions, entry and exit criteria, approval status, GO or NO-GO state, and unauthorized implementation risk. Use before phase/gate scoping, transition claims, roadmap updates, implementation planning, external execution, or review handoffs.
 ---
 # tradebot-phase-gate-audit
 
@@ -10,16 +10,18 @@ Protect TradeBot phase transitions from authority drift, implicit approvals, and
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
-Use before Workstream II/Phase 23 scoping, any phase status change, roadmap update, implementation plan, or review that depends on GO/NO-GO evidence.
+Use before any phase/gate scoping or status change, roadmap update,
+implementation plan, external execution, or review that depends on GO/NO-GO
+evidence.
 
 ## Must Not Be Used
 
@@ -67,7 +69,9 @@ git rev-parse --short HEAD
 - Blocked is not authorized.
 - Live-capable is not live-enabled.
 - Accepted ADR does not authorize source implementation.
-- Phase 23 selection and Gate 1–5 completion/acceptance do not authorize operational cTrader execution.
+- Offline implementation, review, preflight, commit, and exact-artifact proof
+  do not authorize provider execution, retry, a later gate, orders, risk
+  changes, or live use.
 
 ## Procedure
 
@@ -75,15 +79,16 @@ git rev-parse --short HEAD
 2. Verify entry and exit criteria from roadmap, plans, ADRs, and operator decision.
 3. Require explicit GO/NO-GO evidence before any transition.
 4. Classify the proposed next action as documentation, scoping, implementation, live-capable, or live.
-5. Protect Gate 5.1, every Gate 6 activity, and later operational gates from implicit activation.
-6. Report missing approvals, unresolved gates, and required verification.
+5. Classify evidence by candidate, staged, committed, exact-commit-build, and
+   external-process epoch.
+6. Protect the current blocked action and every later phase/gate from implicit activation.
+7. Report missing approvals, exhausted attempt budgets, unresolved gates, and required verification.
 
 ## Validation Checklist
 
-- Phase 21 is Complete - Approved only as planning/governance.
-- ADR 0003 is Accepted but not implementation authorization.
-- Phase 22 is Complete — Accepted; Phase 23 is Complete — Selected; Open API Gates 1–5 are complete or accepted as recorded; operational cTrader execution has not started.
-- Broker-specific implementation is absent unless separately approved.
+- Current phase/gate status is sourced from authority documents at invocation time.
+- ADR, plan, phase, review, commit, and preflight status are not treated as adjacent action authority.
+- Provider/broker-specific implementation or execution is absent unless separately approved.
 - Live trading remains disabled unless exact operator approval exists.
 
 ## Failure Modes Caught
@@ -96,7 +101,8 @@ git rev-parse --short HEAD
 
 ## Hard Prohibitions
 
-- Do not implement Gate 5.1, any Gate 6 activity, or broker-dependent integration without explicit operator GO.
+- Do not activate blocked implementation, provider execution, retry, later
+  phases/gates, orders, risk changes, or live work without explicit operator GO.
 - Do not alter risk limits, credentials, live mode, order routing, or broker code.
 - Do not downgrade blocked status without operator GO.
 - Do not stage, commit, push, reset, clean, or discard changes.
@@ -104,14 +110,14 @@ git rev-parse --short HEAD
 ## Interaction With Existing Skills
 
 - Run after `tradebot-authority-state-audit` for phase-sensitive work.
-- Run before `tradebot-plan-authoring` for Workstream II/Phase 23 planning.
+- Run before `tradebot-plan-authoring` for phase- or gate-sensitive planning.
 - Pair with `tradebot-integration-architecture-review` and `tradebot-risk-review` for Workstream I scoping.
 - Feed final gate state into `tradebot-pr-readiness-review` and `tradebot-handoff`.
 
 ## Example Invocation Prompt
 
 ```text
-Use $tradebot-phase-gate-audit to verify the recorded Phase 23/Gates 1–5 state and whether Gate 5.1, Gate 6, or broker-dependent implementation remains NO-GO.
+Use $tradebot-phase-gate-audit to verify the current phase/gate state and whether the proposed next action has exact GO or remains NO-GO.
 ```
 
 ## Stop Conditions

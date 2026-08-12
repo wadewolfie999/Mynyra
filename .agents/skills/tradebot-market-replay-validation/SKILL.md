@@ -8,6 +8,14 @@ description: Validate TradeBot market replay behavior, replay data policy, and g
 
 Validate TradeBot market replay behavior, replay data policy, and generated replay artifacts.
 
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
+
 ## Activation Conditions
 
 Use when touching `LocalDataReplayAdapter`, replay CSV/binary files, Phase 18 burn-in, replay timestamps, generated replay data, or replay-driven tests.
@@ -41,6 +49,9 @@ Read:
 4. Run replay tests.
 5. If burn-in is relevant, document generated outputs and input size.
 6. Confirm generated files are ignored or intentionally versioned.
+7. Identify fixed temporary paths, generated paths, and caches shared across
+   build trees; run conflicting suites sequentially unless isolation is proven.
+8. Record the evidence epoch and exact commit/artifact identity when required.
 
 ## Related Skills
 
@@ -75,6 +86,8 @@ build/phase18_burnin 10000
 - Schema/timestamp findings.
 - Test results.
 - Generated output paths.
+- Shared-resource isolation or sequential-run status.
+- Evidence epoch.
 - Compatibility risks.
 
 ## Failure Behavior

@@ -7,7 +7,18 @@ description: Provide safe Git-state governance for TradeBot before edits, review
 
 ## Purpose
 
-Inspect TradeBot Git state before sensitive repository actions. Preserve all local work, detect unsafe states early, and report the next safe Git action without staging, committing, rewriting history, or discarding changes.
+Inspect TradeBot Git state before sensitive repository actions. Preserve all
+local work, detect unsafe states early, and report the next safe Git action
+without unauthorized staging, committing, history rewriting, or discarded
+changes.
+
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Must Not Be Used
 
@@ -34,6 +45,7 @@ git status --short --ignored
 git diff --stat
 git diff --name-status
 git diff --cached --name-status
+git diff --cached --check
 ```
 
 Run `git diff --check` after edits when applicable.
@@ -63,6 +75,8 @@ Treat these as unsafe and report them before any Git mutation:
 - Mixed staged and unstaged changes when the task expects a clean review boundary.
 - Large ignored/generated artifacts that may confuse review or handoff.
 - Requested remote push, branch deletion, cleanup, or history rewrite without operator approval.
+- Staging or commit requested without an explicit path allowlist and action-specific approval.
+- Exact-commit evidence claimed from a dirty tracked/index state or a pre-commit binary.
 
 ## Branching Rules
 
@@ -87,7 +101,13 @@ git switch -c <branch-name>
 4. Check for unsafe states.
 5. If branching is needed, recommend the safest branch name. Create it only when authorized.
 6. After edits, run `git diff --check` when there are tracked changes.
-7. Report branch, repository state, files changed, commands run, risks, and next safe action.
+7. Before authorized staging, resolve an explicit path allowlist and review the
+   staged diff independently from the unstaged diff.
+8. Treat stage, commit, push, PR, publication, merge, tag, and release as
+   separate permissions.
+9. After an authorized commit, confirm tracked/index state before any
+   exact-commit rebuild; report ignored artifacts separately.
+10. Report branch, repository state, files changed, commands run, risks, evidence epoch, and next safe action.
 
 ## Related Skills
 
@@ -99,6 +119,8 @@ git switch -c <branch-name>
 
 - Local branch creation with `git switch -c <branch-name>` when the task explicitly requests it or clearly authorizes it.
 - No other Git mutation is allowed by this skill without explicit operator approval.
+- Staging and a local commit are allowed only when the operator names those
+  exact actions and the scoped paths; neither action grants push or publication.
 
 ## Prohibited Mutations
 

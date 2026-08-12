@@ -8,6 +8,14 @@ description: Inspect repository cleanliness, generated artifacts, staged files, 
 
 Inspect repository cleanliness, generated artifacts, staged files, ignored files, and documentation-safe diff health.
 
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
+
 ## Activation Conditions
 
 Use before final reports, commits, handoffs, review preparation, or when unexpected files appear.
@@ -40,8 +48,14 @@ find . -maxdepth 4 -type f -size +1M -print
 2. Separate source/docs changes from generated artifacts.
 3. Check whitespace errors.
 4. Identify large files and secret-like paths.
-5. Report unrelated pre-existing changes.
-6. Recommend cleanup only when safe and in scope.
+5. Report credential-like paths by classification and existence only; do not
+   open ignored secret-bearing files.
+6. Distinguish tracked/index cleanliness from relevant ignored build, data,
+   handoff, evidence, and credential-like artifacts.
+7. Record path and SHA-256 for an intentionally updated ignored evidence file
+   when the handoff requires it, without staging the file.
+8. Report unrelated pre-existing changes.
+9. Recommend cleanup only when safe and in scope.
 
 ## Related Skills
 
@@ -68,6 +82,7 @@ The required repository inspection commands above.
 - Ignored/generated artifacts.
 - Large files.
 - Hygiene risks.
+- Evidence epoch and relevant ignored-evidence hashes when applicable.
 
 ## Failure Behavior
 

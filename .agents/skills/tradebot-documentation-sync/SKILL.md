@@ -8,6 +8,14 @@ description: Keep TradeBot documentation synchronized with source behavior, arch
 
 Keep TradeBot documentation synchronized with source behavior, architecture, risk policy, tests, roadmap, and skills.
 
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
+
 ## Activation Conditions
 
 Use after behavior changes, architecture changes, risk changes, test command changes, data/schema changes, new skills, or governance edits.
@@ -50,13 +58,18 @@ find .agents/skills -name SKILL.md -print | sort
 2. Update only documents whose authority boundary is affected.
 3. Update `docs/README.md` when documents are added or removed.
 4. Update `PROJECT_STATE.md` only for current state.
-5. Create or update ADRs for durable decisions.
-6. Run documentation audit commands.
+5. Keep historical process detail in plans, commits, PRs, and handoffs; do not
+   copy it into current-state or skill procedure as volatile authority.
+6. Update `docs/CODEX_EXECUTION_EVIDENCE.md` only for reusable procedure, not a
+   task-specific branch, hash, gate result, or approval snapshot.
+7. Create or update ADRs for durable decisions.
+8. Validate every changed skill and scan skills for stale phase/gate assertions.
+9. Run documentation audit commands.
 
 ## Related Skills
 
 - Use `tradebot-adr-review` before ADR status or ADR index changes.
-- Use `tradebot-phase-gate-audit` before phase-transition, Workstream II/Phase 23, or broker-dependent status changes.
+- Use `tradebot-phase-gate-audit` before phase/gate or provider/broker-dependent status changes.
 - Use `tradebot-pr-readiness-review` after documentation sync when preparing PR handoff.
 
 ## Allowed Mutations
@@ -77,12 +90,16 @@ grep -RInE 'TO''DO|TB''D|FIX''ME|PLACE''HOLDER|example ''only' AGENTS.md PLANS.m
 grep -RInE 'live trading|live-trading|real order|API key|credential|secret' AGENTS.md PLANS.md CONTRIBUTING.md docs .agents 2>/dev/null || true
 ```
 
+Also run the installed `skill-creator/scripts/quick_validate.py` once for each
+changed skill directory and record the resolved validator path.
+
 ## Expected Outputs
 
 - Docs updated.
 - Authority conflicts resolved or reported.
 - Audit command results.
 - Remaining uncertainty.
+- Skill validation and stale-state scan results.
 
 ## Failure Behavior
 

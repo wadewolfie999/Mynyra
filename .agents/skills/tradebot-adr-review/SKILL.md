@@ -10,12 +10,12 @@ Validate ADR status and implications without letting ADR acceptance become unaut
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
@@ -63,7 +63,10 @@ git diff --name-status
 2. Check context, decision, consequences, validation, reversal conditions, and supersession.
 3. Verify status consistency across ADR file, decisions index, roadmap, project state, and plans where applicable.
 4. Identify implementation implications separately from implementation authorization.
-5. Report required operator approvals and any documents that must be updated.
+5. Separate ADR acceptance from authorization for review, correction,
+   implementation, commit, publication, provider execution, retry, later
+   phases/gates, risk changes, and live work.
+6. Report required operator approvals and any documents that must be updated.
 
 ## Validation Checklist
 
@@ -71,7 +74,8 @@ git diff --name-status
 - Accepted ADR is not treated as source implementation approval.
 - Superseded or deprecated ADRs are clearly marked.
 - Consequences include risk, testing, and rollback implications where relevant.
-- Phase 22 is Complete — Accepted; Phase 23 is Complete — Selected; Open API Gates 1–5 are complete or accepted as recorded; operational cTrader execution has not started.
+- Current phase/gate facts are sourced at invocation time rather than copied
+  into the skill.
 
 ## Failure Modes Caught
 
@@ -85,7 +89,8 @@ git diff --name-status
 
 - Do not mutate ADR status without explicit operator or review-authority evidence.
 - Do not authorize source, broker, credential, risk, or live changes.
-- Do not implement Gate 5.1, any Gate 6 activity, or broker-dependent integration without explicit operator GO.
+- Do not use ADR acceptance to activate any blocked implementation, provider
+  process, retry, later phase/gate, order, risk, or live action.
 - Do not stage, commit, push, reset, clean, or discard changes.
 
 ## Interaction With Existing Skills
@@ -98,7 +103,7 @@ git diff --name-status
 ## Example Invocation Prompt
 
 ```text
-Use $tradebot-adr-review to verify ADR status and confirm acceptance does not authorize Gate 5.1, Gate 6, or broker-dependent implementation.
+Use $tradebot-adr-review to verify ADR status and confirm acceptance is not being treated as implementation or later-gate authorization.
 ```
 
 ## Stop Conditions

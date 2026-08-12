@@ -114,15 +114,19 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
   target does not open a browser, read Keychain, or perform network traffic.
 - Gate 7 proof tests: `ctrader_gate7_tests` uses synthetic account, light/full
   symbol, metadata, scale, volume, quote, timestamp, generation, correlation,
-  allowlist, malformed-frame, allocation-failure, timeout, cancellation,
-  provider-error, terminal-clearing, and fixed OAuth listener/browser/timeout,
-  callback, denial, and state-correlation diagnostic inputs. It also verifies
-  the callback inactivity deadline is capped by the absolute correlation
-  deadline and injects callback-buffer allocation failure to prove the fixed
-  resource-exhaustion result. It proves the target cannot construct trading/
-  order/position/depth/trendbar/historical/reconnect payloads. The single
-  provider attempt is reported separately and is not a substitute for offline
-  tests.
+  allowlist, malformed-frame, allocation-failure, typed send/receive outcomes,
+  provider-error categories, disconnect/token/account controls, timeout,
+  cancellation, partial-event continuation, first-single-complete-BBO,
+  timestamp stale/future classification, heartbeat cadence, terminal-clearing,
+  and fixed OAuth listener/browser/timeout, callback, denial, and
+  state-correlation diagnostic inputs. It verifies that neither OAuth nor
+  residual diagnostics contain value-like or provider-supplied material. It
+  also verifies the callback inactivity deadline is capped by the absolute
+  correlation deadline, injects callback-buffer allocation failure to prove
+  the fixed resource-exhaustion result, and proves the heartbeat wait cannot
+  extend the absolute deadline. It proves the target cannot construct trading/
+  order/position/depth/trendbar/historical/reconnect payloads. Provider
+  execution is reported separately and is never a substitute for offline tests.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 
 ## Required Coverage By Change Type
@@ -136,6 +140,13 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
   no-callback expiry, explicit cancellation, exact matching, single use,
   mismatch/replay rejection, state clearing, code discard, and fixed
   non-sensitive diagnostics.
+- Gate 7 residual transport changes: every typed send/receive result, closed
+  provider-category mapping, fixed diagnostic redaction, account/client/token
+  disconnect handling, exact subscription correlation/account proof,
+  incomplete-event non-retention, first-single-complete-BBO behavior, raw and
+  normalized crossing, timestamp missing/stale/future/unit ambiguity, bounded
+  heartbeat cadence, absolute deadlines, terminal clearing, and allocation
+  failure.
 - Analytics/output changes: generated CSV path, schema, reproducibility, and no secret leakage.
 - Documentation-only changes: `git diff --check`, doc grep audit, and index review.
 
@@ -146,6 +157,11 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
 - Use fixed temporary paths only when tests cleanly isolate them.
 - Do not require external exchanges, network services, or credentials for normal tests.
 - Tests must not depend on ignored generated outputs unless they create them inside the test.
+- Record the evidence epoch: working tree, staged index, commit, or exact-commit
+  rebuild. A relevant edit after a pass invalidates that pass for completion
+  until affected checks are rerun.
+- Exact-commit evidence must name the full commit, build configuration,
+  artifact path/hash when applicable, and final tracked/index status.
 
 ## Fixtures And Test Data
 
@@ -167,6 +183,13 @@ When changing time behavior, test:
 
 Concurrency-sensitive areas include lock-free ring buffers, live-data queueing, broker callbacks, reconnect worker behavior, and metrics aggregation. Changes there require stress or integration tests that exercise queue overflow, dropped events, and shutdown.
 
+Test-run concurrency is separate from concurrency coverage. Full CTest suites
+from different build trees must run sequentially unless fixed ports, loopback
+listeners, local certificate authorities, fixed temporary paths, process names,
+caches, and generated outputs are all proven isolated. If parallel execution
+causes a suspected collision, preserve the initial failure, inspect the shared
+resource, rerun sequentially, and report both results.
+
 ## Performance And Benchmarks
 
 Benchmark executables are separate from tests:
@@ -187,12 +210,17 @@ Reports must include:
 - Warnings.
 - Skipped checks and why.
 - Whether generated outputs were produced.
+- Evidence epoch and exact artifact identity when relevant.
+- Whether suites ran concurrently; if so, how shared resources were isolated.
 
 Do not summarize a failed test as passed. Do not hide compiler warnings.
 
 ## Minimum Evidence For Completion
 
 - Documentation-only: `git diff --check` and documentation audit grep reviewed.
+- Skill/governance changes: documentation-only evidence plus every changed
+  skill passing the available skill validator and a scan for stale volatile
+  phase/gate assertions.
 - Narrow source change: build plus targeted tests.
 - Shared behavior change: build plus full CTest suite.
 - Performance claim: build, relevant tests, benchmark command, environment, input size, and comparative evidence.

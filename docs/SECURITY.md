@@ -101,10 +101,16 @@ trendbar, historical-data, or reconnect messages and is detached from all
 production runtime modes and order/risk components.
 
 The Gate 7 process keeps response-derived account and symbol IDs, prices,
-tokens, and callback material volatile and clears them on terminal paths. Its
-initial attempt stopped at Keychain access; the one newly authorized retry
-stopped at `gate7_oauth_failed` before account discovery or endpoint data
-traffic. No provider response or market-data evidence was obtained.
+tokens, and callback material volatile and clears them on terminal paths.
+Clearing covers caller and callee copies, pass-by-value and return-value
+objects, optionals, containers, callbacks, temporaries, allocation-failure
+paths, and destruction; clearing only the nominal owner is insufficient.
+Historical attempts stopped at Keychain access, generic OAuth failure, and a
+fixed OAuth callback timeout. The latest authorized process passed OAuth,
+fixed demo TLS, application/account authentication, canonical XAUUSD
+resolution, and full metadata validation before the generic
+`gate7_subscription_failed` boundary. No accepted subscription, quote, or
+timestamp evidence was obtained.
 
 Gate 7 OAuth failures are emitted only as fixed categories covering listener
 startup, authorization URL construction, browser launch, callback wait/read,
@@ -116,6 +122,23 @@ uses a nonblocking accepted socket, and caps each receive wait at both a
 two-second inactivity deadline and the absolute correlation deadline. Callback
 buffer allocation failure is caught and reduced to the fixed
 `gate7_oauth_resource_exhausted` category before terminal clearing.
+
+The residual subscription and spot corridor also emits fixed categories only.
+Provider error names may be compared in memory only against the reviewed closed
+mapping; provider error text, descriptions, numeric values, retry delays,
+maintenance timestamps, correlations, identifiers, peer values, and raw
+payloads are never printed or persisted and are cleared before return. The
+fixed diagnostics contain no `=`, `?`, `&`, whitespace-delimited provider text,
+or caller-supplied material.
+
+Gate 7 may admit the documented account-disconnect event only as an inbound
+fail-closed control message. It does not broaden the outbound allowlist. An
+incomplete spot event is never published, cached, or combined with another
+event; each event's raw values are cleared before the next receive. The
+persistent provider-evidence template belongs under the ignored `handoffs/`
+area and must not contain environment or Keychain output, secrets, tokens,
+codes, callback data, account/login identifiers, symbol IDs, raw provider
+payloads/descriptions, balances, positions, or orders.
 
 ## Source-Control Exclusions
 
@@ -196,6 +219,14 @@ AI agents must:
 - Report credential-related uncertainty.
 - Refuse to enable live behavior without explicit authorization.
 - Not commit, push, or publish security-sensitive material without approval.
+- Treat credential presence checks as presence-only and never as authority to
+  read, display, export, change, or use values.
+- Avoid evidence schemas with fields that invite secrets, tokens, identifiers,
+  raw provider payloads, raw quotes, balances, positions, or orders.
+- Treat review, commit, exact-artifact proof, provider execution, retry, later
+  gates, orders, and live use as separate authorization boundaries.
+- Follow `CODEX_EXECUTION_EVIDENCE.md` for sensitive-memory copies, external
+  attempt budgets, ignored evidence records, and professional halt.
 
 ## Security Review Requirements
 

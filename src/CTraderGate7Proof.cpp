@@ -116,6 +116,22 @@ Gate7FullSymbol::~Gate7FullSymbol()
     clearOptionalInt(lotSize);
 }
 
+Gate7SubscriptionEvidence::~Gate7SubscriptionEvidence()
+{
+    secureClear(accountId);
+    secureClear(symbolId);
+}
+
+Gate7SpotEvidence::~Gate7SpotEvidence()
+{
+    secureClear(accountId);
+    secureClear(symbolId);
+    if (bid.has_value()) secureClear(*bid);
+    if (ask.has_value()) secureClear(*ask);
+    if (timestamp.has_value()) secureClear(*timestamp);
+    secureClear(receiptTimestampNs);
+}
+
 bool CTraderGate7Config::isAllowedOpenApiEndpoint(std::string_view host,
                                                    std::uint16_t port) noexcept
 {
@@ -155,10 +171,183 @@ bool CTraderGate7Config::isAllowedInboundPayload(std::uint32_t payloadType) noex
     case 2147: // PROTO_OA_ACCOUNTS_TOKEN_INVALIDATED_EVENT
     case 2148: // PROTO_OA_CLIENT_DISCONNECT_EVENT
     case 2150: // PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES
+    case 2164: // PROTO_OA_ACCOUNT_DISCONNECT_EVENT
         return true;
     default:
         return false;
     }
+}
+
+void Gate7HeartbeatCadence::markOutbound(Clock::time_point now) noexcept
+{
+    nextDue_ = now + INTERVAL;
+    armed_ = true;
+}
+
+bool Gate7HeartbeatCadence::due(Clock::time_point now) const noexcept
+{
+    return armed_ && now >= nextDue_;
+}
+
+Gate7HeartbeatCadence::Clock::time_point
+Gate7HeartbeatCadence::boundedWaitDeadline(
+    Clock::time_point absoluteDeadline,
+    Clock::time_point now) const noexcept
+{
+    if (!armed_ || absoluteDeadline <= now) return absoluteDeadline;
+    return std::min(absoluteDeadline, nextDue_);
+}
+
+Gate7ProviderErrorCategory classifyGate7ProviderError(
+    std::string_view errorCode) noexcept
+{
+    if (errorCode == "ACCOUNT_NOT_AUTHORIZED"
+        || errorCode == "RET_NO_SUCH_LOGIN"
+        || errorCode == "RET_ACCOUNT_DISABLED"
+        || errorCode == "CH_CTID_TRADER_ACCOUNT_NOT_FOUND"
+        || errorCode == "CHANNEL_IS_BLOCKED") {
+        return Gate7ProviderErrorCategory::AccountRejected;
+    }
+    if (errorCode == "OA_AUTH_TOKEN_EXPIRED"
+        || errorCode == "CH_ACCESS_TOKEN_INVALID") {
+        return Gate7ProviderErrorCategory::TokenInvalidated;
+    }
+    if (errorCode == "SYMBOL_NOT_FOUND"
+        || errorCode == "UNKNOWN_SYMBOL"
+        || errorCode == "NO_QUOTES"
+        || errorCode == "NOT_SUBSCRIBED_TO_SPOTS") {
+        return Gate7ProviderErrorCategory::SymbolRejected;
+    }
+    if (errorCode == "BLOCKED_PAYLOAD_TYPE"
+        || errorCode == "REQUEST_FREQUENCY_EXCEEDED"
+        || errorCode == "CONNECTIONS_LIMIT_EXCEEDED") {
+        return Gate7ProviderErrorCategory::RateLimited;
+    }
+    if (errorCode == "SERVER_IS_UNDER_MAINTENANCE"
+        || errorCode == "CH_SERVER_NOT_REACHABLE"
+        || errorCode == "CANT_ROUTE_REQUEST"
+        || errorCode == "TIMEOUT_ERROR") {
+        return Gate7ProviderErrorCategory::ProviderUnavailable;
+    }
+    return Gate7ProviderErrorCategory::Other;
+}
+
+Gate7ResidualFailure classifyGate7SubscriptionSendFailure(
+    Gate7SendOutcome outcome) noexcept
+{
+    switch (outcome) {
+    case Gate7SendOutcome::Sent:
+        return Gate7ResidualFailure::None;
+    case Gate7SendOutcome::ResourceExhausted:
+        return Gate7ResidualFailure::SubscriptionResourceExhausted;
+    case Gate7SendOutcome::InactiveConnection:
+    case Gate7SendOutcome::TransportClosed:
+        return Gate7ResidualFailure::SubscriptionTransportClosed;
+    case Gate7SendOutcome::PayloadRejected:
+    case Gate7SendOutcome::CorrelationRejected:
+    case Gate7SendOutcome::MessageUninitialized:
+    case Gate7SendOutcome::SerializationFailed:
+    case Gate7SendOutcome::FrameTooLarge:
+    case Gate7SendOutcome::WriteTimeout:
+    case Gate7SendOutcome::WriteFailed:
+        return Gate7ResidualFailure::SubscriptionSendFailed;
+    }
+    return Gate7ResidualFailure::SubscriptionSendFailed;
+}
+
+namespace {
+
+Gate7ResidualFailure providerFailure(
+    bool subscription,
+    Gate7ProviderErrorCategory category) noexcept
+{
+    switch (category) {
+    case Gate7ProviderErrorCategory::AccountRejected:
+        return subscription ? Gate7ResidualFailure::SubscriptionAccountRejected
+                            : Gate7ResidualFailure::SpotAccountRejected;
+    case Gate7ProviderErrorCategory::TokenInvalidated:
+        return subscription ? Gate7ResidualFailure::SubscriptionTokenInvalidated
+                            : Gate7ResidualFailure::SpotTokenInvalidated;
+    case Gate7ProviderErrorCategory::SymbolRejected:
+        return subscription ? Gate7ResidualFailure::SubscriptionSymbolRejected
+                            : Gate7ResidualFailure::SpotSymbolRejected;
+    case Gate7ProviderErrorCategory::RateLimited:
+        return subscription ? Gate7ResidualFailure::SubscriptionRateLimited
+                            : Gate7ResidualFailure::SpotRateLimited;
+    case Gate7ProviderErrorCategory::ProviderUnavailable:
+        return subscription
+            ? Gate7ResidualFailure::SubscriptionProviderUnavailable
+            : Gate7ResidualFailure::SpotProviderUnavailable;
+    case Gate7ProviderErrorCategory::None:
+    case Gate7ProviderErrorCategory::Other:
+        return subscription ? Gate7ResidualFailure::SubscriptionProviderRejected
+                            : Gate7ResidualFailure::SpotProviderRejected;
+    }
+    return subscription ? Gate7ResidualFailure::SubscriptionProviderRejected
+                        : Gate7ResidualFailure::SpotProviderRejected;
+}
+
+} // namespace
+
+Gate7ResidualFailure classifyGate7SubscriptionReceiveFailure(
+    Gate7TransportOutcome outcome,
+    Gate7ProviderErrorCategory providerCategory) noexcept
+{
+    switch (outcome) {
+    case Gate7TransportOutcome::Expected:
+        return Gate7ResidualFailure::None;
+    case Gate7TransportOutcome::Timeout:
+        return Gate7ResidualFailure::SubscriptionResponseTimeout;
+    case Gate7TransportOutcome::TransportClosed:
+    case Gate7TransportOutcome::AccountDisconnected:
+    case Gate7TransportOutcome::ClientDisconnected:
+        return Gate7ResidualFailure::SubscriptionTransportClosed;
+    case Gate7TransportOutcome::CommonProviderError:
+    case Gate7TransportOutcome::OpenApiProviderError:
+        return providerFailure(true, providerCategory);
+    case Gate7TransportOutcome::TokenInvalidated:
+        return Gate7ResidualFailure::SubscriptionTokenInvalidated;
+    case Gate7TransportOutcome::UnexpectedAllowedPayload:
+    case Gate7TransportOutcome::InboundTypeRejected:
+        return Gate7ResidualFailure::SubscriptionUnexpectedPayload;
+    case Gate7TransportOutcome::CorrelationMismatch:
+        return Gate7ResidualFailure::SubscriptionCorrelationRejected;
+    case Gate7TransportOutcome::MalformedEnvelope:
+        return Gate7ResidualFailure::SubscriptionResponseMalformed;
+    case Gate7TransportOutcome::ResourceExhausted:
+        return Gate7ResidualFailure::SubscriptionResourceExhausted;
+    }
+    return Gate7ResidualFailure::SubscriptionUnexpectedPayload;
+}
+
+Gate7ResidualFailure classifyGate7SpotReceiveFailure(
+    Gate7TransportOutcome outcome,
+    Gate7ProviderErrorCategory providerCategory) noexcept
+{
+    switch (outcome) {
+    case Gate7TransportOutcome::Expected:
+        return Gate7ResidualFailure::None;
+    case Gate7TransportOutcome::Timeout:
+        return Gate7ResidualFailure::SpotResponseTimeout;
+    case Gate7TransportOutcome::TransportClosed:
+    case Gate7TransportOutcome::AccountDisconnected:
+    case Gate7TransportOutcome::ClientDisconnected:
+        return Gate7ResidualFailure::SpotTransportClosed;
+    case Gate7TransportOutcome::CommonProviderError:
+    case Gate7TransportOutcome::OpenApiProviderError:
+        return providerFailure(false, providerCategory);
+    case Gate7TransportOutcome::TokenInvalidated:
+        return Gate7ResidualFailure::SpotTokenInvalidated;
+    case Gate7TransportOutcome::UnexpectedAllowedPayload:
+    case Gate7TransportOutcome::CorrelationMismatch:
+    case Gate7TransportOutcome::InboundTypeRejected:
+        return Gate7ResidualFailure::SpotUnexpectedPayload;
+    case Gate7TransportOutcome::MalformedEnvelope:
+        return Gate7ResidualFailure::SpotResponseMalformed;
+    case Gate7TransportOutcome::ResourceExhausted:
+        return Gate7ResidualFailure::SpotResourceExhausted;
+    }
+    return Gate7ResidualFailure::SpotUnexpectedPayload;
 }
 
 CTraderGate7Proof::CTraderGate7Proof(std::uint64_t connectionGeneration) noexcept
@@ -569,6 +758,12 @@ std::optional<Decimal64> CTraderGate7Proof::normalizeSpotPrice(
 std::optional<Gate7TimestampProof> CTraderGate7Proof::classifyTimestamp(
     std::uint64_t rawTimestamp, std::uint64_t receiptTimestampNs) noexcept
 {
+    return classifyTimestampDetailed(rawTimestamp, receiptTimestampNs).proof;
+}
+
+Gate7TimestampClassification CTraderGate7Proof::classifyTimestampDetailed(
+    std::uint64_t rawTimestamp, std::uint64_t receiptTimestampNs) noexcept
+{
     constexpr std::array<std::uint64_t, 4> multipliers = {
         1000000000ULL, 1000000ULL, 1000ULL, 1ULL
     };
@@ -581,13 +776,30 @@ std::optional<Gate7TimestampProof> CTraderGate7Proof::classifyTimestamp(
     constexpr std::int64_t MAX_AGE_NS = 120LL * 1000000000LL;
     constexpr std::int64_t MAX_FUTURE_NS = 5LL * 1000000000LL;
 
+    if (receiptTimestampNs == 0) {
+        return {Gate7Decision::TimestampUnitUnproven, std::nullopt};
+    }
+
     std::optional<Gate7TimestampProof> result;
+    std::optional<std::uint64_t> closestDistance;
+    std::uint64_t closestTimestamp = 0;
+    bool closestTied = false;
     for (std::size_t i = 0; i < multipliers.size(); ++i) {
         if (rawTimestamp > std::numeric_limits<std::uint64_t>::max()
                 / multipliers[i]) {
             continue;
         }
         const std::uint64_t timestampNs = rawTimestamp * multipliers[i];
+        const std::uint64_t distance = timestampNs <= receiptTimestampNs
+            ? receiptTimestampNs - timestampNs
+            : timestampNs - receiptTimestampNs;
+        if (!closestDistance.has_value() || distance < *closestDistance) {
+            closestDistance = distance;
+            closestTimestamp = timestampNs;
+            closestTied = false;
+        } else if (distance == *closestDistance) {
+            closestTied = true;
+        }
         std::int64_t delta = 0;
         if (timestampNs <= receiptTimestampNs) {
             const std::uint64_t age = receiptTimestampNs - timestampNs;
@@ -598,20 +810,53 @@ std::optional<Gate7TimestampProof> CTraderGate7Proof::classifyTimestamp(
             if (future > static_cast<std::uint64_t>(MAX_FUTURE_NS)) continue;
             delta = -static_cast<std::int64_t>(future);
         }
-        if (result.has_value()) return std::nullopt;
+        if (result.has_value()) {
+            return {Gate7Decision::TimestampUnitUnproven, std::nullopt};
+        }
         result = Gate7TimestampProof{
             units[i], timestampNs, receiptTimestampNs,
             delta
         };
     }
-    return result;
+    if (result.has_value()) {
+        return {Gate7Decision::Ready, std::move(result)};
+    }
+    if (!closestDistance.has_value() || closestTied) {
+        return {Gate7Decision::TimestampUnitUnproven, std::nullopt};
+    }
+    return {closestTimestamp < receiptTimestampNs
+                ? Gate7Decision::TimestampStale
+                : Gate7Decision::TimestampFuture,
+            std::nullopt};
 }
 
 Gate7Decision CTraderGate7Proof::acceptSpot(Gate7SpotEvidence evidence) noexcept
 {
     try {
-        return acceptSpotImpl(evidence);
+        const Gate7Decision decision = acceptSpotImpl(evidence);
+        secureClear(evidence.accountId);
+        secureClear(evidence.symbolId);
+        if (evidence.bid.has_value()) {
+            secureClear(*evidence.bid);
+            evidence.bid.reset();
+        }
+        if (evidence.ask.has_value()) {
+            secureClear(*evidence.ask);
+            evidence.ask.reset();
+        }
+        if (evidence.timestamp.has_value()) {
+            secureClear(*evidence.timestamp);
+            evidence.timestamp.reset();
+        }
+        secureClear(evidence.receiptTimestampNs);
+        return decision;
     } catch (...) {
+        secureClear(evidence.accountId);
+        secureClear(evidence.symbolId);
+        if (evidence.bid.has_value()) secureClear(*evidence.bid);
+        if (evidence.ask.has_value()) secureClear(*evidence.ask);
+        if (evidence.timestamp.has_value()) secureClear(*evidence.timestamp);
+        secureClear(evidence.receiptTimestampNs);
         return finish(Gate7Decision::ResourceExhausted);
     }
 }
@@ -629,27 +874,37 @@ Gate7Decision CTraderGate7Proof::acceptSpotImpl(Gate7SpotEvidence& evidence)
     if (!evidence.subscriptionMatched) {
         return finish(Gate7Decision::SubscriptionMismatch);
     }
-    if (evidence.accountId != accountId_ || evidence.symbolId != symbolId_
-        || evidence.accountId <= 0 || evidence.symbolId <= 0) {
-        return finish(Gate7Decision::InvalidAccountIdentifier);
+    if (evidence.accountId != accountId_ || evidence.accountId <= 0) {
+        return finish(Gate7Decision::SpotAccountMismatch);
+    }
+    if (evidence.symbolId != symbolId_ || evidence.symbolId <= 0) {
+        return finish(Gate7Decision::SpotSymbolMismatch);
+    }
+    const std::uint64_t maxInt64 = static_cast<std::uint64_t>(
+        std::numeric_limits<std::int64_t>::max());
+    if ((evidence.bid.has_value()
+            && (*evidence.bid == 0 || *evidence.bid > maxInt64))
+        || (evidence.ask.has_value()
+            && (*evidence.ask == 0 || *evidence.ask > maxInt64))) {
+        return finish(Gate7Decision::InvalidSpot);
+    }
+    if (evidence.timestamp.has_value() && *evidence.timestamp < 0) {
+        return finish(Gate7Decision::TimestampUnitUnproven);
+    }
+    if (evidence.timestamp.has_value()
+        && (!evidence.bid.has_value() || !evidence.ask.has_value())) {
+        const auto timestamp = classifyTimestampDetailed(
+            static_cast<std::uint64_t>(*evidence.timestamp),
+            evidence.receiptTimestampNs);
+        if (!timestamp.proof.has_value()) return finish(timestamp.decision);
     }
     if (!evidence.bid.has_value() || !evidence.ask.has_value()) {
-        return finish(Gate7Decision::MissingSpotSide);
+        lastDecision_ = Gate7Decision::IncompleteSpotSide;
+        return lastDecision_;
     }
     const std::uint64_t rawBid = *evidence.bid;
     const std::uint64_t rawAsk = *evidence.ask;
-    const std::uint64_t maxInt64 = static_cast<std::uint64_t>(
-        std::numeric_limits<std::int64_t>::max());
-    if (rawBid == 0 || rawAsk == 0 || rawBid > maxInt64 || rawAsk > maxInt64) {
-        return finish(Gate7Decision::InvalidSpot);
-    }
     if (rawBid > rawAsk) return finish(Gate7Decision::CrossedMarket);
-    if (!evidence.timestamp.has_value() || *evidence.timestamp < 0) {
-        return finish(Gate7Decision::TimestampUnitUnproven);
-    }
-    if (evidence.receiptTimestampNs == 0) {
-        return finish(Gate7Decision::TimestampUnitUnproven);
-    }
     if (!instrument_.has_value()) return finish(Gate7Decision::WrongPhase);
     const std::int32_t digits = instrument_->tickSize.scale;
     const auto bid = normalizeSpotPrice(rawBid, digits);
@@ -658,10 +913,14 @@ Gate7Decision CTraderGate7Proof::acceptSpotImpl(Gate7SpotEvidence& evidence)
         return finish(Gate7Decision::CheckedArithmeticFailed);
     }
     if (bid->units > ask->units) return finish(Gate7Decision::CrossedMarket);
-    const auto timestamp = classifyTimestamp(
+    if (!evidence.timestamp.has_value()) {
+        lastDecision_ = Gate7Decision::IncompleteSpotTimestamp;
+        return lastDecision_;
+    }
+    const auto timestamp = classifyTimestampDetailed(
         static_cast<std::uint64_t>(*evidence.timestamp),
         evidence.receiptTimestampNs);
-    if (!timestamp.has_value()) return finish(Gate7Decision::TimestampUnitUnproven);
+    if (!timestamp.proof.has_value()) return finish(timestamp.decision);
     const std::int64_t rawSpread = static_cast<std::int64_t>(rawAsk)
         - static_cast<std::int64_t>(rawBid);
     const std::int64_t normalizedSpread = ask->units - bid->units;
@@ -679,7 +938,7 @@ Gate7Decision CTraderGate7Proof::acceptSpotImpl(Gate7SpotEvidence& evidence)
     quote.bid = *bid;
     quote.ask = *ask;
     quote.spread = Decimal64{normalizedSpread, bid->scale};
-    quote.timestamp = *timestamp;
+    quote.timestamp = *timestamp.proof;
     quoteEvidence_ = std::move(quote);
     clearSensitiveState();
     phase_ = Phase::Complete;
@@ -771,7 +1030,10 @@ std::string_view CTraderGate7Proof::safeDiagnostic(Gate7Decision decision) noexc
     case Gate7Decision::FullSymbolMismatch: return "gate7_full_symbol_mismatch";
     case Gate7Decision::SymbolMetadataRejected: return "gate7_symbol_metadata_rejected";
     case Gate7Decision::SubscriptionMismatch: return "gate7_subscription_mismatch";
-    case Gate7Decision::MissingSpotSide: return "gate7_spot_side_missing";
+    case Gate7Decision::IncompleteSpotSide: return "gate7_spot_side_incomplete";
+    case Gate7Decision::IncompleteSpotTimestamp: return "gate7_spot_timestamp_missing";
+    case Gate7Decision::SpotAccountMismatch: return "gate7_spot_account_mismatch";
+    case Gate7Decision::SpotSymbolMismatch: return "gate7_spot_symbol_mismatch";
     case Gate7Decision::InvalidSpot: return "gate7_spot_invalid";
     case Gate7Decision::CrossedMarket: return "gate7_crossed_market";
     case Gate7Decision::CheckedArithmeticFailed: return "gate7_checked_arithmetic_failed";
@@ -785,6 +1047,81 @@ std::string_view CTraderGate7Proof::safeDiagnostic(Gate7Decision decision) noexc
     case Gate7Decision::ResourceExhausted: return "gate7_resource_exhausted";
     }
     return "gate7_unknown_failure";
+}
+
+std::string_view safeGate7ResidualDiagnostic(
+    Gate7ResidualFailure failure) noexcept
+{
+    switch (failure) {
+    case Gate7ResidualFailure::None: return "gate7_residual_ok";
+    case Gate7ResidualFailure::SubscriptionStateUnavailable:
+        return "gate7_subscription_state_unavailable";
+    case Gate7ResidualFailure::SubscriptionSendFailed:
+        return "gate7_subscription_send_failed";
+    case Gate7ResidualFailure::SubscriptionResponseTimeout:
+        return "gate7_subscription_response_timeout";
+    case Gate7ResidualFailure::SubscriptionTransportClosed:
+        return "gate7_subscription_transport_closed";
+    case Gate7ResidualFailure::SubscriptionAccountRejected:
+        return "gate7_subscription_account_rejected";
+    case Gate7ResidualFailure::SubscriptionTokenInvalidated:
+        return "gate7_subscription_token_invalidated";
+    case Gate7ResidualFailure::SubscriptionSymbolRejected:
+        return "gate7_subscription_symbol_rejected";
+    case Gate7ResidualFailure::SubscriptionRateLimited:
+        return "gate7_subscription_rate_limited";
+    case Gate7ResidualFailure::SubscriptionProviderUnavailable:
+        return "gate7_subscription_provider_unavailable";
+    case Gate7ResidualFailure::SubscriptionProviderRejected:
+        return "gate7_subscription_provider_rejected";
+    case Gate7ResidualFailure::SubscriptionUnexpectedPayload:
+        return "gate7_subscription_unexpected_payload";
+    case Gate7ResidualFailure::SubscriptionCorrelationRejected:
+        return "gate7_subscription_correlation_rejected";
+    case Gate7ResidualFailure::SubscriptionResponseMalformed:
+        return "gate7_subscription_response_malformed";
+    case Gate7ResidualFailure::SubscriptionAccountMismatch:
+        return "gate7_subscription_account_mismatch";
+    case Gate7ResidualFailure::SubscriptionProofRejected:
+        return "gate7_subscription_proof_rejected";
+    case Gate7ResidualFailure::SubscriptionResourceExhausted:
+        return "gate7_subscription_resource_exhausted";
+    case Gate7ResidualFailure::SpotResponseTimeout:
+        return "gate7_spot_response_timeout";
+    case Gate7ResidualFailure::SpotTransportClosed:
+        return "gate7_spot_transport_closed";
+    case Gate7ResidualFailure::SpotAccountRejected:
+        return "gate7_spot_account_rejected";
+    case Gate7ResidualFailure::SpotTokenInvalidated:
+        return "gate7_spot_token_invalidated";
+    case Gate7ResidualFailure::SpotSymbolRejected:
+        return "gate7_spot_symbol_rejected";
+    case Gate7ResidualFailure::SpotRateLimited:
+        return "gate7_spot_rate_limited";
+    case Gate7ResidualFailure::SpotProviderUnavailable:
+        return "gate7_spot_provider_unavailable";
+    case Gate7ResidualFailure::SpotProviderRejected:
+        return "gate7_spot_provider_rejected";
+    case Gate7ResidualFailure::SpotUnexpectedPayload:
+        return "gate7_spot_unexpected_payload";
+    case Gate7ResidualFailure::SpotResponseMalformed:
+        return "gate7_spot_response_malformed";
+    case Gate7ResidualFailure::SpotAccountMismatch:
+        return "gate7_spot_account_mismatch";
+    case Gate7ResidualFailure::SpotSymbolMismatch:
+        return "gate7_spot_symbol_mismatch";
+    case Gate7ResidualFailure::SpotIncompleteSideTimeout:
+        return "gate7_spot_incomplete_side_timeout";
+    case Gate7ResidualFailure::SpotTimestampMissingTimeout:
+        return "gate7_spot_timestamp_missing_timeout";
+    case Gate7ResidualFailure::SpotCompleteBboTimeout:
+        return "gate7_spot_complete_bbo_timeout";
+    case Gate7ResidualFailure::SpotProofRejected:
+        return "gate7_spot_proof_rejected";
+    case Gate7ResidualFailure::SpotResourceExhausted:
+        return "gate7_spot_resource_exhausted";
+    }
+    return "gate7_residual_unknown_failure";
 }
 
 } // namespace tradebot::ctrader

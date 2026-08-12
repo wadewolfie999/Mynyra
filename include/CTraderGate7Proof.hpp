@@ -2,6 +2,7 @@
 
 #include "BrokerAdapterContracts.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -51,7 +52,10 @@ enum class Gate7Decision {
     FullSymbolMismatch,
     SymbolMetadataRejected,
     SubscriptionMismatch,
-    MissingSpotSide,
+    IncompleteSpotSide,
+    IncompleteSpotTimestamp,
+    SpotAccountMismatch,
+    SpotSymbolMismatch,
     InvalidSpot,
     CrossedMarket,
     CheckedArithmeticFailed,
@@ -71,6 +75,99 @@ enum class Gate7TimestampUnit {
     Microseconds,
     Nanoseconds,
     Unproven
+};
+
+enum class Gate7ProviderErrorCategory {
+    None,
+    AccountRejected,
+    TokenInvalidated,
+    SymbolRejected,
+    RateLimited,
+    ProviderUnavailable,
+    Other
+};
+
+enum class Gate7SendOutcome {
+    Sent,
+    InactiveConnection,
+    PayloadRejected,
+    CorrelationRejected,
+    MessageUninitialized,
+    SerializationFailed,
+    FrameTooLarge,
+    WriteTimeout,
+    TransportClosed,
+    WriteFailed,
+    ResourceExhausted
+};
+
+enum class Gate7TransportOutcome {
+    Expected,
+    Timeout,
+    TransportClosed,
+    CommonProviderError,
+    OpenApiProviderError,
+    TokenInvalidated,
+    AccountDisconnected,
+    ClientDisconnected,
+    UnexpectedAllowedPayload,
+    CorrelationMismatch,
+    MalformedEnvelope,
+    InboundTypeRejected,
+    ResourceExhausted
+};
+
+enum class Gate7ResidualFailure {
+    None,
+    SubscriptionStateUnavailable,
+    SubscriptionSendFailed,
+    SubscriptionResponseTimeout,
+    SubscriptionTransportClosed,
+    SubscriptionAccountRejected,
+    SubscriptionTokenInvalidated,
+    SubscriptionSymbolRejected,
+    SubscriptionRateLimited,
+    SubscriptionProviderUnavailable,
+    SubscriptionProviderRejected,
+    SubscriptionUnexpectedPayload,
+    SubscriptionCorrelationRejected,
+    SubscriptionResponseMalformed,
+    SubscriptionAccountMismatch,
+    SubscriptionProofRejected,
+    SubscriptionResourceExhausted,
+    SpotResponseTimeout,
+    SpotTransportClosed,
+    SpotAccountRejected,
+    SpotTokenInvalidated,
+    SpotSymbolRejected,
+    SpotRateLimited,
+    SpotProviderUnavailable,
+    SpotProviderRejected,
+    SpotUnexpectedPayload,
+    SpotResponseMalformed,
+    SpotAccountMismatch,
+    SpotSymbolMismatch,
+    SpotIncompleteSideTimeout,
+    SpotTimestampMissingTimeout,
+    SpotCompleteBboTimeout,
+    SpotProofRejected,
+    SpotResourceExhausted
+};
+
+class Gate7HeartbeatCadence final {
+public:
+    using Clock = std::chrono::steady_clock;
+    static constexpr auto INTERVAL = std::chrono::seconds(9);
+
+    void markOutbound(Clock::time_point now) noexcept;
+    bool due(Clock::time_point now) const noexcept;
+    Clock::time_point boundedWaitDeadline(
+        Clock::time_point absoluteDeadline,
+        Clock::time_point now) const noexcept;
+
+private:
+    Clock::time_point nextDue_{};
+    bool armed_{false};
 };
 
 struct Gate7AccountRecord final {
@@ -140,6 +237,8 @@ struct Gate7SubscriptionEvidence final {
     std::int64_t accountId{0};
     std::int64_t symbolId{0};
     std::size_t requestedSymbolCount{0};
+
+    ~Gate7SubscriptionEvidence();
 };
 
 struct Gate7SpotEvidence final {
@@ -152,6 +251,8 @@ struct Gate7SpotEvidence final {
     std::optional<std::uint64_t> ask;
     std::optional<std::int64_t> timestamp;
     std::uint64_t receiptTimestampNs{0};
+
+    ~Gate7SpotEvidence();
 };
 
 struct Gate7TimestampProof final {
@@ -159,6 +260,11 @@ struct Gate7TimestampProof final {
     std::uint64_t timestampNs{0};
     std::uint64_t receiptTimestampNs{0};
     std::int64_t freshnessDeltaNs{0};
+};
+
+struct Gate7TimestampClassification final {
+    Gate7Decision decision{Gate7Decision::TimestampUnitUnproven};
+    std::optional<Gate7TimestampProof> proof;
 };
 
 struct Gate7QuoteEvidence final {
@@ -208,6 +314,8 @@ public:
         std::uint64_t rawWire, std::int32_t digits) noexcept;
     static std::optional<Gate7TimestampProof> classifyTimestamp(
         std::uint64_t rawTimestamp, std::uint64_t receiptTimestampNs) noexcept;
+    static Gate7TimestampClassification classifyTimestampDetailed(
+        std::uint64_t rawTimestamp, std::uint64_t receiptTimestampNs) noexcept;
     static std::string_view timestampUnitName(Gate7TimestampUnit unit) noexcept;
     static std::string_view safeDiagnostic(Gate7Decision decision) noexcept;
 
@@ -247,5 +355,18 @@ private:
     bool subscriptionReady_{false};
     std::optional<Gate7QuoteEvidence> quoteEvidence_;
 };
+
+Gate7ProviderErrorCategory classifyGate7ProviderError(
+    std::string_view errorCode) noexcept;
+Gate7ResidualFailure classifyGate7SubscriptionSendFailure(
+    Gate7SendOutcome outcome) noexcept;
+Gate7ResidualFailure classifyGate7SubscriptionReceiveFailure(
+    Gate7TransportOutcome outcome,
+    Gate7ProviderErrorCategory providerCategory) noexcept;
+Gate7ResidualFailure classifyGate7SpotReceiveFailure(
+    Gate7TransportOutcome outcome,
+    Gate7ProviderErrorCategory providerCategory) noexcept;
+std::string_view safeGate7ResidualDiagnostic(
+    Gate7ResidualFailure failure) noexcept;
 
 } // namespace tradebot::ctrader

@@ -10,12 +10,12 @@ Validate execution and order lifecycle behavior across strategy, allocation, exe
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
@@ -73,7 +73,10 @@ Broker feedback must return through gateway-owned events before portfolio or ris
 3. Check ack, reject, fill, partial-fill, cancel, reconcile, halt, and close-only flows.
 4. Require confirmed fills or reconciliation before position sync.
 5. Reject portfolio or risk mutation from unconfirmed broker events.
-6. Identify missing tests for each touched lifecycle state.
+6. Trace all copies of broker/provider identifiers and event material through
+   caller, callee, return, queue, callback, container, and destruction paths;
+   require terminal clearing where policy classifies them as volatile.
+7. Identify missing tests for each touched lifecycle state.
 
 ## Validation Checklist
 
@@ -83,6 +86,7 @@ Broker feedback must return through gateway-owned events before portfolio or ris
 - Unknown cancel state requires reconciliation.
 - Halt and close-only block risk-increasing exposure.
 - Duplicate or stale broker events cannot double-apply state.
+- Sensitive/provider-derived event copies cannot outlive their authorized use.
 
 ## Failure Modes Caught
 

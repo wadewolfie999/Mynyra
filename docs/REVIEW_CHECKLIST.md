@@ -12,6 +12,9 @@
 - Worktree status reviewed.
 - Untracked and ignored artifacts understood.
 - Scope matches task or plan.
+- Authorization names the exact action, artifact, environment, attempt budget, and stop condition.
+- Commit, push, publication, provider execution, retry, later gates, orders, risk changes, and live work are not inferred from adjacent approval.
+- Candidate, staged, committed, exact-commit-build, and external-process evidence are distinguished.
 
 ## Source Review
 
@@ -21,6 +24,8 @@
 - No generated outputs used as source.
 - Error handling fails safely.
 - Tests cover changed behavior.
+- Sensitive or provider-derived data is cleared from caller, callee, returned,
+  container, callback, temporary, and destruction copies where applicable.
 
 ## Risk Review
 
@@ -37,6 +42,8 @@
 - Logs redacted.
 - Dependency changes reviewed.
 - Network behavior understood.
+- Presence-only preflight does not expose values or authorize provider traffic.
+- Evidence templates contain no sensitive value-bearing fields.
 
 ## Data Review
 
@@ -59,6 +66,8 @@
 - ADR added or updated for durable decisions.
 - Project state remains current-state only.
 - Links and indexes reviewed.
+- Skills contain durable procedure rather than copied volatile phase/gate state.
+- Changed skills pass the available skill validator.
 
 ## Final Evidence
 
@@ -67,3 +76,7 @@
 - Skipped checks and reasons.
 - Remaining risks.
 - Rollback path.
+- Exact commit/artifact hash when required.
+- Initial failures and subsequent diagnostic reruns are both reported.
+- Cross-build suites were sequential or shared-resource isolation was proven.
+- Tracked/index status and relevant ignored artifacts are reported separately.

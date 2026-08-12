@@ -8,6 +8,14 @@ description: Produce a complete TradeBot session or actor handoff. Use when work
 
 Produce a complete TradeBot session or actor handoff.
 
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
+
 ## Activation Conditions
 
 Use when work is interrupted, a plan spans sessions, verification is incomplete, another actor will resume work, or safety-sensitive context must be preserved.
@@ -30,10 +38,13 @@ Run:
 
 ```sh
 git status --short
+git status --short --ignored
 git branch --show-current
+git rev-parse HEAD
 git log --oneline --decorate -n 5
 git diff --stat
 git diff --name-status
+git diff --cached --name-status
 ```
 
 Read:
@@ -51,7 +62,12 @@ Read:
 5. Identify failed/skipped checks.
 6. Record risks and unresolved questions.
 7. State next exact action and prohibited next actions.
-8. State required approvals.
+8. Record the authorization tuple, evidence epoch, exact artifact/hash when
+   relevant, external process/traffic count, credential-access status without
+   values, and remaining attempt/retry budget.
+9. If an ignored evidence file changed, record its path and SHA-256 without
+   staging it; define any normalized self-hash rule.
+10. State required approvals.
 
 ## Related Skills
 
@@ -73,7 +89,8 @@ Repository inspection commands above.
 
 ## Expected Outputs
 
-A handoff matching `docs/HANDOFF.md`.
+A handoff matching `docs/HANDOFF.md`, with candidate versus exact-commit
+evidence and tracked versus ignored state clearly separated.
 
 ## Failure Behavior
 

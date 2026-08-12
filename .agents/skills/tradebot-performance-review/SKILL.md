@@ -10,12 +10,12 @@ Review performance-sensitive changes while preserving correctness, determinism, 
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
@@ -32,6 +32,8 @@ Do not use to replace correctness testing, benchmark methodology review, replay 
 - Baseline measurement, if available.
 - Correctness and replay validation evidence.
 - Benchmark command and environment.
+- Evidence epoch and exact commit/artifact identity when the claim is intended
+  to survive commit or handoff.
 
 ## Required Outputs
 
@@ -64,6 +66,8 @@ git diff --name-status
 4. Require benchmark evidence before performance claims.
 5. Defer measurement-quality questions to `tradebot-benchmark-review`.
 6. Require replay and relevant tests after performance-sensitive source changes.
+7. Invalidate pre-change or pre-commit evidence after any relevant source,
+   build, fixture, dependency, or configuration change.
 
 ## Validation Checklist
 
@@ -72,6 +76,7 @@ git diff --name-status
 - Replay determinism is preserved.
 - Risk controls are not weakened.
 - Benchmark output is not overgeneralized into system-level claims.
+- Candidate and exact-commit measurements are not conflated.
 
 ## Failure Modes Caught
 

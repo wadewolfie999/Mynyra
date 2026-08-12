@@ -6,10 +6,11 @@
   controls merged in PR #24 and accepted by Wade on 2026-08-09; PR #25 is
   merged; Gate 6 execution was completed and accepted by Wade; and Gate 7 was
   separately authorized on 2026-08-10. Gate 7 implementation/offline
-  validation passed; its initial attempt stopped at Keychain access; and its
-  one newly authorized retry stopped at `gate7_oauth_failed` before account
-  discovery or endpoint data traffic. Gate 8–9 and all trading messages remain
-  unauthorized.
+  validation passed. Historical processes stopped at Keychain, generic OAuth,
+  and fixed callback-timeout boundaries. The latest authorized process reached
+  `gate7_subscription_failed` after full XAUUSD metadata validation. Residual
+  work is authorized offline; provider execution, Gate 8–9, and all trading
+  messages remain unauthorized.
 - Plans: accepted design `PLAN-20260806-ctrader-open-api-gate5`; offline
   implementation `PLAN-20260809-gate5-oauth-correlation-controls`
 - Decision: ADR 0004
@@ -524,14 +525,17 @@ umbrella. Wade confirmed the rotated client secret, client ID, and exact fixed
 redirect URI. On 2026-08-10 he also authorized a fresh TradeBot OAuth attempt
 with `trading` scope while withholding all trading-message authority. No exact
 FIBO title is required before Gate 6A; it must be observed there and approved
-before Gate 6B. Gates 7–9 remain blocked.
+before Gate 6B. Gate 7 was later separately authorized; Gates 8–9 remain
+blocked.
 
 `GATE 5.1 ACCEPTED — PR #25 MERGED — GATE 6 ACCEPTED — GATE 7 INCOMPLETE AT
-KEYCHAIN-PERMISSION BLOCKER`
+SUBSCRIPTION TRANSITION`
 
 Gate 7 was separately authorized by Wade on 2026-08-10. Its isolated
 implementation and offline validation passed. The initial bounded process
-stopped at Keychain access; the one newly authorized retry stopped at
-`gate7_oauth_failed` before account discovery or fixed-endpoint data traffic,
-so no XAUUSD symbol, metadata, quote, or timestamp evidence was produced.
-Gates 8–9, order messages, and live trading remain unauthorized.
+stopped at Keychain access; later processes stopped at generic OAuth failure and
+a fixed callback timeout. The latest process passed full canonical XAUUSD
+metadata validation and stopped at `gate7_subscription_failed`. No accepted
+subscription, quote, or timestamp evidence was produced. Residual diagnostics
+are authorized offline, while provider execution, Gates 8–9, order messages,
+and live trading remain unauthorized.

@@ -10,7 +10,7 @@
 
 ## Current Gate
 
-Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group through cTrader for demo-only XAUUSD, closing Phase 23. Official Open API is the sole integration path; Gate 1 and Gate 3 are revalidated, Gate 2 and Gate 5 were accepted by Wade on 2026-08-07, Gate 5.1 is merged and accepted, and PR #25 is merged. Gate 6 execution was completed and accepted by Wade. Wade separately authorized Gate 7; its implementation and offline validation passed. The initial attempt stopped at Keychain access, and the one authorized retry stopped at `gate7_oauth_failed` before account discovery or endpoint data traffic. No market-data evidence exists. Gates 8–9 and live trading remain Blocked / NO-GO.
+Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group through cTrader for demo-only XAUUSD, closing Phase 23. Official Open API is the sole integration path; Gate 1 and Gate 3 are revalidated, Gate 2 and Gate 5 were accepted by Wade on 2026-08-07, Gate 5.1 is merged and accepted, and PR #25 is merged. Gate 6 execution was completed and accepted by Wade. Wade separately authorized Gate 7; its implementation and prior offline validation passed. Historical attempts stopped at Keychain, OAuth, and callback-timeout boundaries. The latest process reached `gate7_subscription_failed` after full XAUUSD metadata validation. No accepted subscription, quote, or timestamp evidence exists. Residual work is authorized offline; provider execution, Gates 8–9, and live trading remain Blocked / NO-GO.
 
 ## Priority And Status
 
@@ -26,7 +26,7 @@ Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group th
 | ID | Priority | Area | Status | Residual gap and closure evidence |
 | --- | --- | --- | --- | --- |
 | GOV-001 | P0 | Phase 23 | Closed | Wade selected FIBO Group through cTrader for demo-only XAUUSD. |
-| GOV-002 | P0 | Phase 24 | Gate 6 accepted; Gate 7 incomplete at OAuth failure | Local correlation, Gate 6 account proof, and Gate 7 synthetic controls have evidence. The one newly authorized Gate 7 retry stopped at `gate7_oauth_failed` before account discovery or endpoint data traffic. No quote or symbol metadata evidence was obtained; do not retry in this task. |
+| GOV-002 | P0 | Phase 24 | Gate 6 accepted; Gate 7 incomplete at subscription transition | Local correlation, Gate 6 account proof, and prior Gate 7 synthetic controls have evidence. The latest Gate 7 process passed full XAUUSD metadata validation and stopped at `gate7_subscription_failed`; the subcause, accepted subscription, quote, and timestamp remain unproven. The residual offline patch is reviewed for the authorized local commit/exact rebuild; provider execution still requires its separate preconditions and exact approval. |
 | ENG-001 | P0 | Execution lifecycle | Confirmed gap | `ExecutionEngine` still uses the compatibility `BrokerFill` path. Migrate it to acknowledgement/execution/cancel/health lifecycle callbacks and retain portfolio mutation only from confirmed execution or approved reconciliation. |
 | ENG-002 | P0 | Risk integration | Confirmed gap | The main gateway route does not obtain a concrete final normalized-quantity decision from `RiskEngine`; the compatibility route supplies an always-allowed decision after the preliminary `canTrade()` check. Add a real final decision API and end-to-end tests. |
 | ENG-003 | P0 | Persistence | Confirmed gap | `OrderLifecycleStore` is held in memory and is not included in `StateSerializer` snapshots. Persist lifecycle state, deduplication keys, audit history, and migration/version behavior before restart-sensitive use. |
@@ -34,7 +34,7 @@ Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group th
 | ENG-005 | P0 | Adapter health | Evidence gap | Gateway health events exist, but current `main` wiring does not visibly connect adapter degradation to `RiskEngine` halt/close-only behavior. Define and test fail-closed health propagation and recovery without automatic halt clearing. |
 | ENG-006 | P0 | Reconciliation | Evidence gap | Reconciliation snapshots and mismatch classification exist, but end-to-end policy and tests for position/account mismatch escalation are incomplete. Define when new exposure is blocked, how state is reviewed, and how reconciliation is resolved. |
 | BRK-001 | P0 | Provider adapter | Blocked | No provider-specific adapter exists; only `IBrokerAdapter` and deterministic local simulation are present. A future adapter must attach below `BrokerGateway` and translate provider schemas into neutral contracts. |
-| BRK-002 | P1 | Provider evidence | Gate 7 incomplete; provider evidence pending | Open API approval is operator-reported. The one authorized Gate 7 retry stopped at `gate7_oauth_failed` before account discovery or endpoint data traffic. Authentication, real demo account identity, XAUUSD metadata/data, reconnect behavior, and demo-order proof remain unexecuted. |
+| BRK-002 | P1 | Provider evidence | Gate 7 incomplete; subscription/quote evidence pending | Open API approval is operator-reported. Control-flow evidence now reaches fresh demo-account authentication and full canonical XAUUSD metadata validation, but the generic subscription transition failed. Accepted subscription, BBO/timestamp proof, reconnect behavior, and demo-order proof remain unexecuted. |
 | BRK-003 | P1 | Practice/sandbox validation | Blocked | No external practice or sandbox validation has been authorized or performed. Prove authentication, market data, order lifecycle, disconnects, partial fills, cancellation, reconciliation, and rate-limit behavior in a non-live environment before any live consideration. |
 | RISK-001 | P0 | Live readiness | Blocked | The live-readiness checklist is not satisfied. Missing evidence includes exact venue/account approval, kill switch, limits, monitoring, stale-data handling, disconnect recovery, reconciliation, rollback, and operator stop authority. |
 | RISK-002 | P0 | Credentials/security | Gate 6 credential boundary active | Gate 5 defines Keychain, redaction, and staged Gate 6A/checkpoint/Gate 6B selection. Wade confirmed the configured credential state and authorized `trading` scope; exact callback correlation succeeded. No credential or token value may enter evidence. |
@@ -53,16 +53,20 @@ OANDA is permanently cancelled. FIBO Group through cTrader is selected, and offi
 The current gate sequence is:
 
 1. Preserve Wade's Gate 2 and Gate 5 acceptance record; acceptance grants no execution authority.
-2. Preserve Wade's Gate 5.1 acceptance and Gate 6 authorization evidence.
-3. Rotate the exposed secret and register the fixed redirect URI before the
-   Gate 6A discovery, Wade checkpoint, and Gate 6B authentication sequence.
-   Keep market data, reconnect, demo-order, and live gates separate.
+2. Preserve Wade's Gate 5.1 and completed/accepted Gate 6 evidence; the prior
+   credential/redirect remediation is historical, not a current action.
+3. Complete Gate 7 residual offline review, then require a separate exact Wade
+   approval before one provider process. Keep reconnect, demo-order, and live
+   gates separate.
 
 ## Recommended Sequencing
 
 1. Resolve ENG-001 through ENG-006 and add the missing end-to-end evidence while remaining broker-neutral.
-2. Review the Gate 7 incomplete report and resolve the local Keychain-access
-   condition before any separately authorized future provider attempt.
+2. Preserve the reviewed Gate 7 typed residual diagnostics, bounded heartbeat,
+   first-single-complete-BBO handling, full offline verification, sanitized
+   evidence template, and exact commit/binary identity. Resolve clock health
+   and the remaining preconditions before any separately authorized provider
+   process.
 3. Keep Gate 8–9, demo-order, practice-validation, live-readiness, and live
    authorization as separate decisions; do not collapse them into Gate 7 or
    broker selection.

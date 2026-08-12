@@ -12,7 +12,7 @@
 Verified local environment:
 
 - macOS workspace at `~/TradeBot`.
-- CMake 4.3.2.
+- CMake 4.4.0.
 - Apple clang 21.0.0.
 - CMake generator: Unix Makefiles.
 - Build cache: Release.
@@ -103,6 +103,12 @@ Until tooling is added:
 - Do not commit credentials, private keys, `.env` files, account identifiers, logs containing secrets, or local machine paths.
 - Commit messages should identify the subsystem or document and the purpose, for example `docs: add TradeBot governance system` or `phase19: refine applyBbo benchmark evidence`.
 - Codex must not commit unless explicitly instructed by the operator.
+- Commit authorization does not include push, PR creation, publication, merge,
+  release, deployment, provider traffic, or later-gate work unless those
+  actions are separately named.
+- When an exact-commit artifact is required, rebuild after commit and record
+  the full commit SHA and artifact SHA-256. Label pre-commit binaries as
+  candidates, not exact-commit evidence.
 
 ## Documentation Updates
 
@@ -141,6 +147,11 @@ A reviewable change should include:
 - Handoff if work may continue in another session.
 
 Reviewers should prioritize bugs, safety regressions, data leakage, lookahead bias, mode confusion, credential exposure, stale documentation, and unsupported performance claims.
+
+Run full CTest suites from separate build trees sequentially unless fixed
+ports, local certificate authorities, temporary paths, processes, and other
+shared resources are proven isolated. Preserve and report any initial
+contention failure before the passing sequential rerun.
 
 ## Security-Sensitive Changes
 

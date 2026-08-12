@@ -9,21 +9,27 @@
 ## Standard Workflow
 
 1. Task intake: capture objective, scope, risk class, and expected output.
-2. State inspection: run repository status, inspect relevant docs, inspect source/tests before mutation.
-3. Scope definition: identify in-scope and out-of-scope files and behavior.
-4. Risk classification: normal, architecture-sensitive, data-sensitive, security-sensitive, financial-sensitive, or live-capable.
-5. Planning: use `PLANS.md` when required.
-6. Approval: get operator or review-authority approval for nontrivial, sensitive, live-capable, or destructive work.
-7. Implementation: edit only in scope and preserve unrelated changes.
-8. Verification: run targeted and broad checks appropriate to risk.
-9. Review: prioritize bugs, regressions, missing evidence, safety, docs, and architecture drift.
-10. Correction: fix findings or record why unresolved issues remain.
-11. Commit preparation: review status, diff, and staged files; do not stage unrelated files.
-12. Operator approval: required before commits, pushes, releases, live unlocks, and risk changes.
-13. Push or release: perform only when explicitly instructed.
-14. Documentation update: update state, architecture, risk, testing, data, ADRs, or plans as needed.
-15. Handoff: provide `HANDOFF.md` fields when work continues elsewhere.
-16. Professional halt: stop at a clean evidence boundary when further action needs approval, access, or new scope.
+2. Authorization ledger: record exact actions, files/subsystems, artifact,
+   environment, attempt budget, stop condition, and explicitly prohibited
+   adjacent actions.
+3. State inspection: run repository status, inspect relevant docs, inspect source/tests before mutation.
+4. Scope definition: identify in-scope and out-of-scope files and behavior.
+5. Risk classification: normal, architecture-sensitive, data-sensitive, security-sensitive, financial-sensitive, or live-capable.
+6. Planning: use `PLANS.md` when required.
+7. Approval: get operator or review-authority approval for nontrivial, sensitive, live-capable, or destructive work.
+8. Implementation: edit only in scope and preserve unrelated changes.
+9. Candidate verification: run targeted and broad checks appropriate to risk and record the working-tree evidence epoch.
+10. Review: prioritize bugs, regressions, missing evidence, safety, docs, and architecture drift.
+11. Correction: fix findings or record why unresolved issues remain; rerun affected checks.
+12. Commit preparation: if authorized, review status, explicit staged path allowlist, staged diff, and `git diff --cached --check`; do not stage unrelated files.
+13. Commit and exact-artifact verification: if authorized, commit locally, confirm tracked/index state, rebuild from that commit, and record the full commit and artifact hash.
+14. External action checkpoint: provider traffic, retries, later gates, orders,
+    and live actions require separate exact approval after current preconditions
+    pass.
+15. Push or release: perform only when explicitly instructed; commit authority does not imply either action.
+16. Documentation update: update state, architecture, risk, testing, data, ADRs, or plans as needed.
+17. Handoff: provide `HANDOFF.md` fields when work continues elsewhere.
+18. Professional halt: stop at the authorized evidence boundary when further action needs approval, access, or new scope.
 
 ## Small Fix Workflow
 
@@ -31,6 +37,7 @@
 - Confirm no plan is required.
 - Patch narrowly.
 - Run targeted verification.
+- Record the evidence epoch; if the patch changes after verification, rerun affected checks.
 - Report files changed, commands, results, and residual risk.
 
 ## Feature Work Workflow
@@ -40,6 +47,7 @@
 - Implement in increments.
 - Add or update tests.
 - Run full CTest when shared behavior is touched.
+- Run suites from different build trees sequentially unless every shared resource is isolated.
 - Update docs and handoff.
 
 ## Phase Work Workflow
@@ -64,6 +72,7 @@
 - Avoid duplication and invented facts.
 - Update indexes.
 - Run `git diff --check` and doc audit grep.
+- Validate every changed skill with the repository-available skill validator.
 - Report skipped link-checking if no local tool exists.
 
 ## Research Experiment Workflow
@@ -101,3 +110,6 @@ Halt when:
 - Evidence is insufficient for a claim.
 - Scope would need expansion.
 - Network or external access is required but unavailable.
+- The attempt budget is exhausted or the next action is a retry, reconnect,
+  provider process, staging/commit, publication, later gate, order, risk, or
+  live action not explicitly authorized.

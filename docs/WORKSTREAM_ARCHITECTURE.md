@@ -14,7 +14,7 @@ This architecture defines domains and coordination boundaries. It does not autho
 | Workstream | Domain | Current position |
 | --- | --- | --- |
 | Workstream I — Broker-Neutral Execution Foundation | Deterministic broker-neutral contracts, lifecycle, execution/risk alignment, replay, persistence, and local simulation foundation. | Complete — Accepted through Phase 22. |
-| Workstream II — Broker Integration Program | FIBO/cTrader demo target, official Open API integration gates, failure semantics, and future broker-hosted validation/readiness paths. | Phase 23 selection complete; Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted by Wade on 2026-08-07; Gate 5.1 merged and accepted; PR #25 merged; Gate 6 execution accepted; Gate 7 implementation/offline validation complete but its one authorized retry stopped at `gate7_oauth_failed` before endpoint data traffic. Gate 8–9 and later remain blocked. |
+| Workstream II — Broker Integration Program | FIBO/cTrader demo target, official Open API integration gates, failure semantics, and future broker-hosted validation/readiness paths. | Phase 23 selection complete; Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted by Wade on 2026-08-07; Gate 5.1 merged and accepted; PR #25 merged; Gate 6 execution accepted; Gate 7 incomplete at the latest `gate7_subscription_failed` transition after full XAUUSD metadata validation. Residual work is authorized offline; provider execution, Gate 8–9, and later remain blocked. |
 | Workstream III — Documentation & Knowledge Architecture | Documentation platform, information architecture, canonical knowledge, and maintenance workflows. | Parallel/future domain unless separately activated. |
 | Workstream IV — ML Optimization & Strategy Research | Reproducible offline optimization, ML-assisted research, and strategy evidence. | Parallel/future domain unless separately activated. |
 | Workstream V — Core Platform Enhancement | Broker-neutral core capability, reliability, maintainability, and performance improvements. | Parallel/future domain unless separately activated. |
@@ -47,7 +47,7 @@ The primary rhythm is Strategy 2 — Parallel Evidence Lanes With Wade Checkpoin
 - Bigi owns technical evidence, the adapter-fit audit, the failure-mode checklist, and demo/live semantics analysis.
 - ChatGPT/review assistant supports prompt structure, output review, and governance-drift detection.
 
-This rhythm produced Wade's FIBO Group/cTrader selection. ADR 0004 makes official Open API the sole integration path; the Algo Bridge is abandoned, non-controlling, and out of scope. The selection itself did not authorize later execution. Wade separately authorized the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`) and later authorized Gate 7. The initial Gate 7 attempt stopped at Keychain access; its one authorized retry stopped at `gate7_oauth_failed` before endpoint data traffic. Orders, Gate 8–9, and live trading remain unauthorized.
+This rhythm produced Wade's FIBO Group/cTrader selection. ADR 0004 makes official Open API the sole integration path; the Algo Bridge is abandoned, non-controlling, and out of scope. The selection itself did not authorize later execution. Wade separately authorized the Gate 6 umbrella (`Gate 6A → mandatory Wade checkpoint → Gate 6B`) and later authorized Gate 7. Gate 7 history progressed through Keychain, OAuth, and callback-timeout boundaries; the latest process reached `gate7_subscription_failed` after full metadata validation. Orders, Gate 8–9, and live trading remain unauthorized.
 
 Strategy 3 gate labels may be added later as a governance overlay. A full Kanban system is intentionally not part of v1.0.
 
@@ -56,10 +56,11 @@ Strategy 3 gate labels may be added later as a governance overlay. A full Kanban
 - Phase 22 remains Complete — Accepted at the Workstream I broker-neutral boundary.
 - Workstream II completed Phase 23 selection. Gate 2 and Gate 5 were accepted
   by Wade on 2026-08-07; Gate 5.1 was merged and accepted on 2026-08-09; PR #25
-  is merged; Gate 6 execution was accepted; and Gate 7 implementation/offline
-  validation completed. The initial Gate 7 attempt stopped at Keychain access;
-  its one authorized retry stopped at `gate7_oauth_failed` before endpoint data
-  traffic.
+  is merged; Gate 6 execution was accepted; and Gate 7 implementation/prior
+  offline validation completed. The latest Gate 7 process reached
+  `gate7_subscription_failed` after full XAUUSD metadata validation. Residual
+  subscription/spot diagnostics and first-single-complete-BBO handling are
+  authorized offline; provider execution remains separately blocked.
 - Only Wade may authorize each Open API execution gate.
 - Every future Phase 24 execution step remains blocked until Wade separately approves its exact scope.
 - Workstream III–VII status changes require separate activation.
@@ -68,6 +69,6 @@ Strategy 3 gate labels may be added later as a governance overlay. A full Kanban
 
 ## Professional Halting Point
 
-Stop after the Gate 7 incomplete implementation/provider handoff. Gate 8–9,
-orders, and live actions remain outside current authorization; the one retry is
-exhausted for this task.
+Stop after the Gate 7 residual offline implementation, verification, and
+incomplete handoff. Provider execution requires separate exact Wade approval;
+Gate 8–9, orders, and live actions remain outside current authorization.
