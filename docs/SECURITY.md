@@ -112,6 +112,14 @@ resolution, and full metadata validation before the generic
 `gate7_subscription_failed` boundary. No accepted subscription, quote, or
 timestamp evidence was obtained.
 
+Gate 7 reads the Gate 6 `TBG6TOK1` Keychain token envelope using the same
+big-endian 64-bit expiry and 32-bit length-prefixed field layout that Gate 6
+writes. A successful refresh or authorization-code exchange is not usable for
+provider traffic until the complete replacement envelope has been written to
+the fixed Keychain service. Keychain write failure is terminal and emits only
+`gate7_keychain_write_failed`; token fields are never written to repository
+files or process output.
+
 Gate 7 OAuth failures are emitted only as fixed categories covering listener
 startup, authorization URL construction, browser launch, callback wait/read,
 callback binding/parsing, authorization denial, state correlation, code
@@ -130,6 +138,11 @@ maintenance timestamps, correlations, identifiers, peer values, and raw
 payloads are never printed or persisted and are cleared before return. The
 fixed diagnostics contain no `=`, `?`, `&`, whitespace-delimited provider text,
 or caller-supplied material.
+
+The success path is equally value-free: it emits only fixed markers for the
+completed provider sequence, FIBO demo-account proof, canonical XAUUSD proof,
+single-event BBO proof, freshness proof, and zero exit status. It never prints
+prices, timestamps, IDs, symbol aliases, numeric metadata, or token material.
 
 Gate 7 may admit the documented account-disconnect event only as an inbound
 fail-closed control message. It does not broaden the outbound allowlist. An
