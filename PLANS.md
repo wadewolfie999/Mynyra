@@ -1777,3 +1777,112 @@ authorized retry, documentation synchronization, commit, push, draft PR, and
 the canonical sanitized report are complete. The exact next action is Wade
 review of draft PR #26/report; do not begin Gate 8 or retry provider traffic
 again within this task.
+
+# Plan: Harden Gate 7 OAuth Diagnostics Offline
+
+- Plan ID: `PLAN-20260811-ctrader-gate7-oauth-diagnostics`
+- Status: Complete — offline implementation, review corrections, and verification complete
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Workstream II, Phase 24, Gate 7 review closeout only
+- Related issue or decision: PR #26 review; ADR 0004; Gate 7 incomplete OAuth outcome
+- Created: 2026-08-11
+- Updated: 2026-08-12
+
+## Objective
+
+Replace Gate 7's generic OAuth failure output with fixed, non-sensitive failure
+categories and close the reviewed local callback peer-address and receive-timeout
+gaps without initiating provider traffic.
+
+## Scope
+
+- Add a Gate 7-only diagnostic enum and fixed diagnostic mapping.
+- Preserve the fixed authorization/token/demo endpoints, `trading` scope,
+  allowlists, one-shot correlation, secret clearing, and Gate 6 boundary.
+- Report listener, URL, browser, timeout, callback, denial, state-correlation,
+  code-extraction, cancellation, and resource-exhaustion categories.
+- Use the actual accepted loopback peer address and bounded callback reads.
+- Add deterministic offline coverage for all categories and correlation mappings.
+- Synchronize Gate 7 security, testing, and current-state documentation.
+
+## Out of Scope
+
+- OAuth, browser, Keychain, token, cTrader, account, symbol, quote, timestamp,
+  reconnect, order, Gate 8, Gate 9, or live execution.
+- Removing or weakening `state` correlation.
+- Gate 6 source, behavior, executable, allowlist, or accepted evidence.
+- Commits, pushes, PR state changes, credentials, or external provider traffic.
+
+## Invariants
+
+- Diagnostics contain fixed literals only and never provider text, query data,
+  state, code, token, account identifier, peer address, or secret material.
+- Every OAuth terminal path clears correlation state and callback material.
+- The fixed demo endpoint and existing Gate 7 payload allowlist are unchanged.
+- Offline tests perform no Keychain, browser, socket, provider, or account action.
+
+## Files Expected To Change
+
+- `CMakeLists.txt`
+- `include/CTraderGate7OAuthDiagnostics.hpp`
+- `src/CTraderGate7OAuthDiagnostics.cpp`
+- `src/CTraderGate7Runtime.mm`
+- `tests/ctrader_gate7_tests.cpp`
+- `PLANS.md`
+- `docs/CTRADER_OPEN_API_GATE7.md`
+- `docs/PROJECT_STATE.md`
+- `docs/SECURITY.md`
+- `docs/TESTING.md`
+
+## Verification
+
+```sh
+git diff --check
+cmake -S . -B build/gate7 -DTRADEBOT_ENABLE_CTRADER_GATE7=ON
+cmake --build build/gate7 --target ctrader_gate7_tests ctrader_gate7_proof --parallel 4
+ctest --test-dir build/gate7 -R '^ctrader_gate7_tests$' --output-on-failure
+```
+
+Run the full offline default/Gate 7 suites and sanitizer coverage after the
+targeted checks. Do not run the Gate 7 provider executable.
+
+## Risks
+
+- A diagnostic mapping error could hide the true local failure or expose data;
+  fixed-category tests and redaction assertions are required.
+- Callback I/O changes must retain one-shot terminal behavior and must not alter
+  the accepted correlation contract.
+- Provider support for `state` remains unverified; this patch must not infer or
+  authorize a weaker correlation policy.
+
+## Rollback
+
+With operator approval, revert only this offline hardening diff. Do not alter
+credentials, Keychain items, provider state, Gate 6, PR state, or history.
+
+## Progress Log
+
+- 2026-08-11: Wade explicitly authorized this offline-only diagnostic hardening
+  patch and prohibited provider retry or traffic.
+- 2026-08-11: Added fixed OAuth diagnostics, actual peer capture, bounded
+  callback receive timeout, deterministic category/mapping tests, and synchronized
+  Gate 7 documentation.
+- 2026-08-11: Opt-in Gate 7 target built and targeted test passed; full offline
+  and sanitizer verification completed after the targeted check.
+- 2026-08-12: Review identified that the callback receive loop needed an
+  absolute deadline in addition to its per-receive timeout and that callback
+  buffer allocation failure could escape the fixed diagnostic path. Wade
+  authorized the bounded offline corrections and repeat verification.
+- 2026-08-12: Added the absolute callback read deadline, allocation-safe append
+  classification, deterministic regression coverage, and synchronized
+  documentation. Targeted Gate 7, full default, full Gate 6, full Gate 7, and
+  Gate 7 ASan/UBSan verification all passed without warnings.
+
+## Final Outcome
+
+Offline Gate 7 OAuth diagnostic hardening and its authorized review corrections
+are complete. Gate 7 provider execution remains incomplete at the historical
+`gate7_oauth_failed` outcome. No provider retry, account discovery, market-data
+proof, Gate 8, Gate 9, or live action is authorized by this plan.

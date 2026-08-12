@@ -1,9 +1,14 @@
+#include "CTraderGate7OAuthDiagnostics.hpp"
 #include "CTraderGate7Proof.hpp"
 
 #include <array>
+#include <atomic>
+#include <chrono>
 #include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <limits>
+#include <new>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -13,8 +18,57 @@
 
 namespace {
 
+std::atomic<bool> failNextAllocation{false};
+
+void* allocateForTest(std::size_t size)
+{
+    if (failNextAllocation.exchange(false)) {
+        throw std::bad_alloc();
+    }
+    if (void* memory = std::malloc(size == 0 ? 1 : size)) {
+        return memory;
+    }
+    throw std::bad_alloc();
+}
+
+} // namespace
+
+void* operator new(std::size_t size)
+{
+    return allocateForTest(size);
+}
+
+void* operator new[](std::size_t size)
+{
+    return allocateForTest(size);
+}
+
+void operator delete(void* memory) noexcept
+{
+    std::free(memory);
+}
+
+void operator delete[](void* memory) noexcept
+{
+    std::free(memory);
+}
+
+void operator delete(void* memory, std::size_t) noexcept
+{
+    std::free(memory);
+}
+
+void operator delete[](void* memory, std::size_t) noexcept
+{
+    std::free(memory);
+}
+
+namespace {
+
 using tradebot::ctrader::CTraderGate7Config;
 using tradebot::ctrader::CTraderGate7Proof;
+using tradebot::ctrader::Gate7OAuthFailure;
+using ::CTraderOAuthCorrelationGuard;
 using tradebot::ctrader::Gate7AccountListEvidence;
 using tradebot::ctrader::Gate7AccountRecord;
 using tradebot::ctrader::Gate7Decision;
@@ -150,6 +204,132 @@ void test_endpoint_and_allowlist()
             "provider error not admitted inbound");
     require(!CTraderGate7Config::isAllowedInboundPayload(2126),
             "execution event admitted inbound");
+}
+
+void test_oauth_diagnostics_are_fixed_and_complete()
+{
+    using Failure = Gate7OAuthFailure;
+    struct FailureCase {
+        Failure failure;
+        std::string_view diagnostic;
+    };
+    constexpr std::array<FailureCase, 27> failures = {{
+        {Failure::None, "gate7_oauth_ok"},
+        {Failure::ListenerSocketFailed, "gate7_oauth_listener_socket_failed"},
+        {Failure::ListenerBindFailed, "gate7_oauth_listener_bind_failed"},
+        {Failure::ListenerListenFailed, "gate7_oauth_listener_listen_failed"},
+        {Failure::ListenerNonBlockingFailed,
+         "gate7_oauth_listener_nonblocking_failed"},
+        {Failure::CorrelationArmFailed, "gate7_oauth_correlation_arm_failed"},
+        {Failure::AuthorizationUrlFailed, "gate7_oauth_authorization_url_failed"},
+        {Failure::BrowserLaunchFailed, "gate7_oauth_browser_launch_failed"},
+        {Failure::CallbackTimeout, "gate7_oauth_callback_timeout"},
+        {Failure::CallbackWaitFailed, "gate7_oauth_callback_wait_failed"},
+        {Failure::CallbackAcceptFailed, "gate7_oauth_callback_accept_failed"},
+        {Failure::CallbackReadFailed, "gate7_oauth_callback_read_failed"},
+        {Failure::CallbackMalformed, "gate7_oauth_callback_malformed"},
+        {Failure::CallbackRemoteRejected,
+         "gate7_oauth_callback_remote_rejected"},
+        {Failure::CallbackMethodRejected,
+         "gate7_oauth_callback_method_rejected"},
+        {Failure::CallbackHostRejected, "gate7_oauth_callback_host_rejected"},
+        {Failure::CallbackPathRejected, "gate7_oauth_callback_path_rejected"},
+        {Failure::CallbackQueryMalformed,
+         "gate7_oauth_callback_query_malformed"},
+        {Failure::AuthorizationDenied, "gate7_oauth_authorization_denied"},
+        {Failure::CallbackBeforeArming,
+         "gate7_oauth_callback_before_arming"},
+        {Failure::StateMissing, "gate7_oauth_state_missing"},
+        {Failure::StateMismatch, "gate7_oauth_state_mismatch"},
+        {Failure::CodeMissing, "gate7_oauth_code_missing"},
+        {Failure::CodeExtractionFailed,
+         "gate7_oauth_code_extraction_failed"},
+        {Failure::CallbackReplayRejected,
+         "gate7_oauth_callback_replay_rejected"},
+        {Failure::CallbackCancelled, "gate7_oauth_callback_cancelled"},
+        {Failure::ResourceExhausted, "gate7_oauth_resource_exhausted"}
+    }};
+    for (const FailureCase& testCase : failures) {
+        const std::string_view actual =
+            tradebot::ctrader::safeOAuthDiagnostic(testCase.failure);
+        require(actual == testCase.diagnostic,
+                "OAuth diagnostic category changed unexpectedly");
+        require(actual.size() <= 64 && actual.find('=') == std::string_view::npos,
+                "OAuth diagnostic was unbounded or value-like");
+    }
+
+    using Decision = CTraderOAuthCorrelationGuard::Decision;
+    struct DecisionCase {
+        Decision decision;
+        Failure failure;
+    };
+    constexpr std::array<DecisionCase, 19> decisions = {{
+        {Decision::Unarmed, Failure::CorrelationArmFailed},
+        {Decision::Armed, Failure::None},
+        {Decision::ListenerBindingRejected, Failure::CorrelationArmFailed},
+        {Decision::EntropyUnavailable, Failure::CorrelationArmFailed},
+        {Decision::AlreadyTerminal, Failure::CallbackReplayRejected},
+        {Decision::CallbackBeforeArming, Failure::CallbackBeforeArming},
+        {Decision::CallbackExpired, Failure::CallbackTimeout},
+        {Decision::Cancelled, Failure::CallbackCancelled},
+        {Decision::UnexpectedRemote, Failure::CallbackRemoteRejected},
+        {Decision::UnexpectedMethod, Failure::CallbackMethodRejected},
+        {Decision::UnexpectedHost, Failure::CallbackHostRejected},
+        {Decision::UnexpectedPath, Failure::CallbackPathRejected},
+        {Decision::MalformedQuery, Failure::CallbackQueryMalformed},
+        {Decision::DuplicateParameter, Failure::CallbackQueryMalformed},
+        {Decision::AuthorizationRejected, Failure::AuthorizationDenied},
+        {Decision::StateMissing, Failure::StateMissing},
+        {Decision::StateMismatch, Failure::StateMismatch},
+        {Decision::CodeMissing, Failure::CodeMissing},
+        {Decision::CorrelationMatchedCodeDiscarded, Failure::None}
+    }};
+    for (const DecisionCase& testCase : decisions) {
+        require(tradebot::ctrader::classifyOAuthCorrelationFailure(
+                    testCase.decision) == testCase.failure,
+                "OAuth correlation failure was misclassified");
+    }
+}
+
+void test_oauth_callback_read_hardening()
+{
+    using Clock = tradebot::ctrader::Gate7OAuthClock;
+    const auto now = Clock::time_point{} + std::chrono::seconds(100);
+    const auto correlationDeadline = now + std::chrono::seconds(60);
+    require(tradebot::ctrader::gate7OAuthCallbackReadDeadline(
+                correlationDeadline, now)
+                == now + tradebot::ctrader::GATE7_OAUTH_CALLBACK_READ_TIMEOUT,
+            "callback read did not use the bounded inactivity deadline");
+    const auto nearDeadline = now + std::chrono::seconds(1);
+    require(tradebot::ctrader::gate7OAuthCallbackReadDeadline(
+                nearDeadline, now) == nearDeadline,
+            "callback read exceeded the absolute correlation deadline");
+    require(tradebot::ctrader::gate7OAuthCallbackReadDeadline(
+                nearDeadline, nearDeadline) == nearDeadline,
+            "expired callback read extended its deadline");
+
+    std::string bounded = "TEST";
+    require(tradebot::ctrader::appendGate7OAuthCallbackBytes(
+                bounded, "_ONLY", 9) == Gate7OAuthFailure::None,
+            "bounded callback bytes were rejected");
+    require(bounded == "TEST_ONLY", "callback bytes were not appended exactly");
+    require(tradebot::ctrader::appendGate7OAuthCallbackBytes(
+                bounded, "X", 9) == Gate7OAuthFailure::CallbackMalformed,
+            "oversized callback bytes were not rejected");
+    require(bounded == "TEST_ONLY",
+            "oversized callback bytes changed retained material");
+
+    std::string allocationTarget;
+    const std::string allocationInput(2048, 'x');
+    failNextAllocation = true;
+    const Gate7OAuthFailure allocationFailure =
+        tradebot::ctrader::appendGate7OAuthCallbackBytes(
+            allocationTarget, allocationInput, 4096);
+    failNextAllocation = false;
+    require(allocationFailure == Gate7OAuthFailure::ResourceExhausted,
+            "callback allocation failure was not sanitized");
+    require(allocationTarget.empty(),
+            "callback allocation failure retained partial material");
 }
 
 void test_canonical_symbol_rule()
@@ -447,6 +627,10 @@ int main()
 {
     std::cerr << "[ctrader_gate7_tests] endpoint and allowlists...\n";
     test_endpoint_and_allowlist();
+    std::cerr << "[ctrader_gate7_tests] OAuth diagnostics...\n";
+    test_oauth_diagnostics_are_fixed_and_complete();
+    std::cerr << "[ctrader_gate7_tests] OAuth callback read hardening...\n";
+    test_oauth_callback_read_hardening();
     std::cerr << "[ctrader_gate7_tests] canonical symbol rule...\n";
     test_canonical_symbol_rule();
     std::cerr << "[ctrader_gate7_tests] account selection...\n";

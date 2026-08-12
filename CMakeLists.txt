@@ -170,7 +170,9 @@ if (TRADEBOT_ENABLE_CTRADER_GATE7)
             -Wno-nullability-extension)
     endif()
 
-    add_library(ctrader_gate7_core STATIC src/CTraderGate7Proof.cpp)
+    add_library(ctrader_gate7_core STATIC
+        src/CTraderGate7Proof.cpp
+        src/CTraderGate7OAuthDiagnostics.cpp)
     target_include_directories(ctrader_gate7_core PUBLIC include)
 
     add_library(ctrader_gate7_runtime STATIC

@@ -106,6 +106,17 @@ initial attempt stopped at Keychain access; the one newly authorized retry
 stopped at `gate7_oauth_failed` before account discovery or endpoint data
 traffic. No provider response or market-data evidence was obtained.
 
+Gate 7 OAuth failures are emitted only as fixed categories covering listener
+startup, authorization URL construction, browser launch, callback wait/read,
+callback binding/parsing, authorization denial, state correlation, code
+extraction, cancellation, and resource exhaustion. No category contains a
+query, state, code, token, identifier, peer value, or provider text. The
+callback uses the accepted peer address rather than a caller-supplied address,
+uses a nonblocking accepted socket, and caps each receive wait at both a
+two-second inactivity deadline and the absolute correlation deadline. Callback
+buffer allocation failure is caught and reduced to the fixed
+`gate7_oauth_resource_exhausted` category before terminal clearing.
+
 ## Source-Control Exclusions
 
 `.gitignore` excludes:

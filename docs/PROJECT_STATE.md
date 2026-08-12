@@ -5,10 +5,10 @@
 - Purpose: authoritative current-state summary for TradeBot.
 - Authority level: current-state evidence below active approved plans and above the roadmap; the project workstream map is defined in `WORKSTREAM_ARCHITECTURE.md`, and phase definitions and statuses are delegated to `ROADMAP.md`.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and handoff recipients.
-- Last documentation/state audit: 2026-08-10 against Gate 7 branch
+- Last documentation/state audit: 2026-08-12 against Gate 7 branch
   `codex/gate7-xauusd-market-data-proof` from authoritative merged
   `origin/main` `7fc244e2f3cc5a1e406d416898807562fcf58c6d`.
-- Last CMake/CTest verification evidence: 2026-08-10.
+- Last CMake/CTest verification evidence: 2026-08-12.
 
 This document represents current state only. Historical execution belongs in Git commits, pull requests, issues, ADRs, and handoffs.
 
@@ -71,13 +71,14 @@ This document represents current state only. Historical execution belongs in Git
 ## In-Progress Work
 
 - Repository governance and Codex skill-system maintenance.
-- Gate 7 review closeout under
-  `PLAN-20260810-ctrader-open-api-gate7-xauusd-market-data-proof`. The target is
+- Gate 7 review closeout and offline OAuth diagnostic hardening under
+  `PLAN-20260810-ctrader-open-api-gate7-xauusd-market-data-proof` and
+  `PLAN-20260811-ctrader-gate7-oauth-diagnostics`. The target is
   default-disabled, macOS-only, detached from production runtime modes and
   order/risk paths, and offline validation passed. The initial attempt stopped
   at Keychain access; the one authorized retry stopped at
   `gate7_oauth_failed` before account discovery or the fixed endpoint. No
-  further retry is permitted in this task.
+  further provider retry is permitted in this task.
 
 ## Blocked Or Constrained Work
 
@@ -129,7 +130,7 @@ This document represents current state only. Historical execution belongs in Git
 
 ## Verification Evidence
 
-Verified locally on 2026-08-10:
+Verified locally on 2026-08-12:
 
 ```sh
 cmake -S . -B build
@@ -143,6 +144,12 @@ ctest --test-dir build/gate6 --output-on-failure
 cmake -S . -B build/gate7 -DTRADEBOT_ENABLE_CTRADER_GATE7=ON
 cmake --build build/gate7 --parallel 4
 ctest --test-dir build/gate7 --output-on-failure
+cmake -S . -B build/gate7-sanitize \
+  -DTRADEBOT_ENABLE_CTRADER_GATE7=ON \
+  -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_OBJCXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+cmake --build build/gate7-sanitize --target ctrader_gate7_tests --parallel 4
 ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-failure
 ```
 
@@ -175,9 +182,9 @@ Results:
 
 ## Next Safe Action
 
-Review the Gate 7 draft PR and sanitized report. The single authorized retry is
-exhausted; do not repeat provider traffic in this task, mark the PR ready,
-merge it, or begin Gate 8.
+Review the Gate 7 draft PR, sanitized report, and offline diagnostic-hardening
+diff. The single authorized provider retry is exhausted; do not repeat provider
+traffic in this task, mark the PR ready, merge it, or begin Gate 8.
 
 ## Next Professional Halting Point
 
