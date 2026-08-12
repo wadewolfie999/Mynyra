@@ -1,6 +1,6 @@
 ---
 name: tradebot-pr-readiness-review
-description: Review whether a TradeBot branch is ready for PR or merge handoff by checking branch state, changed files, validation evidence, documentation consistency, residual risk, rollback notes, and Workstream II/Phase 23 or live-authorization safety.
+description: Review whether a TradeBot branch is ready for PR or merge handoff by checking branch state, changed files, validation evidence, evidence epochs, exact artifacts, documentation consistency, residual risk, rollback notes, and phase/gate or live-authorization safety.
 ---
 # tradebot-pr-readiness-review
 
@@ -10,12 +10,12 @@ Determine whether a branch has enough evidence, scope control, and risk clarity 
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
@@ -23,7 +23,10 @@ Use before PR creation, merge handoff, commit-readiness claims, review transfer,
 
 ## Must Not Be Used
 
-Do not use as a substitute for code review, risk review, replay validation, L2 review, or build/test verification. Do not approve readiness if Gate 5.1, Gate 6, broker-dependent implementation, or live authorization is implied without explicit operator GO.
+Do not use as a substitute for code review, risk review, replay validation, L2
+review, or build/test verification. Do not approve readiness if blocked
+implementation, provider execution, retry, later-gate, order, risk, or live
+authorization is implied without explicit operator GO.
 
 ## Required Inputs
 
@@ -63,9 +66,15 @@ Read relevant docs, active plan, ADRs, and review outputs for changed areas.
 2. Check worktree and staging status.
 3. Confirm changed files match the stated scope.
 4. Verify required validation evidence exists and covers the changed behavior.
-5. Confirm documentation and indexes are consistent.
-6. Confirm residual risk, rollback path, and required approvals are stated.
-7. Fail readiness if Gate 5.1, Gate 6, live trading, broker-specific behavior, or risk changes are implied without approval.
+5. Confirm each result names its evidence epoch and invalidate candidate results
+   superseded by later relevant edits.
+6. When exact-artifact evidence is required, verify full commit, clean
+   tracked/index state, rebuild configuration, artifact path/hash, and test results.
+7. Confirm documentation and indexes are consistent.
+8. Confirm residual risk, rollback path, required approvals, attempt budget,
+   and prohibited adjacent actions are stated.
+9. Fail readiness if blocked implementation, provider execution, retry,
+   later-gate, order, risk, or live behavior is implied without approval.
 
 ## Validation Checklist
 
@@ -75,6 +84,8 @@ Read relevant docs, active plan, ADRs, and review outputs for changed areas.
 - `git diff --check` passes.
 - Required tests or docs audits are reported.
 - Risk summary and rollback notes are concise and specific.
+- Initial failures and diagnostic reruns are both reported.
+- Multi-build suites ran sequentially or shared-resource isolation is proven.
 
 ## Failure Modes Caught
 
@@ -82,7 +93,7 @@ Read relevant docs, active plan, ADRs, and review outputs for changed areas.
 - Missing validation evidence.
 - Untracked generated artifacts confusing review.
 - Docs/index drift.
-- Gate 5.1, Gate 6, broker-dependent, or live authorization implied by wording.
+- Blocked provider/broker, retry, later-gate, order, risk, or live authorization implied by wording.
 - PR readiness claimed before required specialist review.
 
 ## Hard Prohibitions
@@ -107,7 +118,10 @@ Use $tradebot-pr-readiness-review to decide whether this TradeBot docs branch is
 
 ## Stop Conditions
 
-Stop if branch state is unsafe, validation is missing, changed files exceed scope, Gate 5.1/Gate 6 or broker-dependent implementation is implied active, live authorization is ambiguous, or rollback is not documented.
+Stop if branch state is unsafe, validation is stale or missing, changed files
+exceed scope, exact-artifact identity is unsupported, blocked external/later-
+gate behavior is implied active, live authorization is ambiguous, or rollback
+is not documented.
 
 ## Reporting Format
 

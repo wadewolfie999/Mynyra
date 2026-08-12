@@ -201,6 +201,16 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 - Actors are not trusted merely because they have repository access.
 - AI agents must inspect before mutation, avoid scope expansion, and report uncertainty.
 - Financial-sensitive ambiguity requires halt and operator escalation.
+- Authorization is non-transitive: offline work, review, correction, commit,
+  exact-artifact proof, provider traffic, retry, later gates, orders, financial
+  changes, and live use require their own named boundaries when applicable.
+- Evidence must identify its epoch. Working-tree, staged, committed,
+  exact-commit-build, and external-process results are not interchangeable.
+- A failed one-process external attempt consumes that attempt unless the
+  operator explicitly renews it. Repeating an unchanged attempt without a new
+  hypothesis or authorization is prohibited.
+- Sensitive/provider-derived memory must be cleared from every owned copy and
+  terminal path, not only from the primary object.
 
 ## Rollback And Containment
 

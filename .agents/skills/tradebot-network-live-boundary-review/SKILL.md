@@ -10,12 +10,12 @@ Protect network, credential, mode, broker, and live-capable boundaries from unsa
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
@@ -32,6 +32,8 @@ Do not use to authorize live trading, inspect secret values, or run external exc
 - Credential or env-var names involved.
 - External I/O or log behavior.
 - Operator approval evidence if any live-capable action is requested.
+- Exact external action, artifact, endpoint, attempt budget, preconditions, and
+  stop condition when network/provider execution is proposed.
 
 ## Required Outputs
 
@@ -72,7 +74,14 @@ git diff --name-status
 3. Confirm secrets are never printed, copied, committed, or documented as values.
 4. Confirm PAPER behavior remains simulated unless separately approved.
 5. Confirm tests do not require real venue, account, or endpoint state.
-6. Reject default-live, real-order, or secret-logging ambiguity.
+6. For proposed external execution, require exact commit/artifact identity,
+   presence-only credential preflight, bounded clock health, immediate
+   port/process checks, fixed endpoint/allowlist, one-process budget, and a
+   separately named authorization.
+7. Trace sensitive/provider-derived data through caller, callee, return,
+   container, callback, temporary, failure, and destruction copies.
+8. Reject default-live, real-order, secret-logging, implicit retry, or
+   preflight-as-execution ambiguity.
 
 ## Validation Checklist
 
@@ -82,6 +91,9 @@ git diff --name-status
 - `PAPER` is not real venue execution by default.
 - `LIVE` requires exact operator approval for venue, account, scope, branch, commit, config, and time window.
 - Logs redact or avoid sensitive values.
+- Preflight and credential presence do not authorize value access or traffic.
+- A failed one-process attempt does not authorize retry or reconnect.
+- Every volatile sensitive/provider-derived copy has terminal clearing.
 
 ## Failure Modes Caught
 
@@ -90,12 +102,16 @@ git diff --name-status
 - External network dependency in deterministic tests.
 - PAPER treated as sandbox without approval.
 - Broker connection added outside approved boundary.
+- Review, commit, exact-artifact proof, or preflight treated as provider authority.
+- Retry after a consumed attempt budget.
 
 ## Hard Prohibitions
 
 - Do not expose, print, copy, or modify secrets.
 - Do not edit `.env`, keys, certificates, credentials, or account IDs.
 - Do not run live services, real orders, or exchange operations.
+- Do not run provider traffic, retry, reconnect, or a second process unless the
+  exact action and attempt are authorized.
 - Do not implement broker-specific behavior without approval.
 - Do not stage, commit, push, reset, clean, or discard changes.
 
@@ -114,7 +130,9 @@ Use $tradebot-network-live-boundary-review to verify a LiveDataAdapter change do
 
 ## Stop Conditions
 
-Stop if secret exposure, live authorization, external side effects, PAPER semantics, or mode defaults are ambiguous.
+Stop if secret exposure, external action/attempt authority, preflight, clock,
+port/process state, endpoint, allowlist, live authorization, PAPER semantics,
+or mode defaults are ambiguous.
 
 ## Reporting Format
 

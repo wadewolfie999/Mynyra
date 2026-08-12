@@ -10,12 +10,12 @@ Validate benchmark quality and prevent overclaims from weak or non-reproducible 
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
@@ -33,6 +33,8 @@ Do not use to approve correctness, replay behavior, risk behavior, or source imp
 - Generated output paths.
 - Claimed interpretation.
 - Baseline or comparison target.
+- Evidence epoch and exact commit/artifact identity when the claim depends on
+  committed code.
 
 ## Required Outputs
 
@@ -64,6 +66,9 @@ git diff --name-status
 3. Confirm generated outputs remain ignored unless intentionally versioned and approved.
 4. Distinguish microbenchmark improvement from system-level improvement.
 5. Reject overclaiming, profitability claims, live-readiness claims, or cross-machine comparisons without environment detail.
+6. Distinguish a working-tree candidate measurement from an exact-commit
+   measurement; rerun if relevant source, build, fixture, or dependency state
+   changes.
 
 ## Validation Checklist
 
@@ -73,6 +78,7 @@ git diff --name-status
 - Timing method and warmup behavior are understood.
 - Comparison baseline is valid.
 - Generated output paths are reported and not treated as source truth.
+- Full commit and artifact hash are recorded when exact-artifact evidence is claimed.
 
 ## Failure Modes Caught
 

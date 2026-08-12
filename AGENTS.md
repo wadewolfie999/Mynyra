@@ -5,7 +5,7 @@
 - Purpose: primary repository instruction contract for Codex and other repository-side agents.
 - Authority level: repository-level operating authority, subordinate only to explicit operator instruction for the current task.
 - Audience: Codex, human contributors, reviewers, testers, research agents, and future coding agents.
-- Related documents: deeper policy lives in `docs/`; planning rules live in `PLANS.md`; contributor workflow lives in `CONTRIBUTING.md`.
+- Related documents: deeper policy lives in `docs/`; reusable Codex execution and evidence rules live in `docs/CODEX_EXECUTION_EVIDENCE.md`; planning rules live in `PLANS.md`; contributor workflow lives in `CONTRIBUTING.md`.
 
 ## Repository Identity
 
@@ -14,7 +14,7 @@
 - Verified local root: `/Users/vaheedgorgeen/TradeBot`.
 - CMake project name: `TradeBot-AIIO-Core`.
 - Current implementation core: C++20.
-- Current build system: CMake 3.14 minimum, verified locally with CMake 4.3.2, Unix Makefiles, Apple clang 21.0.0.
+- Current build system: CMake 3.14 minimum, verified locally with CMake 4.4.0, Unix Makefiles, Apple clang 21.0.0.
 - Financial-sensitive classification: this repository contains live-capable trading-system code and must be treated as financial, credential, and operational-risk sensitive even when a task is documentation-only.
 
 TradeBot is a trading-system research and engineering repository with a deterministic C++ core for market-data replay, strategy execution, portfolio and risk accounting, L2 order-book handling, trigger orders, analytics, metrics, broker/data adapters, tests, and benchmarks. It defaults to non-live operation.
@@ -65,9 +65,10 @@ Use this order when instructions conflict:
 7. `docs/PROJECT_STATE.md`.
 8. `docs/ROADMAP.md`.
 9. `docs/WORKFLOW.md`.
-10. Skill-specific instructions in `.agents/skills/*/SKILL.md`.
-11. `CONTRIBUTING.md`.
-12. General documentation.
+10. `docs/CODEX_EXECUTION_EVIDENCE.md`.
+11. Skill-specific instructions in `.agents/skills/*/SKILL.md`.
+12. `CONTRIBUTING.md`.
+13. General documentation.
 
 No document may silently override financial safety or operator authority. Conflicts involving live execution, credentials, order routing, risk limits, generated-data provenance, or architectural boundaries must be reported and halted until the operator resolves them.
 
@@ -86,6 +87,11 @@ Codex must:
 - Report failures, skipped checks, warnings, and limitations honestly.
 - Avoid undocumented assumptions; record necessary assumptions in plans or handoffs.
 - Stop safely when required evidence is unavailable or a safety-sensitive ambiguity cannot be resolved locally.
+- Treat authorization as exact-action, scope, artifact, environment, attempt-budget, and stop-condition specific. Authorization is not transitive across review, correction, staging, commit, push, provider execution, retry, later gates, orders, risk changes, or live work.
+- Separate working-tree, staged-index, committed-tree, exact-commit-build, and external-process evidence. Re-run affected checks when the relevant artifact changes.
+- Diagnose before retrying. Preserve the initial failure and explain what changed before a rerun.
+- Treat local ports, certificate authorities, fixed temporary paths, processes, caches, and generated outputs as shared resources. Run multi-build-tree CTest suites sequentially unless isolation is proven.
+- Protect every sensitive or provider-derived memory copy, including caller, callee, return-value, container, callback, and destruction paths.
 
 ## Hard Prohibitions
 
@@ -106,6 +112,8 @@ Codex and other repository-side agents must not:
 - Invent architectural facts.
 - Silently bypass roadmap, plan, risk, or live-trading gates.
 - Make broad refactors during narrowly scoped work.
+- Reuse a one-process or one-attempt external authorization for a retry, reconnect, second process, or later gate.
+- Treat preflight success, credential presence, a commit, an exact binary hash, or successful offline tests as external-provider or live authorization.
 
 ## Verified Repository Map
 
@@ -122,6 +130,7 @@ Codex and other repository-side agents must not:
 - Build directory: `build/`, ignored by Git.
 - Phase 19 generated logs/replay artifacts observed under `build/phase19_revalidation/`.
 - Codex skills: `.agents/skills/`.
+- Codex execution/evidence contract: `docs/CODEX_EXECUTION_EVIDENCE.md`.
 - Python components: none tracked at the time this contract was created.
 - Julia components: none tracked at the time this contract was created.
 - Scripts/tooling: tracked validation wrappers exist under `scripts/`, with `.githooks/pre-push` and `.github/workflows/validation.yml`; CMake remains the underlying tooling entrypoint.
@@ -159,6 +168,10 @@ Full CTest suite:
 ```sh
 ctest --test-dir build --output-on-failure
 ```
+
+Run full suites from multiple build trees sequentially unless their ports,
+local certificate authority, temporary paths, processes, and other shared
+resources are proven isolated.
 
 Validation wrapper test:
 
@@ -243,6 +256,7 @@ TradeBot defaults to `BACKTEST` or dry-run behavior. Live trading is prohibited 
 - Security and credentials: `docs/SECURITY.md`.
 - Actor permissions: `docs/ACTORS.md`.
 - Work protocol: `docs/WORKFLOW.md`.
+- Codex execution and evidence: `docs/CODEX_EXECUTION_EVIDENCE.md`.
 - Handoffs: `docs/HANDOFF.md`.
 - ADRs: `docs/decisions/`.
 - Contribution workflow: `CONTRIBUTING.md`.
@@ -257,6 +271,7 @@ Documentation-only changes:
 - Relevant indexes updated.
 - `git diff --check` passes.
 - Documentation audit grep commands reviewed.
+- Every changed repository skill passes the skill validator when available.
 
 Source changes:
 
@@ -306,5 +321,7 @@ Every Codex task report must include:
 - Risks.
 - Remaining work.
 - Git diff summary.
+- Exact authorization boundary and prohibited adjacent actions when the task is sensitive or externally capable.
+- Evidence epoch and exact commit/artifact identity when completion depends on a committed build or external process.
 
 For long-running or interrupted tasks, create or update a handoff using `docs/HANDOFF.md`.

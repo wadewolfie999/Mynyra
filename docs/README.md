@@ -19,9 +19,10 @@ This directory contains the active project documentation for TradeBot. Historica
 7. `PROJECT_STATE.md`.
 8. `ROADMAP.md`.
 9. `WORKFLOW.md`.
-10. Skill-specific instructions in `../.agents/skills/`.
-11. `../CONTRIBUTING.md`.
-12. General documentation.
+10. `CODEX_EXECUTION_EVIDENCE.md`.
+11. Skill-specific instructions in `../.agents/skills/`.
+12. `../CONTRIBUTING.md`.
+13. General documentation.
 
 Financial safety and operator authority cannot be silently overridden by any document.
 
@@ -37,6 +38,9 @@ Financial safety and operator authority cannot be silently overridden by any doc
 - `SECURITY.md`: credential storage, `.env`, redaction, dependency, shell, network, and incident-response policy.
 - `ACTORS.md`: multi-actor roles, permissions, evidence, escalation, onboarding, and offboarding.
 - `WORKFLOW.md`: end-to-end task intake, planning, implementation, verification, review, handoff, and professional halt.
+- `CODEX_EXECUTION_EVIDENCE.md`: durable action-authorization, evidence-epoch,
+  exact-artifact, retry-budget, shared-resource, sensitive-memory, and external-
+  process rules for repository-side agents.
 - `HANDOFF.md`: copy-pasteable session and actor handoff template.
 - `BENCHMARKING.md`: performance evidence, benchmark commands, generated outputs, and claim rules.
 - `DEPENDENCY_POLICY.md`: dependency review and offline-first dependency handling.
@@ -115,6 +119,11 @@ Skill workflow rules:
 - `tradebot-performance-review` interprets performance-change risk; `tradebot-benchmark-review` validates benchmark measurement quality.
 - `tradebot-pr-readiness-review` verifies merge readiness after required specialist reviews; it does not replace them.
 - Accepted ADRs and approved Phase 21 artifacts did not independently authorize Phase 22 implementation. Bounded broker-neutral implementation is complete and accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`; broker-dependent and live work remain Blocked / NO-GO.
+- Every skill defers volatile branch, phase, gate, provider, and approval state
+  to Git, `PROJECT_STATE.md`, `ROADMAP.md`, and the active plan. Skills must not
+  preserve stale snapshots as current authority.
+- Every skill follows `CODEX_EXECUTION_EVIDENCE.md`; domain-specific skill
+  rules may narrow but must not widen its authorization or evidence boundary.
 
 ## Documentation Rules
 

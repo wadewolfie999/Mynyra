@@ -8,6 +8,10 @@
 
 Live trading is not authorized by repository code, branch name, credentials, or test success. It requires explicit operator approval for the exact scope.
 
+Offline verification, preflight, a commit, an exact binary hash, demo-provider
+evidence, or a prior bounded process does not authorize live use, orders,
+retry, reconnect, autonomous restart, or a later gate.
+
 ## Required Approval
 
 Operator approval must name:
@@ -40,6 +44,10 @@ Before live unlock:
 - Credentials are least-privilege and not committed.
 - Withdrawal permissions are disabled.
 - Operator can monitor and stop the system.
+- Exact committed source and reviewed binary/artifact identity are recorded.
+- Presence-only credential, clock-skew, port, process, endpoint, and allowlist
+  preconditions are rechecked immediately before the authorized process.
+- Attempt count, retry policy, stop condition, and post-failure authority are explicit.
 
 ## Prohibited Until Ready
 

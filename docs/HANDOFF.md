@@ -28,6 +28,13 @@ Use a handoff whenever work stops before completion, another actor will resume i
 - Safe stopping condition.
 - Prohibited next actions.
 - Required approvals.
+- Exact authorization received and prohibited adjacent actions.
+- Evidence epoch and whether results came from a candidate tree, staged index,
+  commit, exact-commit build, or external process.
+- Artifact path/SHA-256 when exact-artifact proof is relevant.
+- Relevant ignored artifacts and ignored-evidence SHA-256 when applicable.
+- External process/traffic count, credential-access status without values, and
+  remaining attempt or retry budget.
 
 ## Handoff Rules
 
@@ -37,6 +44,9 @@ Use a handoff whenever work stops before completion, another actor will resume i
 - State whether generated outputs were created.
 - State whether source, docs, data, or credentials were touched.
 - Include the next exact action rather than a vague recommendation.
+- Do not present pre-commit verification as exact-commit evidence.
+- If an ignored evidence file contains its own hash, state the normalized
+  hashing rule and separately record the full-file hash if useful.
 
 ## Copy-Paste Handoff Template
 
@@ -51,6 +61,12 @@ Use a handoff whenever work stops before completion, another actor will resume i
 - Active phase:
 - Date:
 - Actor:
+- Authorization boundary:
+- Evidence epoch:
+- Exact artifact/hash:
+- External process/traffic count:
+- Credential access status:
+- Remaining attempt/retry budget:
 
 ## Objective
 

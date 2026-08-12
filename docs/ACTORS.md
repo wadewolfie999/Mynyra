@@ -16,6 +16,11 @@ Actors are not automatically trusted merely because they have repository access.
 - Preserve unrelated work.
 - Provide evidence for claims.
 - Escalate financial, credential, live-execution, architecture, or destructive actions to the operator.
+- Treat approval as action-, artifact-, environment-, attempt-, and stop-condition specific; do not infer adjacent authority.
+- Identify whether evidence came from a candidate diff, staged index, commit,
+  exact-commit build, or external process.
+- Follow `CODEX_EXECUTION_EVIDENCE.md` for retries, shared resources, sensitive
+  memory, exact artifacts, and handoffs.
 
 ## Operator
 
@@ -88,6 +93,9 @@ Actors are not automatically trusted merely because they have repository access.
 - Approval requirements: none for safe local checks.
 - Onboarding: read `TESTING.md` and `BENCHMARKING.md`.
 - Offboarding: provide test report.
+- Parallelism: do not run cross-build suites concurrently when they can share
+  a port, local certificate authority, temporary path, process, cache, or
+  generated output unless isolation is proven.
 
 ## Advisor
 
@@ -124,6 +132,8 @@ Actors are not automatically trusted merely because they have repository access.
 - Approval requirements: plan approval for nontrivial work.
 - Onboarding: read `AGENTS.md`, active plan, state, workflow, relevant skill.
 - Offboarding: `HANDOFF.md` template.
+- Evidence responsibility: preserve authorization boundaries and evidence
+  epochs; never report a working-tree artifact as an exact-commit artifact.
 
 ## Review Agent
 
@@ -136,6 +146,9 @@ Actors are not automatically trusted merely because they have repository access.
 - Approval requirements: assigned review authority.
 - Onboarding: read relevant docs and diff.
 - Offboarding: list unresolved questions.
+- Review responsibility: challenge stale verification, implicit retries,
+  non-transitive approval, shared-resource collisions, and sensitive copies
+  outside the nominal owner.
 
 ## Local Or Offline AI Agent
 

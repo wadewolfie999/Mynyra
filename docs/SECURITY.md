@@ -102,6 +102,9 @@ production runtime modes and order/risk components.
 
 The Gate 7 process keeps response-derived account and symbol IDs, prices,
 tokens, and callback material volatile and clears them on terminal paths.
+Clearing covers caller and callee copies, pass-by-value and return-value
+objects, optionals, containers, callbacks, temporaries, allocation-failure
+paths, and destruction; clearing only the nominal owner is insufficient.
 Historical attempts stopped at Keychain access, generic OAuth failure, and a
 fixed OAuth callback timeout. The latest authorized process passed OAuth,
 fixed demo TLS, application/account authentication, canonical XAUUSD
@@ -216,6 +219,14 @@ AI agents must:
 - Report credential-related uncertainty.
 - Refuse to enable live behavior without explicit authorization.
 - Not commit, push, or publish security-sensitive material without approval.
+- Treat credential presence checks as presence-only and never as authority to
+  read, display, export, change, or use values.
+- Avoid evidence schemas with fields that invite secrets, tokens, identifiers,
+  raw provider payloads, raw quotes, balances, positions, or orders.
+- Treat review, commit, exact-artifact proof, provider execution, retry, later
+  gates, orders, and live use as separate authorization boundaries.
+- Follow `CODEX_EXECUTION_EVIDENCE.md` for sensitive-memory copies, external
+  attempt budgets, ignored evidence records, and professional halt.
 
 ## Security Review Requirements
 

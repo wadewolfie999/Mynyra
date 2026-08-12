@@ -9,6 +9,10 @@
   `codex/gate7-residual-diagnostics-and-proof` from authoritative merged
   `origin/main` `f63a03b63a81d37203376d1e2dea267ece115c89`.
 - Last CMake/CTest verification evidence: 2026-08-13.
+- Codex execution/evidence governance is centralized in
+  `CODEX_EXECUTION_EVIDENCE.md`; skills carry durable domain procedure and must
+  resolve volatile branch, phase, gate, provider, and approval state at use
+  time.
 
 This document represents current state only. Historical execution belongs in Git commits, pull requests, issues, ADRs, and handoffs.
 
@@ -134,6 +138,9 @@ This document represents current state only. Historical execution belongs in Git
   `CTRADER_OPEN_API_GATE5.md`, and ADR 0004 define the sole Open API protocol,
   numeric, baseline, OAuth, secret, account-ID, and demo-only boundary.
 - `.agents/skills/` TradeBot skill files are present locally, including `tradebot-git-safety`.
+- `CODEX_EXECUTION_EVIDENCE.md` defines shared authorization, evidence-epoch,
+  exact-artifact, retry, resource-isolation, sensitive-memory, and handoff
+  procedure for those skills.
 - `WORKSTREAM_ARCHITECTURE.md` is the current project-level Workstreams I-VII map; `ROADMAP.md` is the canonical phase authority; this document summarizes current state.
 
 ## Verification Evidence

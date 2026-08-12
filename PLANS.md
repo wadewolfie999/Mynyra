@@ -5,7 +5,7 @@
 - Purpose: define when and how implementation plans are authored, approved, executed, resumed, closed, abandoned, or superseded.
 - Authority level: active approved plans rank below `docs/ARCHITECTURE.md` and above `docs/PROJECT_STATE.md`.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and research agents.
-- Related documents: `AGENTS.md`, `docs/WORKFLOW.md`, `docs/HANDOFF.md`, `docs/ROADMAP.md`, and `docs/decisions/`.
+- Related documents: `AGENTS.md`, `docs/WORKFLOW.md`, `docs/CODEX_EXECUTION_EVIDENCE.md`, `docs/HANDOFF.md`, `docs/ROADMAP.md`, and `docs/decisions/`.
 
 TradeBot uses plans to prevent scope drift, preserve architectural continuity, and make safety-sensitive work resumable across sessions and actors.
 
@@ -72,7 +72,7 @@ Do not reuse IDs. If a plan is superseded, create a new ID and cross-reference t
 
 ## Planning Rules
 
-Every plan must state:
+Every plan created or materially revised after this contract update must state:
 
 - Objective and success criteria.
 - Scope and out-of-scope boundaries.
@@ -85,10 +85,21 @@ Every plan must state:
 - Risks and decision points.
 - Progress log and deviations.
 - Completion evidence.
+- Exact authorization boundary, attempt budget, stop condition, and prohibited adjacent actions when external, credential, Git-publication, financial, or live-capable actions are possible.
+- Evidence epochs when review, staging, commit, exact-commit rebuild, or external execution are separate checkpoints.
 
 Plans must not invent repository facts. If evidence is missing, record the uncertainty and define the inspection needed to resolve it.
 
 Plan approval, phase approval, and ADR acceptance are distinct. None independently authorizes a blocked phase, source implementation, broker selection, documentation-platform selection, credentials, or live trading.
+
+Commit, push, publication, provider execution, retry, later-gate work, order
+capability, financial-limit changes, and live use are also distinct approvals.
+An earlier approval must not be widened merely because its preconditions later
+become satisfiable.
+
+When tests use local ports, certificate authorities, fixed temporary paths,
+process names, caches, or generated outputs, plans must name the shared resource
+and require sequential cross-build verification unless isolation is proven.
 
 ## Workstream Architecture Relationship
 
@@ -133,6 +144,9 @@ Then compare the plan with:
 - Previous handoff in `docs/HANDOFF.md` format, if present.
 
 Resume only from a verified state. If state is ambiguous, create a handoff-style assessment before further mutation.
+
+Identify the last valid evidence epoch. Do not reuse working-tree or pre-commit
+results as exact-commit evidence after relevant files changed.
 
 ## Closure Requirements
 
@@ -179,6 +193,8 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 ## Assumptions
 
 ## Invariants
+
+## Authorization Boundary
 
 ## Files Expected to Change
 
@@ -2202,3 +2218,160 @@ Wade approval. The authorized local commit and exact-commit rebuild establish
 reviewable source/binary identity only; they do not grant provider authority.
 Gates 8–9, orders, live accounts, production runtime coupling, and live trading
 remain blocked regardless of this offline result.
+
+# Plan: Synchronize Codex Governance And Skill Learning
+
+- Plan ID: `PLAN-20260813-codex-governance-learning-sync`
+- Status: Complete — documentation-only update validated; Wade authorized
+  staging, commit, push, PR creation, and merge on 2026-08-13
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Repository governance; no phase transition
+- Related issue or decision: Wade request to update `AGENTS.md`, all TradeBot
+  skills, and Codex-related modules from recurring recent context
+- Created: 2026-08-13
+- Updated: 2026-08-13
+
+## Objective
+
+Turn recurring review and Gate 7 lessons into durable repository-side agent
+procedure without changing TradeBot runtime behavior or copying volatile phase
+state into every skill.
+
+## Context
+
+Recent work repeatedly exposed non-transitive approvals, candidate-versus-
+exact-commit evidence drift, shared local test-resource contention, retries
+without new evidence, ignored handoff provenance, and caller-side sensitive
+copies surviving callee clearing. Several skills also embedded obsolete phase
+and gate snapshots.
+
+## Scope
+
+- Update `AGENTS.md` and the planning, actor, workflow, handoff, review,
+  testing, recovery, security, risk, live-readiness, contributor, index, and
+  current-state modules.
+- Add one reusable Codex execution/evidence contract.
+- Update every tracked TradeBot `SKILL.md` and the existing skill UI metadata.
+- Validate structure, authority consistency, stale-state removal, and diff
+  hygiene.
+
+## Out of Scope
+
+- C++ source, headers, tests, CMake, runtime behavior, credentials, ignored
+  evidence, provider traffic, retries, later gates, orders, risk limits, live
+  trading, staging, commit, push, PR, publication, or release.
+- Modification of system-owned Codex skills outside this repository.
+
+## Preconditions
+
+- Start from tracked-clean branch
+  `codex/gate7-residual-diagnostics-and-proof` at
+  `febcaf72872b771d2d39fc17dae616cdfd91e326`.
+- Preserve every ignored build, data, handoff, and credential-like artifact
+  without inspecting credential values.
+
+## Assumptions
+
+- “All skills” means every tracked TradeBot skill under `.agents/skills/`.
+- “Codex-related modules” means the repository-owned documents that govern
+  agent authority, planning, workflow, evidence, review, testing, security,
+  risk, recovery, contribution, state, and handoff.
+
+## Invariants
+
+- Current phase/gate facts remain authoritative only in the operator
+  instruction, Git, active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Skills contain reusable domain procedure and may narrow but never widen
+  higher-order authority.
+- No source, test, build, credential, provider, order, risk, or live behavior
+  changes.
+
+## Authorization Boundary
+
+Wade authorized repository documentation and skill updates for this task. No
+authorization was given for staging, commit, push, publication, credential
+access, provider execution, retry, later gates, orders, risk changes, or live
+work. Stop after the documentation/skill diff and local validation report.
+
+## Files Expected to Change
+
+- `AGENTS.md`, `PLANS.md`, `CONTRIBUTING.md`.
+- `docs/CODEX_EXECUTION_EVIDENCE.md` and affected Codex/governance modules.
+- Every `.agents/skills/*/SKILL.md` and existing matching UI metadata.
+
+## Implementation Steps
+
+1. Inspect Git, authority documents, every skill, and current Gate 7 context.
+2. Define reusable authorization, evidence-epoch, retry, resource-isolation,
+   sensitive-memory, exact-artifact, and handoff rules.
+3. Centralize those rules and remove volatile phase snapshots from skills.
+4. Add only domain-specific consequences to each skill.
+5. Validate every skill, YAML metadata, links/indexes, terminology, and diff.
+
+## Verification
+
+- Run `git diff --check`, status/name/stat audits, documentation greps, and a
+  stale-skill-state scan.
+- Run the installed skill-creator `quick_validate.py` for every tracked skill.
+- Parse tracked skill YAML/frontmatter and UI metadata.
+- Confirm no source, test, CMake, credential, ignored evidence, or provider
+  path changed.
+
+## Risks
+
+- Repeating the full shared contract in every skill would waste context;
+  mitigate with one central module and short skill references.
+- Removing old phase text could erase safety boundaries; replace it with
+  stronger generic non-transitive authorization rules while current state
+  remains in authoritative documents.
+- Broad documentation edits can introduce authority conflicts; validate the
+  authority order and current-state wording explicitly.
+
+## Rollback
+
+With operator approval, revert only this documentation/skill diff. Do not alter
+the preceding Gate 7 commit or ignored artifacts.
+
+## Progress Log
+
+- 2026-08-13: Inspected a tracked-clean branch, all 20 TradeBot skills, skill
+  metadata, and the controlling Codex/governance documents.
+- 2026-08-13: Added the shared execution/evidence module and synchronized every
+  skill plus affected governance modules. Validation is in progress.
+- 2026-08-13: All 20 skill validators passed; skill frontmatter and the existing
+  UI metadata parsed successfully; diff, scope, placeholder, stale-state, and
+  authority-reference audits passed. No source build was required for this
+  documentation-only change.
+- 2026-08-13: Wade explicitly authorized staging, committing, pushing, opening
+  a PR, and merging the validated branch. Provider traffic, credentials, later
+  gates, orders, risk changes, and live behavior remain outside that authority.
+
+## Deviations
+
+None recorded.
+
+## Completion Evidence
+
+- Installed skill-creator `quick_validate.py`: 20/20 TradeBot skills passed.
+- YAML frontmatter and existing `agents/openai.yaml` metadata parsed
+  successfully. The first metadata command used an unavailable older Ruby/
+  Psych convenience API; the supported `safe_load(File.read(...))` rerun
+  passed without a repository change.
+- `git diff --check` passed.
+- All 20 tracked skills reference `CODEX_EXECUTION_EVIDENCE.md`; all 20
+  `SKILL.md` files changed and passed the stale volatile phase/gate scan.
+- Changed paths are limited to `AGENTS.md`, `PLANS.md`, `CONTRIBUTING.md`,
+  `docs/`, and `.agents/skills/`. CMake, source, headers, tests, scripts,
+  credentials, ignored evidence, and external state are unchanged.
+- No CMake/CTest run was required because runtime and test code are unchanged.
+
+## Final Outcome
+
+The recurring lessons are captured once in the shared Codex execution/evidence
+module and applied through every TradeBot skill plus the affected governance
+documents. Volatile phase/gate snapshots were removed from skills. The update
+is validated and Wade authorized its Git publication and merge. That authority
+does not include provider traffic, credentials, later gates, orders, risk
+changes, or live behavior; Git and GitHub retain the publication evidence.

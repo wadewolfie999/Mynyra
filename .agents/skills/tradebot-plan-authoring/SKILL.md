@@ -8,13 +8,24 @@ description: Draft, review, or update implementation plans using the TradeBot pl
 
 Draft, review, or update implementation plans using the TradeBot planning system.
 
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
+
 ## Activation Conditions
 
 Use before nontrivial source changes, architecture changes, financial-sensitive work, data schema changes, dependency changes, performance work, or multi-session work.
 
 ## Invocation Order
 
-Run `tradebot-authority-state-audit` before phase-sensitive planning. Run `tradebot-phase-gate-audit` before any Workstream II/Phase 23 scoping, and do not draft broker-selection or broker-dependent implementation steps unless explicit operator GO exists.
+Run `tradebot-authority-state-audit` before phase-sensitive planning. Run
+`tradebot-phase-gate-audit` before phase/gate scoping or external execution,
+and do not draft blocked provider/broker implementation steps as executable
+without exact operator GO.
 
 ## Must Not Be Used
 
@@ -53,9 +64,16 @@ git log --oneline --decorate -n 5
 2. Assign a plan ID shaped `PLAN-YYYYMMDD-short-topic`.
 3. Fill every section of the `PLANS.md` schema.
 4. Record assumptions and invariants.
-5. Define acceptance criteria, verification, rollback, risks, and approval gates.
-6. Identify documentation and ADR updates.
-7. Mark state as Draft or Proposed until approved.
+5. Add an authorization boundary naming exact actions, artifacts, environment,
+   attempt budget, stop condition, and prohibited adjacent actions.
+6. Define evidence epochs for candidate review, staged index, commit,
+   exact-commit rebuild, external process, and acceptance when applicable.
+7. Identify shared ports, certificate authorities, temporary paths, processes,
+   caches, and generated outputs; require sequential cross-build validation
+   unless isolation is proven.
+8. Define acceptance criteria, verification, rollback, risks, and approval gates.
+9. Identify documentation and ADR updates.
+10. Mark state as Draft or Proposed until approved.
 
 ## Related Skills
 
@@ -83,6 +101,8 @@ For plan-only work, no CMake build is required unless plan content changes verif
 
 - Complete plan with objective, scope, implementation steps, verification, rollback, and risks.
 - Explicit approvals required.
+- Exact action/attempt/stop boundary and prohibited adjacent actions.
+- Evidence-epoch and shared-resource strategy.
 - Clear resumption and closure rules.
 
 ## Failure Behavior

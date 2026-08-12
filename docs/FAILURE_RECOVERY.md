@@ -23,6 +23,14 @@
 4. Run targeted checks after fixes.
 5. Re-run full CTest for shared behavior changes.
 6. Report residual warnings and skipped checks.
+7. Do not retry an unchanged failure merely to seek a pass. Record the changed
+   hypothesis, input, code, environment, or precondition that makes a rerun
+   informative.
+
+If several build trees were tested concurrently, treat ports, loopback
+listeners, local certificate authorities, fixed temporary paths, processes,
+caches, and generated outputs as possible shared resources. Stop parallel
+activity and rerun sequentially only after preserving the initial failure.
 
 ## Documentation Audit Failure
 
@@ -38,6 +46,8 @@ If branch, status, or commits differ from handoff:
 - Do not assume previous scope remains valid.
 - Reconcile with `PROJECT_STATE.md`, active plan, and ADRs.
 - Escalate if changes affect scope or safety.
+- Identify the last valid evidence epoch. Candidate or pre-commit results do
+  not prove a later commit or binary.
 
 ## Generated Artifact Containment
 
@@ -57,6 +67,17 @@ If live-capable behavior is unexpectedly implicated:
 - Preserve logs without exposing secrets.
 - Reconcile local and external state if authorized.
 - Do not resume until the operator approves.
+
+## External Attempt Failure
+
+- Treat a one-process or one-attempt authorization as consumed by the first
+  launched external process unless the operator explicitly says otherwise.
+- Preflight failure does not authorize credential-value inspection, provider
+  launch, retry, reconnect, or remediation outside scope.
+- Before any newly authorized attempt, re-establish exact commit/artifact,
+  presence-only credential, clock, port, process, endpoint, allowlist, timeout,
+  and stop-condition evidence.
+- Record the first terminal result and stop when the plan prohibits retry.
 
 ## Git Recovery
 

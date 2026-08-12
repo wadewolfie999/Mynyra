@@ -10,12 +10,12 @@ Break unproductive agent loops and force one bounded, evidence-producing next ac
 
 ## Global TradeBot Rules
 
-- Prefer correctness before speed, determinism before convenience, and risk controls before feature development.
-- Resolve documentation authority before documentation sync; run `tradebot-authority-state-audit` before `tradebot-documentation-sync` when current state is uncertain.
-- Run `tradebot-phase-gate-audit` before phase transitions or Workstream II/Phase 23 planning; run `tradebot-adr-review` before ADR status mutation; run `tradebot-pr-readiness-review` before PR or merge handoff.
-- Phase 22 is Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`. Phase 23 is Complete — FIBO Group/cTrader selected, and Open API Gates 1–5 are complete or accepted as recorded. Operational cTrader execution has not started; Gate 5.1 and every Gate 6 activity remain Blocked / NO-GO unless separately approved by the operator.
-- Live trading remains disabled unless exact operator approval exists.
-- Do not make broker-specific assumptions, destructive Git changes, or source/test changes unless a future task explicitly authorizes them.
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`; do not hardcode them in
+  this skill.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
 
 ## Activation Conditions
 
@@ -32,6 +32,7 @@ Do not use to skip required verification, ignore failures, or rush through safet
 - Suspected loop pattern.
 - Missing evidence or invariant.
 - Proposed bounded next action.
+- Remaining attempt/retry budget and the authorization covering the action.
 
 ## Required Outputs
 
@@ -59,7 +60,10 @@ Read the most relevant authority doc, active plan, previous handoff, or failed v
 3. Identify the missing invariant or decision.
 4. Choose one bounded next action that can change knowledge or state.
 5. Define a concrete stop condition before taking the action.
-6. Stop and report if the bounded action fails to add new evidence.
+6. Confirm the action changes a hypothesis, input, code, environment, or
+   precondition; an unchanged retry is not evidence-producing.
+7. Stop and report if the bounded action fails to add new evidence or consumes
+   the available attempt budget.
 
 ## Validation Checklist
 
@@ -67,7 +71,8 @@ Read the most relevant authority doc, active plan, previous handoff, or failed v
 - Documentation work starts with authority docs, not lower-order summaries.
 - Only one bounded next action is active after loop detection.
 - Stop condition is explicit before continuing.
-- Recorded Phase 23/Gates 1–5 status and all unauthorized operational, live, broker, credential, and risk gates remain unchanged.
+- Current authority is re-read and no adjacent implementation, external,
+  credential, publication, order, risk, or live action is inferred.
 
 ## Failure Modes Caught
 
@@ -81,7 +86,8 @@ Read the most relevant authority doc, active plan, previous handoff, or failed v
 
 - Do not repeat broad rewrites without new evidence.
 - Do not modify source, tests, credentials, broker code, or generated artifacts unless explicitly authorized by a later task.
-- Do not implement Gate 5.1, any Gate 6 activity, broker-dependent integration, or enable live trading.
+- Do not turn a bounded diagnostic action into retry, reconnect, provider
+  traffic, later-gate work, publication, orders, risk changes, or live work.
 - Do not stage, commit, push, reset, clean, or discard changes.
 
 ## Interaction With Existing Skills
@@ -99,7 +105,9 @@ Use $tradebot-agent-loop-control to stop repeated TradeBot docs rewrites and cho
 
 ## Stop Conditions
 
-Stop if no bounded action can be named, if the same missing evidence remains after the action, or if progress would require unauthorized source, broker, credential, risk, or live changes.
+Stop if no bounded action can be named, the same missing evidence remains, the
+attempt budget is exhausted, or progress requires an unauthorized mutation or
+external action.
 
 ## Reporting Format
 

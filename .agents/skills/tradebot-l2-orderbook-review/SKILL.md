@@ -8,6 +8,14 @@ description: Review or validate TradeBot L2 order-book behavior and Phase 19 app
 
 Review or validate changes affecting TradeBot L2 order-book behavior and Phase 19 `applyBbo` performance.
 
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
+
 ## Activation Conditions
 
 Use when touching or reviewing `L2OrderBook`, BBO updates, recentering, trigger-order BBO inputs, Phase 18 tests, or Phase 19 benchmarks.
@@ -47,7 +55,9 @@ git status --short
 4. Confirm trigger-order paths still receive valid BBO.
 5. Run targeted Phase 18 test.
 6. Run `apply_bbo_microbench` when performance is relevant.
-7. Report correctness before performance.
+7. Record whether evidence is a working-tree candidate or exact-commit build;
+   include commit/artifact hash for exact-artifact claims.
+8. Report correctness before performance.
 
 ## Related Skills
 
@@ -76,6 +86,7 @@ build/apply_bbo_microbench 10000
 
 - Correctness findings.
 - Benchmark command and metrics if run.
+- Evidence epoch and exact artifact identity when relevant.
 - Regression risks.
 - Files requiring tests or docs.
 
