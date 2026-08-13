@@ -2,20 +2,97 @@ name: TradeBot Validation
 
 on:
   push:
+    branches:
+      - main
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  validate:
-    runs-on: ubuntu-latest
+  policy:
+    name: Offline safety policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
-      - name: Configure
-        run: ./scripts/configure.sh
+      - name: Check repository and workflow boundaries
+        run: bash scripts/ci_policy_checks.sh
+
+  build-test:
+    name: C++20 ${{ matrix.compiler }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler:
+          - gcc
+          - clang
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Select compiler
+        run: |
+          if [[ "${{ matrix.compiler }}" == "clang" ]]; then
+            echo "CC=clang" >> "$GITHUB_ENV"
+            echo "CXX=clang++" >> "$GITHUB_ENV"
+          else
+            echo "CC=gcc" >> "$GITHUB_ENV"
+            echo "CXX=g++" >> "$GITHUB_ENV"
+          fi
+
+      - name: Configure default-off build
+        run: cmake -S . -B "build/${{ matrix.compiler }}" -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Verify provider proofs remain disabled
+        run: |
+          grep -q '^TRADEBOT_ENABLE_CTRADER_GATE6:BOOL=OFF$' "build/${{ matrix.compiler }}/CMakeCache.txt"
+          grep -q '^TRADEBOT_ENABLE_CTRADER_GATE7:BOOL=OFF$' "build/${{ matrix.compiler }}/CMakeCache.txt"
 
       - name: Build
-        run: ./scripts/build.sh
+        run: cmake --build "build/${{ matrix.compiler }}" --parallel 2
 
       - name: Test
-        run: ./scripts/test.sh
+        run: ctest --test-dir "build/${{ matrix.compiler }}" --output-on-failure
+
+  sanitizers:
+    name: ASan and UBSan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Configure sanitizer build
+        run: |
+          cmake -S . -B build/sanitizers \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build
+        run: cmake --build build/sanitizers --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build/sanitizers --output-on-failure

@@ -133,7 +133,9 @@ Codex and other repository-side agents must not:
 - Codex execution/evidence contract: `docs/CODEX_EXECUTION_EVIDENCE.md`.
 - Python components: none tracked at the time this contract was created.
 - Julia components: none tracked at the time this contract was created.
-- Scripts/tooling: tracked validation wrappers exist under `scripts/`, with `.githooks/pre-push` and `.github/workflows/validation.yml`; CMake remains the underlying tooling entrypoint.
+- Scripts/tooling: tracked validation wrappers and the offline policy checker
+  exist under `scripts/`, with `.githooks/pre-push` and workflows under
+  `.github/workflows/`; CMake remains the underlying tooling entrypoint.
 
 ## Verified Commands
 
@@ -177,6 +179,12 @@ Validation wrapper test:
 
 ```sh
 ./scripts/test.sh
+```
+
+Offline CI policy:
+
+```sh
+./scripts/ci_policy_checks.sh
 ```
 
 Targeted phase test:

@@ -89,6 +89,29 @@ cmake --build build/gate7-sanitize --target ctrader_gate7_tests --parallel 4
 ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-failure
 ```
 
+## GitHub Actions Validation
+
+`.github/workflows/validation.yml` runs three independent offline jobs:
+
+- `Offline safety policy` rejects tracked credential-like files, private-key
+  material, tracked handoff evidence, provider-capable workflow steps, a
+  non-`BACKTEST` default, or enabled-by-default Gate 6/Gate 7 CMake options.
+- `C++20 gcc/clang` configures separate default build trees, proves the
+  provider proof options are `OFF`, builds, and runs the complete default
+  CTest suite.
+- `ASan and UBSan` builds and tests the default core with address and
+  undefined-behavior sanitizers.
+
+`.github/workflows/codeql.yml` performs scheduled and change-triggered C++
+security analysis using the default-off build. None of these workflows accesses
+credentials or starts a cTrader proof process.
+
+`.github/workflows/release-candidate.yml` is manual. It repeats policy,
+release build, and full default tests before uploading `tradebot_core`, a
+SHA-256 manifest, and non-sensitive build metadata for 14 days. The artifact is
+a candidate only; no release, deployment, provider traffic, or live transition
+occurs.
+
 ## Test Layers
 
 - Unit-style tests: direct class behavior inside phase test executables.

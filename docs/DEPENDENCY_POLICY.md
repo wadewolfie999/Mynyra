@@ -21,6 +21,10 @@
   their license at pinned upstream revision
   `3fd8bddfbe0cfc2ecfda079623dc4e498af11e66`; configure-time SHA-256 checks
   fail closed before binding generation.
+- GitHub automation uses official `actions/checkout`,
+  `actions/upload-artifact`, and `github/codeql-action` actions. Dependabot
+  proposes monthly GitHub Actions version updates for review; it does not merge
+  them.
 
 ## Addition Rules
 

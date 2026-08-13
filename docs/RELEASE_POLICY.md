@@ -40,6 +40,17 @@ Before release:
 - Security review complete.
 - Operator approves release.
 
+## Release-Candidate Artifact Gate
+
+The manually dispatched `Offline Release Candidate` workflow may build, test,
+hash, and upload the default `tradebot_core` binary as a temporary Actions
+artifact. Triggering it requires an intentional operator action.
+
+The artifact is not a GitHub Release or deployment. It must not contain
+credentials, hidden files, generated provider evidence, Gate 6/Gate 7 proof
+binaries, or live configuration. Producing it does not authorize publication,
+provider traffic, orders, or a live transition.
+
 ## Live Transition Gate
 
 Any live transition is governed by `RISK_POLICY.md` and `LIVE_TRADING_READINESS.md`. A software release is not live-trading authorization.
