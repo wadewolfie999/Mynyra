@@ -53,7 +53,9 @@ If no file arguments are supplied, the program falls back to `data/BTCUSDT-15.cs
 - API key env name: `AIIO_API_KEY`
 - API secret env name: `AIIO_API_SECRET`
 
-Credentials may also be held in `SystemConfig` fields. Do not hardcode or document values.
+Credentials may also be held in `SystemConfig` fields for explicit consumers.
+The WP-0 `LiveDataAdapter` no longer consumes those fields or constructs signed
+or provider-specific REST requests. Do not hardcode or document values.
 
 ### cTrader Open API Gate 5 Names
 

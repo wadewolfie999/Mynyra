@@ -54,6 +54,12 @@ if ! grep -Eq \
     report_failure "SystemConfig no longer defaults to BACKTEST"
 fi
 
+if grep -Eq \
+    'AuthManager|m_auth|/api/v3/|X-MBX-APIKEY' \
+    include/LiveDataAdapter.hpp src/LiveDataAdapter.cpp; then
+    report_failure "legacy LiveDataAdapter crossed the credential/provider boundary"
+fi
+
 if grep -RIlE \
     'pull_request_target|secrets\.|TRADEBOT_ENABLE_CTRADER_GATE[67]=ON|ctrader_gate[67]_proof' \
     .github/workflows > "$policy_tmp_dir/workflow-findings.txt"; then

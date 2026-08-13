@@ -447,6 +447,10 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
   `./scripts/ci_deep_validate.sh build/wp0-ci-deep-validation`. Automation and
   CI policy checks passed. The build retained the two known unused-variable
   warnings in `AsyncNetworkClient.cpp` and `RiskEngine.cpp`.
+- 2026-08-14: PR #35 CodeQL review identified the legacy credential-to-network
+  flow in `LiveDataAdapter`. WP-0 removed credential ownership and provider-
+  specific REST requests from that data adapter instead of suppressing the finding;
+  CI policy now preserves the boundary. Exact-commit evidence must be rerun.
 
 ## Deviations
 

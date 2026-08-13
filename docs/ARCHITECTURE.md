@@ -53,7 +53,7 @@ ADR decisions remain constraints, not proof that implementation is complete.
 | Allocation/regime | `PortfolioAllocator`, `RegimeDetector` | Strategy weights and market-regime classification |
 | Portfolio/risk | `PortfolioManager`, `RiskEngine` | Position accounting, drawdown, VaR, circuit breakers, halt state |
 | Execution | `ExecutionEngine`, `TriggerOrderManager` | Signal execution, pending/trigger orders, broker routing bridge |
-| Live data | `LiveDataAdapter` | Live-like candle queue, simulated external payload/test hooks, reconnect/gap-fill state |
+| Live data | `LiveDataAdapter` | Live-like candle queue, simulated external payload/test hooks, reconnect/gap-fill state; no credential ownership or provider-specific REST requests |
 | Broker | `BrokerGateway`, `IBrokerAdapter`, `DeterministicBrokerAdapter`, `OrderLifecycleStore` | Broker-neutral order normalization, lifecycle events, paper-mode deterministic adapter simulation, live-capable broker boundary, reconciliation snapshot |
 | Network/auth | `AsyncNetworkClient`, `AuthManager`, `CTraderOAuthCorrelationGuard` | Async network bridge, HMAC signing, env/config credential loading, and offline-only one-shot cTrader OAuth correlation control |
 | Analytics/persistence | `AnalyticsEngine`, `MetricsAggregator`, `LocalMetricsExporter`, `StateSerializer` | CSV outputs, latency summaries, local metrics, resume snapshots |
@@ -303,6 +303,9 @@ codes are memory-only. See `CTRADER_OPEN_API_GATE5.md`.
 - Research code must not bypass risk gates.
 - Live-capable adapters must not be enabled by default.
 - Credential loading must not move into strategy or analytics code.
+- `LiveDataAdapter` must not load credentials or construct provider-specific
+  REST requests; those belong below a separately approved provider-adapter
+  boundary.
 - Generated results must not become hidden inputs to source behavior without explicit data policy review.
 - Performance optimizations must not silently weaken correctness tests or risk behavior.
 

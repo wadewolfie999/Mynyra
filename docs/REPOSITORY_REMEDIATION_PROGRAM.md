@@ -164,8 +164,10 @@ credentials, network access, or order construction.
 
 The approved implementation uses `TRADEBOT_ENABLE_LIVE_RUNTIME=OFF` as the
 normal build state plus `--unlock-live-runtime` as the second technical gate.
-Both must pass before the legacy LIVE adapter may load credentials or start its
-network client. These gates never grant operator or provider authority.
+Both must pass before the legacy LIVE adapter may start its network client. The
+WP-0 design also removes credential ownership and provider-specific REST
+requests from that data adapter; those belong to a future separately approved provider
+adapter. These gates never grant operator or provider authority.
 
 ### Approval And Rollback
 

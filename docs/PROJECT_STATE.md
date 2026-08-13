@@ -55,7 +55,8 @@ ADR, or provider-gate action is the current next action.
 WP-0 implementation is in progress on `codex/wp0-live-containment`. Its
 candidate boundary adds default-off compile/runtime containment, pre-startup
 LIVE rejection, explicit invalid-mode rejection, unavailable-gateway execution
-blocking, PAPER regression coverage, and default-off CI enforcement. It is not
+blocking, removal of credential/provider-specific REST ownership from the legacy data
+adapter, PAPER regression coverage, and default-off CI enforcement. It is not
 accepted until the branch evidence is reviewed and merged.
 
 ## Current Roadmap State

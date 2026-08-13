@@ -28,7 +28,6 @@
 //   the queue, exercising all queue/backoff logic without a real socket.
 #include "MarketCandle.hpp"
 #include "AsyncNetworkClient.hpp"
-#include "AuthManager.hpp"
 #include "LockFreeRingBuffer.hpp"
 #include "SystemConfig.hpp"
 #include <deque>
@@ -153,7 +152,6 @@ private:
 
     const SystemConfig& m_cfg;
     AsyncNetworkClient  m_networkClient;
-    AuthManager         m_auth;
 
     struct TickNode {
         MarketCandle candle;

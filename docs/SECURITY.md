@@ -200,6 +200,8 @@ See `DEPENDENCY_POLICY.md`.
 - Workflow evidence must exclude hidden files and contain only the declared
   CTest log, license, manifest, and checksum list; the live-capable executable
   must not be uploaded.
+- The legacy `LiveDataAdapter` is a market-data boundary only. CI policy rejects
+  credential loading or provider-specific REST construction in that adapter.
 
 ## Shell-Script Safety
 

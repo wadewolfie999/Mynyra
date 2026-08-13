@@ -120,15 +120,9 @@ void LiveDataAdapter::connect()
         return;
     }
 
-    // LIVE mode: spin async network bridge + auth after both containment gates.
-    (void)m_auth.load(m_cfg);
-    if (!m_auth.hasCredentials()) {
-        std::cout << "[LiveDataAdapter] WARNING: no API credentials in env/config; "
-                  << "signed endpoints disabled.\n";
-    } else {
-        std::cout << "[LiveDataAdapter] Auth loaded for key: "
-                  << m_auth.redactedApiKey() << "\n";
-    }
+    // LIVE market-data transport starts only after both containment gates.
+    // Credential loading and signed provider requests do not belong in this
+    // legacy data adapter; a future approved provider adapter must own them.
 
     m_networkClient.setDisconnectCallback([this] {
         m_connected.store(false);
@@ -158,26 +152,6 @@ void LiveDataAdapter::connect()
         m_connected.store(false);
         if (m_integrityCallback) { m_integrityCallback(false); }
         return;
-    }
-
-    // Non-blocking REST state query bridge (time ping + optional signed account probe).
-    AsyncNetworkClient::RestRequest ping;
-    ping.method = "GET";
-    ping.path   = "/api/v3/time";
-    m_networkClient.issueRestQuery(m_cfg.restEndpoint, ping,
-                                   [](const AsyncNetworkClient::RestResponse&) {});
-
-    if (m_auth.hasCredentials()) {
-        const std::string query = "timestamp=" + std::to_string(AuthManager::nonceMs());
-        const std::string sig = m_auth.sign(query);
-        AsyncNetworkClient::RestRequest signedReq;
-        signedReq.method = "GET";
-        signedReq.path = "/api/v3/account";
-        signedReq.query = query + "&signature=" + sig;
-        signedReq.signedRequest = true;
-        signedReq.headers.emplace_back("X-MBX-APIKEY", m_auth.apiKey());
-        m_networkClient.issueRestQuery(m_cfg.restEndpoint, signedReq,
-                                       [](const AsyncNetworkClient::RestResponse&) {});
     }
 
     m_connected.store(true);

@@ -114,6 +114,9 @@ Any live-capable path must support operator-controlled halt behavior that stops 
   `--unlock-live-runtime`; neither technical gate grants operational authority.
 - A bound but unavailable `BrokerGateway` must reject execution and must never
   fall back to a local fill.
+- The legacy `LiveDataAdapter` must not load credentials or construct provider-
+  specific REST requests; provider credential use belongs to a separately
+  approved provider adapter.
 
 ## Credential Exposure
 
