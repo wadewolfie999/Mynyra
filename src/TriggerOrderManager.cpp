@@ -74,7 +74,7 @@ std::size_t TriggerOrderManager::evaluate(const std::string& symbol,
         return 0;
     }
 
-    std::size_t filled = 0;
+    std::size_t triggered = 0;
     for (std::size_t i = 0; i < m_slots.size(); ++i) {
         auto& slot = m_slots[i];
         if (!slot.inUse || slot.symbol != symbol) {
@@ -134,11 +134,10 @@ std::size_t TriggerOrderManager::evaluate(const std::string& symbol,
         ev.strategyId = slot.strategyId;
         outFills.push_back(std::move(ev));
 
-        releaseSlot(i);
-        ++filled;
+        ++triggered;
     }
 
-    return filled;
+    return triggered;
 }
 
 std::size_t TriggerOrderManager::activeOrderCount() const noexcept

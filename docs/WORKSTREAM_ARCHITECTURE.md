@@ -16,11 +16,13 @@ The nine-package Repository Remediation Program in
 across Workstreams I-VII. It does not replace this domain map or rewrite
 historical workstream status. It pauses provider continuation, new phase work,
 feature work, research, optimization, documentation-platform selection, and
-deployment work until the Landing Spot Gate and the relevant package gates are
-accepted.
+deployment work while the approved infrastructure-foundation packages are
+executed.
 
-WP-0 through WP-8 remain Planned / NO-GO. Any workstream proposal must map to
-one of those packages or stop for Wade's explicit scope revision.
+WP-0 is approved and current; WP-1 is approved and queued behind WP-0; WP-2
+through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices integrated
+into WP-0 and WP-1. Any workstream proposal must map to one of those packages
+or stop for Wade's explicit scope revision.
 
 ## Current Workstream Map
 
@@ -82,8 +84,8 @@ Strategy 3 gate labels may be added later as a governance overlay. A full Kanban
 
 ## Professional Halting Point
 
-Stop after the verified Landing Spot Gate governance candidate and present it
-to Wade. After acceptance, the next allowed action is preparation/review of an
-exact WP-0 plan slice. Provider execution, package implementation, Gate 8–9,
+Complete the authorized WP-0 stage/commit/push/PR/merge sequence after its
+candidate, WP-7 evidence, and WP-8 synchronization pass review. WP-1 remains
+inactive until WP-0 is merged and accepted. Provider execution, Gate 8–9,
 orders, risk-limit changes, deployment, and live actions remain outside current
 authorization.

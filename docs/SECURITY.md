@@ -190,8 +190,8 @@ See `DEPENDENCY_POLICY.md`.
   credentials.
 - Pull-request workflows do not read repository secrets.
 - The tracked policy checker rejects credential-like tracked paths,
-  private-key material, provider-capable workflow steps, enabled Gate 6/Gate 7
-  proof targets, and a non-`BACKTEST` default.
+  private-key material, provider-capable workflow steps, an enabled legacy LIVE
+  runtime or Gate 6/Gate 7 proof target, and a non-`BACKTEST` default.
 - Normal CI and evidence packaging must remain provider-free: no
   OAuth, browser flow, Keychain access, account access, market-data request,
   reconnect, order, or live endpoint operation.
@@ -200,6 +200,8 @@ See `DEPENDENCY_POLICY.md`.
 - Workflow evidence must exclude hidden files and contain only the declared
   CTest log, license, manifest, and checksum list; the live-capable executable
   must not be uploaded.
+- The legacy `LiveDataAdapter` is a market-data boundary only. CI policy rejects
+  credential loading or provider-specific REST construction in that adapter.
 
 ## Shell-Script Safety
 
@@ -219,9 +221,9 @@ See `DEPENDENCY_POLICY.md`.
 - Do not use `pull_request_target`, self-hosted runners, repository or
   environment secrets, credential stores, provider endpoints, or write-scoped
   tokens in ordinary validation or candidate delivery.
-- Force Gate 6 and Gate 7 OFF in repository automation. Workflow summaries and
-  artifact manifests must state that release, deployment, provider, order, and
-  live authority are absent.
+- Force the legacy LIVE runtime plus Gate 6 and Gate 7 OFF in repository
+  automation. Workflow summaries and artifact manifests must state that
+  release, deployment, provider, order, and live authority are absent.
 - Validate workflow guardrails and repository skill metadata with
   `python3 scripts/validate_automation.py`.
 - Upload failure diagnostics and validation evidence only from offline

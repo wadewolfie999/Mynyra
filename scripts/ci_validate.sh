@@ -15,6 +15,7 @@ python3 scripts/validate_automation.py
 cmake -S . -B "${build_dir}" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DBUILD_TESTING=ON \
+    -DTRADEBOT_ENABLE_LIVE_RUNTIME=OFF \
     -DTRADEBOT_ENABLE_CTRADER_GATE6=OFF \
     -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF
 cmake --build "${build_dir}" --parallel "${build_jobs}"
@@ -25,6 +26,7 @@ printf '%s\n' \
     'format_version=1' \
     "commit_sha=${commit_sha}" \
     'build_type=RelWithDebInfo' \
+    'live_runtime=OFF' \
     'ctrader_gate6=OFF' \
     'ctrader_gate7=OFF' \
     'ctest=passed_sequentially' \

@@ -14,9 +14,11 @@ TradeBot defaults to `BACKTEST`, dry-run, simulation, or paper behavior. Live tr
 
 The Repository Remediation Program in
 `REPOSITORY_REMEDIATION_PROGRAM.md` is the sole current implementation queue.
-WP-0 through WP-8 remain Planned / NO-GO while the Landing Spot Gate is being
-strengthened. Existing source is classified as operationally unsafe for live
-use until accepted package evidence supports a narrower conclusion.
+Its foundational governance is approved. WP-0 is the current approved package;
+WP-1 is approved and dependency-queued; WP-2 through WP-8 remain Planned /
+NO-GO except for integrated WP-7/WP-8 closure slices. Existing source is
+classified as operationally unsafe for live use until accepted package evidence
+supports a narrower conclusion.
 
 - No historical phase, ADR, cTrader gate, passing test, credential presence,
   branch, or build artifact authorizes provider continuation or runtime use.
@@ -107,7 +109,14 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 - `BACKTEST`, `PAPER`, and `LIVE` are verified code modes.
 - Sandbox is a governance concept, not a verified code mode.
 - Documentation must distinguish dry-run, paper, sandbox, and live behavior.
-- `LIVE` mode must not be used casually in tests or local runs without understanding whether network or order side effects can occur.
+- The default build rejects `LIVE` before credential lookup and network startup.
+  A non-default `TRADEBOT_ENABLE_LIVE_RUNTIME=ON` build also requires
+  `--unlock-live-runtime`; neither technical gate grants operational authority.
+- A bound but unavailable `BrokerGateway` must reject execution and must never
+  fall back to a local fill.
+- The legacy `LiveDataAdapter` must not load credentials or construct provider-
+  specific REST requests; provider credential use belongs to a separately
+  approved provider adapter.
 
 ## Credential Exposure
 

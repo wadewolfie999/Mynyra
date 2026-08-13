@@ -9,7 +9,7 @@
 ## Current Remediation Release Hold
 
 The Repository Remediation Program is the sole current implementation queue.
-While its Landing Spot Gate or any of WP-0 through WP-8 remains unaccepted:
+While any of WP-0 through WP-8 remains unaccepted:
 
 - package work may be committed or pushed only under its own exact operator
   authorization;
@@ -65,9 +65,10 @@ review evidence, not a release or deployment:
   targets, deployment environments, or live-capable options are used.
 - Governance, default configure/build, and the full sequential CTest suite must
   pass before packaging.
-- The evidence bundle records the full commit, toolchain, disabled provider
-  targets, test status, and built-binary SHA-256, but deliberately excludes the
-  live-capable executable. It expires from GitHub Actions after 14 days.
+- The evidence bundle records the full commit, toolchain, disabled legacy LIVE
+  runtime and provider targets, test status, and built-binary SHA-256, but
+  deliberately excludes the live-capable executable. It expires from GitHub
+  Actions after 14 days.
 - Dispatch authority covers that evidence upload only. It does not authorize
   a tag, GitHub Release, package/container publication, deployment, provider
   process, order, risk change, or live transition.

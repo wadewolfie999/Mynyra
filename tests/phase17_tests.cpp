@@ -152,7 +152,7 @@ void test_broker_fault_injector_determinism()
 void test_live_resilience_with_fault_pressure_and_observability()
 {
     SystemConfig cfg;
-    cfg.mode = SystemMode::LIVE;
+    cfg.mode = SystemMode::PAPER;
     cfg.wssEndpoint = "mock://phase17-live-feed";
     cfg.restEndpoint = "http://127.0.0.1:9";
     cfg.reconnectInitialMs = 10;
@@ -160,7 +160,7 @@ void test_live_resilience_with_fault_pressure_and_observability()
 
     LiveDataAdapter adapter(cfg);
     adapter.connect();
-    require(adapter.isConnected(), "live adapter failed initial mock connection");
+    require(adapter.isConnected(), "PAPER adapter failed initial simulation connection");
 
     adapter.simulateDisconnect();
     const auto start = std::chrono::steady_clock::now();
@@ -170,7 +170,7 @@ void test_live_resilience_with_fault_pressure_and_observability()
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
-    require(adapter.isConnected(), "live adapter failed reconnect under simulated network degradation");
+    require(adapter.isConnected(), "PAPER adapter failed reconnect under simulated degradation");
     require(adapter.gapFillCount() > 0, "gap-fill not triggered after reconnect");
 
     LocalMetricsExporter exporter;

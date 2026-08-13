@@ -154,7 +154,7 @@ void test_rest_hardening_request_and_classification()
 void test_live_adapter_secure_bridge_p99()
 {
     SystemConfig cfg;
-    cfg.mode = SystemMode::LIVE;
+    cfg.mode = SystemMode::PAPER;
     cfg.wssEndpoint = "mock://phase16-live-secure";
     cfg.restEndpoint = "http://127.0.0.1:9";
     cfg.reconnectInitialMs = 10;
@@ -162,7 +162,7 @@ void test_live_adapter_secure_bridge_p99()
 
     LiveDataAdapter adapter(cfg);
     adapter.connect();
-    require(adapter.isConnected(), "LiveDataAdapter mock LIVE connection failed");
+    require(adapter.isConnected(), "LiveDataAdapter PAPER simulation failed");
 
     constexpr int N = 200;
     for (int i = 0; i < N; ++i) {

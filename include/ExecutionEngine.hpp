@@ -48,8 +48,9 @@ public:
     // Pass nullptr to disable ATR-based sizing (falls back to equal-slice).
     void setStrategy(SmaCrossStrategy* strategy) noexcept;
 
-    // Bind optional broker gateway. When bound and connected, orders route
-    // through the lock-free event bus into BrokerGateway::submitOrder().
+    // Bind optional broker gateway. Once bound, orders route only through the
+    // gateway; an unavailable gateway fails closed and never falls back to a
+    // local simulated fill.
     void bindBrokerGateway(BrokerGateway* gateway) noexcept;
 
     // Attempt to execute the given signal at `marketPrice`.

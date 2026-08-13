@@ -4,7 +4,8 @@
 // Phase 12 (MOP-20260322-07, Workstream 7.2):
 //   Implements the live-data half of the Data Engine.  In BACKTEST mode the
 //   class behaves identically to CsvReader (sequential, deterministic).  In
-//   PAPER or LIVE modes it:
+//   PAPER mode provides a local simulation harness. LIVE additionally requires
+//   the default-off compile gate and explicit runtime unlock before it:
 //     - Maintains a persistent WSS connection to the configured endpoint.
 //     - Parses incoming JSON tick messages into MarketCandle objects and
 //       pushes them onto a thread-safe internal deque (the "candle queue").
@@ -27,7 +28,6 @@
 //   the queue, exercising all queue/backoff logic without a real socket.
 #include "MarketCandle.hpp"
 #include "AsyncNetworkClient.hpp"
-#include "AuthManager.hpp"
 #include "LockFreeRingBuffer.hpp"
 #include "SystemConfig.hpp"
 #include <deque>
@@ -54,9 +54,8 @@ public:
 
     // -- Connection lifecycle -----------------------------------------------
 
-    // Begin the WSS connection (no-op in BACKTEST mode).
-    // In PAPER/LIVE mode this simulates a successful initial connection and
-    // starts the internal heartbeat timer.
+    // Begin the connection lifecycle (no-op in BACKTEST mode). PAPER remains
+    // local simulation. LIVE fails closed unless both containment gates pass.
     void connect();
 
     // Gracefully close the WSS connection and drain the pending candle queue.
@@ -153,7 +152,6 @@ private:
 
     const SystemConfig& m_cfg;
     AsyncNetworkClient  m_networkClient;
-    AuthManager         m_auth;
 
     struct TickNode {
         MarketCandle candle;

@@ -60,6 +60,16 @@ void LiveDataAdapter::connect()
         return;
     }
 
+    if (m_cfg.isLiveMode() && !m_cfg.canEnterLiveRuntime()) {
+        std::cerr << "[LiveDataAdapter] LIVE connection blocked by WP-0 "
+                     "compile-time/runtime containment gates.\n";
+        m_connected.store(false);
+        if (m_integrityCallback) {
+            m_integrityCallback(false);
+        }
+        return;
+    }
+
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         if (m_connected.load()) { return; }
@@ -70,28 +80,6 @@ void LiveDataAdapter::connect()
 
     std::cout << "[LiveDataAdapter] Connecting to " << m_cfg.wssEndpoint
               << "  [" << modeName(m_cfg.mode) << " mode]\n";
-
-    // PAPER mode remains simulation-only.
-    if (m_cfg.isPaperMode()) {
-        m_connected.store(true);
-        std::cout << "[LiveDataAdapter] WSS connection established. "
-                  << "Latency threshold=" << m_cfg.latencyMaxMs << "ms, "
-                  << "ErrorRate threshold=" << m_cfg.errorRateThresh << "/min\n";
-        if (m_integrityCallback) {
-            m_integrityCallback(true);
-        }
-        return;
-    }
-
-    // LIVE mode: spin async network bridge + auth.
-    (void)m_auth.load(m_cfg);
-    if (!m_auth.hasCredentials()) {
-        std::cout << "[LiveDataAdapter] WARNING: no API credentials in env/config; "
-                  << "signed endpoints disabled.\n";
-    } else {
-        std::cout << "[LiveDataAdapter] Auth loaded for key: "
-                  << m_auth.redactedApiKey() << "\n";
-    }
 
     m_networkClient.setWsMessageCallback([this](std::string_view payload, uint64_t recvNs) {
         TickNode* node = nullptr;
@@ -117,6 +105,24 @@ void LiveDataAdapter::connect()
         }
         m_cv.notify_one();
     });
+
+    // PAPER mode remains local and simulation-only. The callback above lets
+    // explicit test hooks exercise the network-to-queue parser without an
+    // endpoint connection.
+    if (m_cfg.isPaperMode()) {
+        m_connected.store(true);
+        std::cout << "[LiveDataAdapter] Local PAPER simulation established. "
+                  << "Latency threshold=" << m_cfg.latencyMaxMs << "ms, "
+                  << "ErrorRate threshold=" << m_cfg.errorRateThresh << "/min\n";
+        if (m_integrityCallback) {
+            m_integrityCallback(true);
+        }
+        return;
+    }
+
+    // LIVE market-data transport starts only after both containment gates.
+    // Credential loading and signed provider requests do not belong in this
+    // legacy data adapter; a future approved provider adapter must own them.
 
     m_networkClient.setDisconnectCallback([this] {
         m_connected.store(false);
@@ -146,26 +152,6 @@ void LiveDataAdapter::connect()
         m_connected.store(false);
         if (m_integrityCallback) { m_integrityCallback(false); }
         return;
-    }
-
-    // Non-blocking REST state query bridge (time ping + optional signed account probe).
-    AsyncNetworkClient::RestRequest ping;
-    ping.method = "GET";
-    ping.path   = "/api/v3/time";
-    m_networkClient.issueRestQuery(m_cfg.restEndpoint, ping,
-                                   [](const AsyncNetworkClient::RestResponse&) {});
-
-    if (m_auth.hasCredentials()) {
-        const std::string query = "timestamp=" + std::to_string(AuthManager::nonceMs());
-        const std::string sig = m_auth.sign(query);
-        AsyncNetworkClient::RestRequest signedReq;
-        signedReq.method = "GET";
-        signedReq.path = "/api/v3/account";
-        signedReq.query = query + "&signature=" + sig;
-        signedReq.signedRequest = true;
-        signedReq.headers.emplace_back("X-MBX-APIKEY", m_auth.apiKey());
-        m_networkClient.issueRestQuery(m_cfg.restEndpoint, signedReq,
-                                       [](const AsyncNetworkClient::RestResponse&) {});
     }
 
     m_connected.store(true);
@@ -305,12 +291,24 @@ void LiveDataAdapter::simulateDisconnect() noexcept
     if (m_integrityCallback) {
         m_integrityCallback(false);
     }
-    startReconnectWorker();
+    if (!m_cfg.isLiveMode() || m_cfg.canEnterLiveRuntime()) {
+        startReconnectWorker();
+    }
     m_cv.notify_all();
 }
 
 void LiveDataAdapter::simulateReconnect()
 {
+    if (m_cfg.isLiveMode() && !m_cfg.canEnterLiveRuntime()) {
+        std::cerr << "[LiveDataAdapter] LIVE reconnect blocked by WP-0 "
+                     "compile-time/runtime containment gates.\n";
+        m_connected.store(false);
+        if (m_integrityCallback) {
+            m_integrityCallback(false);
+        }
+        return;
+    }
+
     const uint32_t backoffMs = nextBackoffMs();
     const uint32_t attempt   = m_reconnectAttempts.load();
 
@@ -407,11 +405,17 @@ void LiveDataAdapter::setIntegrityCallback(IntegrityCallback cb) noexcept
 
 void LiveDataAdapter::injectExternalPayloadForTest(std::string_view payload) noexcept
 {
+    if (m_cfg.isPaperMode() && !m_networkClient.isRunning()) {
+        (void)m_networkClient.start();
+    }
     m_networkClient.injectTestWebSocketPayload(payload);
 }
 
 void LiveDataAdapter::injectSecureExternalPayloadForTest(std::string_view payload) noexcept
 {
+    if (m_cfg.isPaperMode() && !m_networkClient.isRunning()) {
+        (void)m_networkClient.start();
+    }
     m_networkClient.injectSecureTestWebSocketPayload(payload);
 }
 
@@ -548,7 +552,9 @@ bool LiveDataAdapter::parseExternalTick(std::string_view payload, TickNode& out)
 
 void LiveDataAdapter::startReconnectWorker()
 {
-    if (m_cfg.isBacktest() || m_shutdown.load() || m_connected.load()) {
+    if (m_cfg.isBacktest()
+        || (m_cfg.isLiveMode() && !m_cfg.canEnterLiveRuntime())
+        || m_shutdown.load() || m_connected.load()) {
         return;
     }
     if (m_reconnectWorker.joinable()) {

@@ -71,7 +71,7 @@ jobs:
           {
             echo "### TradeBot offline validation evidence"
             echo "- Commit: \`${{ steps.identity.outputs.commit_sha }}\`"
-            echo "- Gate 6 and Gate 7 targets: disabled"
+            echo "- Legacy LIVE runtime, Gate 6, and Gate 7 targets: disabled"
             echo "- Full default CTest suite: passed sequentially"
             echo "- Executable included: no (hash evidence only)"
             echo "- Retention: 14 days"

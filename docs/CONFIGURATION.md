@@ -11,10 +11,14 @@
 `SystemConfig` defines:
 
 - `BACKTEST`: deterministic CSV replay; default.
-- `PAPER`: live-data-like path with simulated broker execution.
-- `LIVE`: live-capable data and broker execution path.
+- `PAPER`: local live-like data simulation with deterministic broker execution.
+- `LIVE`: legacy live-capable market-data path; unavailable in the default
+  build and still fail-closed at the broker boundary without a separately
+  approved adapter.
 
-`parseModeFlag` accepts `backtest`, `paper`, and `live` case variants shown in code and returns `BACKTEST` for unrecognized strings.
+`parseModeFlag` accepts the lowercase or uppercase forms of `backtest`, `paper`,
+and `live`. Any other value is rejected; it is never silently downgraded to
+`BACKTEST`.
 
 ## Verified CLI Flags
 
@@ -23,9 +27,22 @@
 ```sh
 build/tradebot_core --mode backtest <csv-files>
 build/tradebot_core --mode paper <csv-files>
-build/tradebot_core --mode live <csv-files>
 build/tradebot_core --resume <snapshot-file> <csv-files>
 ```
+
+The normal/default build rejects `--mode live` before opening input files,
+constructing engines, reading credentials, or starting network transport. The
+legacy live-capable path has two technical containment gates:
+
+```sh
+cmake -S . -B build/live-contained -DTRADEBOT_ENABLE_LIVE_RUNTIME=ON
+cmake --build build/live-contained --target tradebot_core
+build/live-contained/tradebot_core --mode live --unlock-live-runtime <csv-files>
+```
+
+These commands document the mechanism; they are not authorized operational
+instructions. The build option and CLI flag must both be present, and neither
+is provider, credential, order, deployment, or live-trading authorization.
 
 If no file arguments are supplied, the program falls back to `data/BTCUSDT-15.csv`. That file was not present in the verified tracked tree.
 
@@ -36,7 +53,9 @@ If no file arguments are supplied, the program falls back to `data/BTCUSDT-15.cs
 - API key env name: `AIIO_API_KEY`
 - API secret env name: `AIIO_API_SECRET`
 
-Credentials may also be held in `SystemConfig` fields. Do not hardcode or document values.
+Credentials may also be held in `SystemConfig` fields for explicit consumers.
+The WP-0 `LiveDataAdapter` no longer consumes those fields or constructs signed
+or provider-specific REST requests. Do not hardcode or document values.
 
 ### cTrader Open API Gate 5 Names
 

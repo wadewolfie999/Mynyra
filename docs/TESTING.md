@@ -21,6 +21,8 @@ Tests are evidence, not ceremony. TradeBot is financial-sensitive, so tests must
   - `phase17_tests`
   - `phase18_tests`
   - `phase22_tests`
+  - `wp0_containment_tests`
+  - `wp0_live_startup_rejected`
   - `ctrader_gate5_1_tests`
 - The opt-in Gate 6 configuration additionally registers
   `ctrader_gate6_tests`; normal builds remain unchanged.
@@ -56,10 +58,11 @@ Ordinary local/CI automation path:
 ```
 
 The helper validates repository automation, configures `RelWithDebInfo` with
-`BUILD_TESTING=ON`, forces both cTrader proof targets OFF, builds with a bounded
-job count, and runs the full default CTest suite sequentially. Only after CTest
-passes does it write a build-local marker bound to the current full commit and
-configuration; evidence packaging rejects a missing or mismatched marker.
+`BUILD_TESTING=ON`, forces the legacy LIVE runtime and both cTrader proof
+targets OFF, builds with a bounded job count, and runs the full default CTest
+suite sequentially. Only after CTest passes does it write a build-local marker
+bound to the current full commit and configuration, including
+`live_runtime=OFF`; evidence packaging rejects a missing or mismatched marker.
 
 Scheduled/manual deep offline path:
 
@@ -67,9 +70,10 @@ Scheduled/manual deep offline path:
 ./scripts/ci_deep_validate.sh build/ci-deep-validation
 ```
 
-The deep helper uses one isolated Debug build tree with ASan/UBSan, keeps both
-cTrader proof targets OFF, and runs the default suite sequentially. It does not
-replace the separately authorized macOS Gate 7 sanitizer procedure below.
+The deep helper uses one isolated Debug build tree with ASan/UBSan, keeps the
+legacy LIVE runtime and both cTrader proof targets OFF, and runs the default
+suite sequentially. It does not replace the separately authorized macOS Gate 7
+sanitizer procedure below.
 Leak detection remains enabled on Linux; the helper disables only that ASan
 option on Darwin because Apple ASan does not support it.
 
@@ -78,6 +82,7 @@ Targeted test:
 ```sh
 ctest --test-dir build -R phase18_tests --output-on-failure
 ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
+ctest --test-dir build -R '^wp0_' --output-on-failure
 ```
 
 Opt-in Gate 6 suite:
@@ -120,7 +125,7 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
 - `Automation and offline-policy governance` validates repository skills,
   workflow pins and boundaries, shell syntax, tracked credential-like paths,
   private-key material, provider-capable workflow steps, the `BACKTEST`
-  default, and default-disabled Gate 6/Gate 7 options.
+  default, and default-disabled legacy LIVE, Gate 6, and Gate 7 options.
 - Required `validate` runs the default-off GCC build and complete sequential
   CTest suite while preserving the protected branch status context.
 - `C++20 clang` repeats the default-off build and complete sequential suite in
@@ -202,7 +207,8 @@ Every package in `REPOSITORY_REMEDIATION_PROGRAM.md` must have named tests that
 trace its acceptance criteria. Minimum package emphasis:
 
 - WP-0: mode/startup rejection, no credential/network side effect, unready
-  gateway fail-closed behavior, and explicit BACKTEST/PAPER regression.
+  gateway fail-closed behavior, protective-trigger retention, opt-in build gate
+  composition, and explicit BACKTEST/PAPER regression.
 - WP-1: zero/one/many-position round-trip, risk/lifecycle/dedup state,
   version/migration, corrupt/partial/atomic-write failure, and exact generated-
   path containment.

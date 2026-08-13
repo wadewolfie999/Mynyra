@@ -8,6 +8,11 @@
 
 Live trading is not authorized by repository code, branch name, credentials, or test success. It requires explicit operator approval for the exact scope.
 
+The normal `tradebot_core` build rejects `LIVE` before credential or network
+initialization. `TRADEBOT_ENABLE_LIVE_RUNTIME=ON` plus
+`--unlock-live-runtime` are containment gates only; satisfying them does not
+satisfy this readiness checklist or authorize provider traffic or orders.
+
 Offline verification, preflight, a commit, an exact binary hash, demo-provider
 evidence, or a prior bounded process does not authorize live use, orders,
 retry, reconnect, autonomous restart, or a later gate.
@@ -15,11 +20,11 @@ retry, reconnect, autonomous restart, or a later gate.
 ## Current Program Block
 
 The nine-package Repository Remediation Program is the current prerequisite
-overlay. The Landing Spot Gate is not yet accepted and WP-0 through WP-8
-implementation remains NO-GO. Live readiness cannot be evaluated as satisfied
-until every package is accepted and the final WP-8 closeout explicitly
-reassesses this checklist. Even then, live trading requires a new exact
-operator authorization; program completion is not an unlock.
+overlay. Its foundational governance is approved; WP-0 is current and WP-1 is
+dependency-queued. Live readiness cannot be evaluated as satisfied until every
+package is accepted and the final WP-8 closeout explicitly reassesses this
+checklist. Even then, live trading requires a new exact operator authorization;
+program completion is not an unlock.
 
 ## Required Approval
 

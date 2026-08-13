@@ -44,12 +44,20 @@ Wade has locked current implementation focus to the nine work packages in
 - WP-7 CI and observability.
 - WP-8 Authority synchronization.
 
-Current status: focus lock active; Landing Spot Gate governance candidate
-locally verified and awaiting Wade acceptance; every package implementation
-remains Planned / NO-GO. No older
-phase, workstream, plan, ADR, or provider-gate action is the current next action.
-Landing Spot acceptance authorizes only preparation/review of WP-0's exact
-slice; WP-0 implementation still requires a separate Wade GO.
+Current status: focus lock and foundational governance approved by Wade on
+2026-08-14. The objective is infrastructure-foundation strengthening, with no
+separate preliminary gate. WP-0 is approved as the current package. WP-1 is
+approved and queued behind accepted WP-0 evidence. WP-2 through WP-8 remain
+Planned / NO-GO, except for WP-7 evidence and WP-8 synchronization included
+inside the approved WP-0 and WP-1 scopes. No older phase, workstream, plan,
+ADR, or provider-gate action is the current next action.
+
+WP-0 implementation is in progress on `codex/wp0-live-containment`. Its
+candidate boundary adds default-off compile/runtime containment, pre-startup
+LIVE rejection, explicit invalid-mode rejection, unavailable-gateway execution
+blocking, removal of credential/provider-specific REST ownership from the legacy data
+adapter, PAPER regression coverage, and default-off CI enforcement. It is not
+accepted until the branch evidence is reviewed and merged.
 
 ## Current Roadmap State
 
@@ -121,10 +129,13 @@ Historical summary:
 
 ## In-Progress Work
 
-- Governance-only Landing Spot Gate synchronization under
-  `PLAN-20260813-repository-cohesion-remediation`.
-- No source work package is in progress. WP-0 through WP-8 remain Planned /
-  NO-GO pending Landing Spot acceptance and package-specific authorization.
+- WP-0 is the current approved package under
+  `PLAN-20260813-repository-cohesion-remediation`; implementation is active on
+  `codex/wp0-live-containment`.
+- WP-1 is approved but inactive until WP-0 implementation, WP-7 evidence, WP-8
+  synchronization, and operator acceptance are complete.
+- WP-2 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices required
+  to close the approved WP-0 and WP-1 work.
 
 ## Blocked Or Constrained Work
 
@@ -220,7 +231,7 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
 
 Results:
 
-- The unstaged Landing Spot Gate documentation candidate on
+- The foundational governance documentation candidate on
   `codex/repository-remediation-lock` passed Git diff hygiene, automation
   validation for 23 skills/four offline workflows, CI policy, exact nine-
   package and no-out-of-range-package checks, current-action drift review,
@@ -273,14 +284,16 @@ Results:
 
 ## Next Safe Action
 
-Complete local verification of the Landing Spot Gate candidate, present the
-governance diff and residual limitations to Wade, and stop. After Wade accepts
-the gate, prepare WP-0's exact plan slice; do not implement WP-0 without a
-separate exact GO.
+Complete WP-0 source/test/documentation verification, review its exact diff,
+then use the separately authorized stage, commit, push, PR, and merge sequence.
+Provider activity, credentials, orders, financial-limit changes, deployment,
+and live use remain prohibited.
 
 ## Next Professional Halting Point
 
-The verified, uncommitted governance candidate is the current stopping point.
-Staging, commit, push, WP implementation, workflow dispatch, credential access,
-provider execution, reconnect, orders, risk-limit changes, deployment, later
-gates, and live use remain prohibited without separate exact authorization.
+Merged, accepted WP-0 evidence plus its WP-7/WP-8 closeout is the next
+professional transition point. Staging, commit, push, PR, and merge are
+authorized for WP-0 and dependency-gated WP-1 only. Workflow dispatch,
+credential access, provider execution, reconnect, orders, risk-limit changes,
+deployment, later packages, and live use remain prohibited. WP-1 must remain
+inactive until WP-0 is accepted.

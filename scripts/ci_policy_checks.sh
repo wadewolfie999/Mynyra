@@ -36,6 +36,7 @@ if git grep -nEI -- \
 fi
 
 for option_name in \
+    TRADEBOT_ENABLE_LIVE_RUNTIME \
     TRADEBOT_ENABLE_CTRADER_GATE6 \
     TRADEBOT_ENABLE_CTRADER_GATE7
 do
@@ -51,6 +52,12 @@ if ! grep -Eq \
     'SystemMode mode\{SystemMode::BACKTEST\};' \
     include/SystemConfig.hpp; then
     report_failure "SystemConfig no longer defaults to BACKTEST"
+fi
+
+if grep -Eq \
+    'AuthManager|m_auth|/api/v3/|X-MBX-APIKEY' \
+    include/LiveDataAdapter.hpp src/LiveDataAdapter.cpp; then
+    report_failure "legacy LiveDataAdapter crossed the credential/provider boundary"
 fi
 
 if grep -RIlE \

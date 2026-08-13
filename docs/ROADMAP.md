@@ -43,24 +43,26 @@ Wade has locked current implementation focus to the nine work packages in
 correctness and safety overlay, not a new numbered phase and not a revision of
 historical phase or ADR status.
 
-The Landing Spot Gate is being strengthened. WP-0 through WP-8 remain Planned /
-NO-GO until the gate is accepted and Wade separately authorizes the exact
-package action. During this lock, the phase table below is historical and
-structural authority only: no provider continuation, later phase, workstream,
-feature, strategy, optimization, deployment, or platform-selection action may
-pre-empt the remediation queue.
+The foundational governance is approved. The objective is infrastructure-
+foundation strengthening; there is no separate preliminary roadmap gate. WP-0
+is the current approved package; WP-1 is approved and dependency-queued; WP-2
+through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices integrated
+into the approved work. During this lock, the phase table below is historical
+and structural authority only: no provider continuation, later phase,
+workstream, feature, strategy, optimization, deployment, or platform-selection
+action may pre-empt the remediation queue.
 
 | Package | Current status |
 | --- | --- |
-| WP-0 Live containment | Planned / NO-GO |
-| WP-1 Persistence and generated-state containment | Planned / NO-GO |
+| WP-0 Live containment | Approved — current |
+| WP-1 Persistence and generated-state containment | Approved — queued after WP-0 acceptance |
 | WP-2 Accounting and quantity correctness | Planned / NO-GO |
 | WP-3 Risk-state repair | Planned / NO-GO |
 | WP-4 Unified order lifecycle | Planned / NO-GO |
 | WP-5 Runtime-mode and data contracts | Planned / NO-GO |
 | WP-6 Transport and provider integration | Planned / NO-GO |
-| WP-7 CI and observability | Planned / NO-GO |
-| WP-8 Authority synchronization | Planned / NO-GO |
+| WP-7 CI and observability | Planned / NO-GO except integrated WP-0/WP-1 evidence slices |
+| WP-8 Authority synchronization | Planned / NO-GO except integrated WP-0/WP-1 synchronization slices |
 
 ## Current Workstream Architecture
 

@@ -95,6 +95,7 @@ def validate_workflows(errors: list[str]) -> int:
         "self-hosted": "self-hosted runner",
         "TRADEBOT_ENABLE_CTRADER_GATE6=ON": "Gate 6 enablement",
         "TRADEBOT_ENABLE_CTRADER_GATE7=ON": "Gate 7 enablement",
+        "TRADEBOT_ENABLE_LIVE_RUNTIME=ON": "legacy LIVE runtime enablement",
         "gh release": "GitHub Release publication",
         "actions/create-release": "GitHub Release publication",
     }
