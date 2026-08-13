@@ -2553,6 +2553,11 @@ live state exists to unwind.
   equivalent summary-redirection style findings; workflow summaries were
   mechanically grouped and fresh verification was started. No repository
   runtime or required dependency was added.
+- 2026-08-13: PR #30's four workflow jobs passed, but branch protection
+  correctly blocked merge because the hardened build job no longer emitted the
+  repository's required legacy `validate` status context. The job key and
+  visible name were restored to `validate`; governance remains a separate
+  required-by-workflow job and no check, permission, or assertion was removed.
 
 ## Deviations
 
@@ -2572,6 +2577,10 @@ live state exists to unwind.
   variable as a loop name, which temporarily removed `git` from that audit
   process's command search path. The corrected read-only audit used a neutral
   variable and passed; repository state was not mutated by the failed attempt.
+- The first PR evidence epoch exposed a branch-protection compatibility defect:
+  all new jobs passed, but required context `validate` was absent because the
+  build job had been renamed. This was classified as a workflow-configuration
+  defect and corrected without bypassing or changing branch protection.
 
 ## Completion Evidence
 
