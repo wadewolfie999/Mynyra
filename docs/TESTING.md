@@ -49,6 +49,30 @@ Full suite:
 ctest --test-dir build --output-on-failure
 ```
 
+Ordinary local/CI automation path:
+
+```sh
+./scripts/ci_validate.sh build/ci-validation
+```
+
+The helper validates repository automation, configures `RelWithDebInfo` with
+`BUILD_TESTING=ON`, forces both cTrader proof targets OFF, builds with a bounded
+job count, and runs the full default CTest suite sequentially. Only after CTest
+passes does it write a build-local marker bound to the current full commit and
+configuration; evidence packaging rejects a missing or mismatched marker.
+
+Scheduled/manual deep offline path:
+
+```sh
+./scripts/ci_deep_validate.sh build/ci-deep-validation
+```
+
+The deep helper uses one isolated Debug build tree with ASan/UBSan, keeps both
+cTrader proof targets OFF, and runs the default suite sequentially. It does not
+replace the separately authorized macOS Gate 7 sanitizer procedure below.
+Leak detection remains enabled on Linux; the helper disables only that ASan
+option on Darwin because Apple ASan does not support it.
+
 Targeted test:
 
 ```sh
@@ -128,6 +152,23 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
   order/position/depth/trendbar/historical/reconnect payloads. Provider
   execution is reported separately and is never a substitute for offline tests.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
+
+## GitHub Actions Evidence
+
+- `.github/workflows/validation.yml` runs automation governance plus the
+  default offline configure/build/full-test path on pushes, pull requests, and
+  manual dispatches.
+- `.github/workflows/deep-validation.yml` runs the default ASan/UBSan path on a
+  weekly schedule or manual dispatch.
+- `.github/workflows/offline-artifact-delivery.yml` is manual only. It repeats
+  default offline validation, packages a CTest log and exact-revision SHA-256
+  provenance, verifies the checksum list, and uploads 14-day evidence. It does
+  not include the live-capable executable.
+- All workflows use read-only repository permission, GitHub-hosted Ubuntu,
+  no repository secrets, default-off provider proof targets, and sequential
+  CTest execution.
+- A workflow pass or uploaded artifact is evidence for that workflow revision
+  only. It is not release, deployment, provider, order, or live authorization.
 
 ## Required Coverage By Change Type
 

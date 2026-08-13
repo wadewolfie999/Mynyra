@@ -40,6 +40,25 @@ Before release:
 - Security review complete.
 - Operator approves release.
 
+## Offline Validation Evidence Gate
+
+The manually dispatched offline artifact workflow delivers non-executable
+review evidence, not a release or deployment:
+
+- The operator selects one reviewed ref and initiates one workflow dispatch.
+- Repository permissions remain read-only; no repository secrets, provider
+  targets, deployment environments, or live-capable options are used.
+- Governance, default configure/build, and the full sequential CTest suite must
+  pass before packaging.
+- The evidence bundle records the full commit, toolchain, disabled provider
+  targets, test status, and built-binary SHA-256, but deliberately excludes the
+  live-capable executable. It expires from GitHub Actions after 14 days.
+- Dispatch authority covers that evidence upload only. It does not authorize
+  a tag, GitHub Release, package/container publication, deployment, provider
+  process, order, risk change, or live transition.
+- A separate operator decision and release artifact are required for any
+  promotion or release.
+
 ## Live Transition Gate
 
 Any live transition is governed by `RISK_POLICY.md` and `LIVE_TRADING_READINESS.md`. A software release is not live-trading authorization.
