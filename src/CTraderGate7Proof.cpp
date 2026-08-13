@@ -320,6 +320,41 @@ Gate7ResidualFailure classifyGate7SubscriptionReceiveFailure(
     return Gate7ResidualFailure::SubscriptionUnexpectedPayload;
 }
 
+Gate7ResidualFailure classifyGate7UnexpectedSubscriptionPayload(
+    std::uint32_t payloadType) noexcept
+{
+    switch (payloadType) {
+    case 2101: // PROTO_OA_APPLICATION_AUTH_RES
+    case 2103: // PROTO_OA_ACCOUNT_AUTH_RES
+    case 2115: // PROTO_OA_SYMBOLS_LIST_RES
+    case 2117: // PROTO_OA_SYMBOL_BY_ID_RES
+    case 2150: // PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES
+        return Gate7ResidualFailure::SubscriptionPriorStageResponse;
+    case 2130: // PROTO_OA_UNSUBSCRIBE_SPOTS_RES
+        return Gate7ResidualFailure::SubscriptionUnrequestedUnsubscribeResponse;
+    case 2131: // PROTO_OA_SPOT_EVENT
+        return Gate7ResidualFailure::SubscriptionSpotBeforeAcknowledgement;
+    case 2120: // PROTO_OA_SYMBOL_CHANGED_EVENT
+        return Gate7ResidualFailure::SubscriptionSymbolChangedEvent;
+    case 2123: // PROTO_OA_TRADER_UPDATE_EVENT
+        return Gate7ResidualFailure::SubscriptionTraderUpdatedEvent;
+    case 2107: // PROTO_OA_TRAILING_SL_CHANGED_EVENT
+    case 2126: // PROTO_OA_EXECUTION_EVENT
+    case 2132: // PROTO_OA_ORDER_ERROR_EVENT
+    case 2141: // PROTO_OA_MARGIN_CHANGED_EVENT
+    case 2155: // PROTO_OA_DEPTH_EVENT
+    case 2171: // PROTO_OA_MARGIN_CALL_UPDATE_EVENT
+    case 2172: // PROTO_OA_MARGIN_CALL_TRIGGER_EVENT
+        return Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent;
+    default:
+        break;
+    }
+    if (payloadType >= 2100 && payloadType <= 2188) {
+        return Gate7ResidualFailure::SubscriptionOtherSchemaPayload;
+    }
+    return Gate7ResidualFailure::SubscriptionUnknownPayload;
+}
+
 Gate7ResidualFailure classifyGate7SpotReceiveFailure(
     Gate7TransportOutcome outcome,
     Gate7ProviderErrorCategory providerCategory) noexcept
@@ -1076,6 +1111,22 @@ std::string_view safeGate7ResidualDiagnostic(
         return "gate7_subscription_provider_rejected";
     case Gate7ResidualFailure::SubscriptionUnexpectedPayload:
         return "gate7_subscription_unexpected_payload";
+    case Gate7ResidualFailure::SubscriptionPriorStageResponse:
+        return "gate7_subscription_prior_stage_response";
+    case Gate7ResidualFailure::SubscriptionUnrequestedUnsubscribeResponse:
+        return "gate7_subscription_unrequested_unsubscribe_response";
+    case Gate7ResidualFailure::SubscriptionSpotBeforeAcknowledgement:
+        return "gate7_subscription_spot_before_ack";
+    case Gate7ResidualFailure::SubscriptionSymbolChangedEvent:
+        return "gate7_subscription_symbol_changed_event";
+    case Gate7ResidualFailure::SubscriptionTraderUpdatedEvent:
+        return "gate7_subscription_trader_updated_event";
+    case Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent:
+        return "gate7_subscription_prohibited_async_event";
+    case Gate7ResidualFailure::SubscriptionOtherSchemaPayload:
+        return "gate7_subscription_other_schema_payload";
+    case Gate7ResidualFailure::SubscriptionUnknownPayload:
+        return "gate7_subscription_unknown_payload";
     case Gate7ResidualFailure::SubscriptionCorrelationRejected:
         return "gate7_subscription_correlation_rejected";
     case Gate7ResidualFailure::SubscriptionResponseMalformed:

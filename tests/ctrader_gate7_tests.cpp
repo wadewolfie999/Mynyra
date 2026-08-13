@@ -369,6 +369,36 @@ void test_residual_transport_and_provider_classification()
                     testCase.category) == testCase.spot,
                 "spot provider category was misclassified");
     }
+
+    struct UnexpectedSubscriptionCase {
+        std::uint32_t payloadType;
+        Gate7ResidualFailure expected;
+    };
+    constexpr std::array<UnexpectedSubscriptionCase, 18> unexpectedCases = {{
+        {2101, Gate7ResidualFailure::SubscriptionPriorStageResponse},
+        {2103, Gate7ResidualFailure::SubscriptionPriorStageResponse},
+        {2115, Gate7ResidualFailure::SubscriptionPriorStageResponse},
+        {2117, Gate7ResidualFailure::SubscriptionPriorStageResponse},
+        {2150, Gate7ResidualFailure::SubscriptionPriorStageResponse},
+        {2130, Gate7ResidualFailure::SubscriptionUnrequestedUnsubscribeResponse},
+        {2131, Gate7ResidualFailure::SubscriptionSpotBeforeAcknowledgement},
+        {2120, Gate7ResidualFailure::SubscriptionSymbolChangedEvent},
+        {2123, Gate7ResidualFailure::SubscriptionTraderUpdatedEvent},
+        {2107, Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent},
+        {2126, Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent},
+        {2132, Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent},
+        {2141, Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent},
+        {2155, Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent},
+        {2171, Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent},
+        {2172, Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent},
+        {2188, Gate7ResidualFailure::SubscriptionOtherSchemaPayload},
+        {999999, Gate7ResidualFailure::SubscriptionUnknownPayload}
+    }};
+    for (const auto& testCase : unexpectedCases) {
+        require(tradebot::ctrader::classifyGate7UnexpectedSubscriptionPayload(
+                    testCase.payloadType) == testCase.expected,
+                "unexpected subscription payload category was not closed");
+    }
 }
 
 void test_heartbeat_cadence_is_bounded()
@@ -856,7 +886,7 @@ void test_terminal_errors_and_sanitized_diagnostics()
                 "terminal failure retained volatile state");
     }
 
-    constexpr std::array<Gate7ResidualFailure, 34> residualFailures = {
+    constexpr std::array<Gate7ResidualFailure, 42> residualFailures = {
         Gate7ResidualFailure::None,
         Gate7ResidualFailure::SubscriptionStateUnavailable,
         Gate7ResidualFailure::SubscriptionSendFailed,
@@ -869,6 +899,14 @@ void test_terminal_errors_and_sanitized_diagnostics()
         Gate7ResidualFailure::SubscriptionProviderUnavailable,
         Gate7ResidualFailure::SubscriptionProviderRejected,
         Gate7ResidualFailure::SubscriptionUnexpectedPayload,
+        Gate7ResidualFailure::SubscriptionPriorStageResponse,
+        Gate7ResidualFailure::SubscriptionUnrequestedUnsubscribeResponse,
+        Gate7ResidualFailure::SubscriptionSpotBeforeAcknowledgement,
+        Gate7ResidualFailure::SubscriptionSymbolChangedEvent,
+        Gate7ResidualFailure::SubscriptionTraderUpdatedEvent,
+        Gate7ResidualFailure::SubscriptionProhibitedAsyncEvent,
+        Gate7ResidualFailure::SubscriptionOtherSchemaPayload,
+        Gate7ResidualFailure::SubscriptionUnknownPayload,
         Gate7ResidualFailure::SubscriptionCorrelationRejected,
         Gate7ResidualFailure::SubscriptionResponseMalformed,
         Gate7ResidualFailure::SubscriptionAccountMismatch,

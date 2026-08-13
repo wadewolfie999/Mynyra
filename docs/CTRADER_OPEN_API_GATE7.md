@@ -92,6 +92,18 @@ correlation deadline. Callback buffer allocation failure emits only the fixed
 resource-exhaustion category. The normal build remains unchanged unless
 `TRADEBOT_ENABLE_CTRADER_GATE7=ON` is supplied.
 
+The residual subscription wait preserves the raw-payload prohibition while
+classifying a rejected message type into closed schema-derived categories:
+prior-stage response, unrequested unsubscribe response, spot-before-
+acknowledgement, symbol-change event, trader-update event, prohibited
+order/risk/depth asynchronous event, other pinned-schema payload, or unknown
+payload. No category generically admits or ignores the message. The stored
+credential path consumes the Gate 6 `TBG6TOK1` envelope using Gate 6's 32-bit
+field lengths. Refreshed or exchanged credentials remain in memory for the
+bounded process and are not written to Keychain by Gate 7. Successful proof
+output contains fixed markers only and omits all quote, timestamp, identifier,
+and numeric metadata values.
+
 ## Provider outcome
 
 The execution chronology is cumulative: Keychain boundary; generic OAuth
