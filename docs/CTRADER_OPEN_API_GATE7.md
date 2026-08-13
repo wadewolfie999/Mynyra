@@ -99,9 +99,10 @@ acknowledgement, symbol-change event, trader-update event, prohibited
 order/risk/depth asynchronous event, other pinned-schema payload, or unknown
 payload. No category generically admits or ignores the message. The stored
 credential path consumes the Gate 6 `TBG6TOK1` envelope using Gate 6's 32-bit
-field lengths and atomically persists a complete refreshed envelope before
-opening the demo connection. Successful proof output contains fixed markers
-only and omits all quote, timestamp, identifier, and numeric metadata values.
+field lengths. Refreshed or exchanged credentials remain in memory for the
+bounded process and are not written to Keychain by Gate 7. Successful proof
+output contains fixed markers only and omits all quote, timestamp, identifier,
+and numeric metadata values.
 
 ## Provider outcome
 

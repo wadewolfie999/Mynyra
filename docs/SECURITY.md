@@ -114,11 +114,9 @@ timestamp evidence was obtained.
 
 Gate 7 reads the Gate 6 `TBG6TOK1` Keychain token envelope using the same
 big-endian 64-bit expiry and 32-bit length-prefixed field layout that Gate 6
-writes. A successful refresh or authorization-code exchange is not usable for
-provider traffic until the complete replacement envelope has been written to
-the fixed Keychain service. Keychain write failure is terminal and emits only
-`gate7_keychain_write_failed`; token fields are never written to repository
-files or process output.
+writes. Gate 7 may use a successfully refreshed or exchanged token only within
+the current bounded process; it does not update the Keychain token envelope.
+Token fields are never written to repository files or process output.
 
 Gate 7 OAuth failures are emitted only as fixed categories covering listener
 startup, authorization URL construction, browser launch, callback wait/read,
