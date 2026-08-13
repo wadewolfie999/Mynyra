@@ -196,6 +196,39 @@ deployment, provider traffic, or live transition occurs.
 
 ## Required Coverage By Change Type
 
+### Repository Remediation Program Evidence
+
+Every package in `REPOSITORY_REMEDIATION_PROGRAM.md` must have named tests that
+trace its acceptance criteria. Minimum package emphasis:
+
+- WP-0: mode/startup rejection, no credential/network side effect, unready
+  gateway fail-closed behavior, and explicit BACKTEST/PAPER regression.
+- WP-1: zero/one/many-position round-trip, risk/lifecycle/dedup state,
+  version/migration, corrupt/partial/atomic-write failure, and exact generated-
+  path containment.
+- WP-2: fixed-unit golden vectors, overflow/rounding, buy/sell/reduce/close/
+  reversal/partial-fill accounting, multi-symbol marks, and the 261-tick fill-
+  ceiling regression.
+- WP-3: daily drawdown, VaR aggregation, final normalized quantity, independent
+  halt/close-only sources, stale health/reconciliation data, persistence, and
+  operator-clear semantics.
+- WP-4: one end-to-end lifecycle with rejection, partial/full fill, cancel/fill
+  race, timeout, duplicate/out-of-order event, trigger/pending retention,
+  restart deduplication, and reconciliation.
+- WP-5: mode topology, explicit inputs, timestamp units/clock domains, stale/
+  future/out-of-order data, replay schema/version/cursor, ownership, shutdown,
+  and concurrency.
+- WP-6: fully synthetic provider-adapter framing, partial I/O, TLS validation,
+  backpressure, timeout, bounded reconnect, translation, health, redaction,
+  lifecycle, and reconciliation. Normal tests remain network- and secret-free.
+- WP-7: CI-to-criterion traceability, sanitizer/analyzer/warning policy,
+  benchmark correctness, observability redaction, and artifact allowlists.
+- WP-8: authority/index consistency, tracked-file disposition, stale-claim
+  scans, documentation links when tooling exists, and exact evidence epoch.
+
+A package test pass does not accept the package. The corresponding WP-8 sync
+and Wade acceptance are also required, and the next package remains NO-GO.
+
 - Order-book changes: targeted tests for valid/invalid BBO, level mutation, recentering if affected, and `apply_bbo_microbench` when performance is claimed.
 - Replay changes: CSV, binary, malformed input, timestamp ordering, cursor, and generated binary compatibility.
 - Risk changes: drawdown, position cap, VaR, close-only, halt, latency, error-rate, and live volatility scaling.

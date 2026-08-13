@@ -16,6 +16,21 @@
 - Commit, push, publication, provider execution, retry, later gates, orders, risk changes, and live work are not inferred from adjacent approval.
 - Candidate, staged, committed, exact-commit-build, and external-process evidence are distinguished.
 
+## Repository Remediation Program
+
+- Landing Spot Gate acceptance is identified.
+- Change maps to exactly one of WP-0 through WP-8 in
+  `REPOSITORY_REMEDIATION_PROGRAM.md`.
+- Predecessor package evidence is accepted or an explicit safe exception is
+  recorded.
+- Current-source facts were revalidated; diagnosis-baseline claims were not
+  copied forward without inspection.
+- Scope, exclusions, units, ownership, lifecycle, tests, rollback, stop
+  condition, and exact operator approval match the package slice.
+- WP-7 evidence and WP-8 documentation synchronization are included.
+- No phase, provider gate, next package, order, risk change, deployment, or
+  live authority is inferred from package acceptance.
+
 ## Source Review
 
 - Change is focused.

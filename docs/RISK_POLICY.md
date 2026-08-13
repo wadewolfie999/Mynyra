@@ -10,6 +10,24 @@
 
 TradeBot defaults to `BACKTEST`, dry-run, simulation, or paper behavior. Live trading is not permitted by default.
 
+## Current Remediation Safety Hold
+
+The Repository Remediation Program in
+`REPOSITORY_REMEDIATION_PROGRAM.md` is the sole current implementation queue.
+WP-0 through WP-8 remain Planned / NO-GO while the Landing Spot Gate is being
+strengthened. Existing source is classified as operationally unsafe for live
+use until accepted package evidence supports a narrower conclusion.
+
+- No historical phase, ADR, cTrader gate, passing test, credential presence,
+  branch, or build artifact authorizes provider continuation or runtime use.
+- WP-0 must establish runtime containment before later packages can rely on a
+  safe execution boundary.
+- WP-2 and WP-3 may correct existing accounting/risk intent only under exact
+  approval; changing financial-limit values is a separate action.
+- WP-4 must establish a single confirmed order lifecycle before provider work.
+- WP-6 base approval is offline only; every provider process remains separate.
+- Completion of all packages still does not authorize live trading.
+
 ## Live Trading Unlock Requirements
 
 Live trading requires explicit operator authorization for the exact venue, account, scope, branch, commit, configuration, and time window. Authorization is not inferred from repository access, credentials being present, or the existence of `LIVE` mode in code.

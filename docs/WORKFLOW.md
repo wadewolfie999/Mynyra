@@ -6,6 +6,27 @@
 - Authority level: workflow policy below roadmap and above skill-specific instructions.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and testers.
 
+## Current Remediation Workflow
+
+The current implementation queue is locked to WP-0 through WP-8 in
+`REPOSITORY_REMEDIATION_PROGRAM.md`. Before ordinary feature, phase, provider,
+research, optimization, or deployment workflow is considered:
+
+1. Confirm the Landing Spot Gate is accepted.
+2. Map the task to exactly one package; cross-package dependencies must be
+   explicit and cannot create an implicit tenth package.
+3. Revalidate the package's observed baseline facts at the current commit.
+4. Record the exact package slice, evidence epoch, approvals, stop condition,
+   rollback, and prohibited adjacent actions.
+5. Obtain Wade's exact implementation GO for that slice.
+6. Implement and verify only the slice; add WP-7 evidence before or with the
+   behavior it protects.
+7. Complete the WP-8 authority synchronization slice and obtain acceptance.
+8. Stop. The next package remains NO-GO until separately authorized.
+
+Historical phase, plan, ADR, or provider-gate approval does not bypass this
+workflow.
+
 ## Standard Workflow
 
 1. Task intake: capture objective, scope, risk class, and expected output.
@@ -75,6 +96,7 @@
 ## Phase Work Workflow
 
 - Confirm phase marker in `ROADMAP.md` and `PROJECT_STATE.md`.
+- Confirm the phase action is not paused by the current remediation focus lock.
 - Use a plan with phase ID.
 - Preserve phase gates and validation requirements.
 - Record benchmark/test evidence.

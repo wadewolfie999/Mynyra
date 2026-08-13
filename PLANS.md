@@ -215,6 +215,231 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 ## Final Outcome
 ```
 
+## Current Active Plan Register
+
+`PLAN-20260813-repository-cohesion-remediation` is the sole current execution
+plan. Older plans below are retained as decision and execution history; any
+stale `In Progress`, provider-next-action, or residual-authorization wording in
+those records is non-controlling under Wade's current focus lock. Work from an
+older plan must first map to WP-0 through WP-8 and receive new exact authority.
+
+# Plan: Repository Cohesion Remediation Program
+
+- Plan ID: `PLAN-20260813-repository-cohesion-remediation`
+- Status: In Progress — governance-only focus lock active; Landing Spot Gate
+  candidate verified locally and awaiting Wade acceptance; WP-0 through WP-8
+  implementation Planned / NO-GO
+- Owner: Wade
+- Implementer: separately assigned per package
+- Review authority: Wade
+- Related roadmap phase: cross-cutting remediation overlay; no historical phase
+  transition
+- Related issue or decision: 2026-08-13 repository-wide cohesion diagnosis and
+  Wade's nine-work-package focus lock
+- Created: 2026-08-13
+- Updated: 2026-08-13
+
+## Objective
+
+Convert the repository-wide diagnosis into one authoritative, dependency-aware
+remediation program and prevent feature, provider, phase, or deployment work
+from advancing until the repository's safety and correctness landing spot is
+strengthened.
+
+Success means:
+
+- the Landing Spot Gate is accepted by Wade;
+- WP-0 through WP-8 are the only implementation queue;
+- each package is separately planned, authorized, implemented, verified,
+  synchronized, and accepted in accordance with
+  `docs/REPOSITORY_REMEDIATION_PROGRAM.md`; and
+- completion does not imply live, deployment, provider, order, or financial-
+  limit authority.
+
+## Context
+
+A repository-wide diagnosis at commit
+`7f89c597d3874e5c8782a49a31d42335c8bf1e17` found that the repository is
+well-documented and its current offline suites pass, but its live containment,
+persistence, accounting, risk, order lifecycle, runtime/data contracts,
+transport/provider integration, CI/observability, and authority state do not
+yet form an operationally credible whole. Wade directed that current focus be
+locked to nine remediation work packages and that the governance landing spot
+be strengthened before any package implementation proceeds.
+
+Historical Phase 22 and cTrader gate records remain preserved. Their prior
+completion or approval does not override this current queue or authorize a
+provider continuation.
+
+## Scope
+
+- Establish and maintain the canonical WP-0 through WP-8 definitions in
+  `docs/REPOSITORY_REMEDIATION_PROGRAM.md`.
+- Synchronize active governance so current work, next safe action, package
+  status, evidence, rollback, and approval boundaries agree.
+- After Landing Spot Gate acceptance, create one bounded implementation slice
+  at a time from the canonical package definition.
+- Require WP-7 evidence and WP-8 documentation/authority closeout for every
+  accepted package.
+
+## Out Of Scope
+
+- Source, header, test, CMake, workflow, credential, generated-artifact,
+  financial-control, runtime, provider, order, deployment, or live mutation as
+  part of the Landing Spot Gate.
+- Any tenth package, feature expansion, new strategy, new provider, phase
+  activation, optimization, or platform selection without Wade's explicit
+  scope revision.
+- Credential-value access, external/provider traffic, demo or real orders,
+  risk-limit changes, staging, commit, push, publication, release, deployment,
+  or live trading unless separately and exactly authorized.
+
+## Preconditions
+
+- Current Git branch, full commit, tracked/index state, and relevant ignored
+  artifacts are inspected before each plan slice.
+- The package's baseline finding is revalidated against current source and
+  tests; the 2026-08-13 diagnosis is not copied forward as immutable fact.
+- All predecessor packages required by the canonical dependency graph are
+  accepted, or Wade approves a documented exception that preserves safety.
+- The exact package action and prohibited adjacent actions are recorded.
+
+## Assumptions
+
+- The nine package names and outcomes are stable enough to govern the current
+  queue; package-internal findings may be refined without expanding scope.
+- Historical phase and ADR records can remain accurate while a cross-cutting
+  remediation overlay controls current execution.
+- Offline checks can establish most implementation evidence; external
+  provider evidence, if ever needed, remains a separate exact action.
+
+## Invariants
+
+- `BACKTEST` remains the default.
+- No live trading or real/demo order authority is inferred.
+- No existing financial risk limit is changed without exact operator approval.
+- No provider-specific type or behavior leaks above the broker-adapter boundary.
+- Generated evidence is never source truth and secret values are never read,
+  printed, or persisted.
+- A package cannot self-authorize its successor.
+- Historical phase/ADR status is not rewritten merely to express the current
+  focus lock.
+
+## Authorization Boundary
+
+Wade's 2026-08-13 direction authorizes the governance-only Landing Spot Gate:
+authoring this plan, creating the canonical remediation document, and
+synchronizing affected governance files. It does not authorize WP-0 through
+WP-8 source implementation, staging, commit, push, publication, workflow
+dispatch, credentials, provider traffic, retry, later gates, orders, risk-
+limit changes, release, deployment, or live use.
+
+There is no external-process attempt budget in the Landing Spot Gate because
+external activity is prohibited. Stop after local documentation verification
+and present the candidate for Wade's acceptance.
+
+## Files Expected to Change
+
+Landing Spot Gate only:
+
+- `AGENTS.md`, `PLANS.md`, and `CONTRIBUTING.md`.
+- `docs/REPOSITORY_REMEDIATION_PROGRAM.md` and affected current-state,
+  roadmap, workstream, backlog, architecture, workflow, review, testing, risk,
+  live-readiness, security, data, release, failure-recovery, actor, handoff, and
+  index documents.
+
+No source, header, test, CMake, script, workflow, ADR status, credential, or
+generated artifact is expected to change.
+
+Future package files are controlled by the canonical package definition and a
+separately approved package slice; this plan does not pre-authorize them.
+
+## Implementation Steps
+
+1. Audit Git and the current authority, phase, ADR, risk, live-readiness,
+   testing, workflow, and documentation state.
+2. Define one canonical nine-package register with dependencies, scope,
+   exclusions, acceptance, tests, approval, and rollback.
+3. Synchronize governance files and freeze conflicting next-action language.
+4. Run documentation, automation, scope, and Git-diff validation.
+5. Present the Landing Spot Gate candidate to Wade and stop.
+6. After separate acceptance, prepare WP-0's exact implementation plan slice;
+   do not begin implementation without a second exact GO.
+
+## Verification
+
+Landing Spot Gate:
+
+```sh
+git status --short
+git diff --name-status
+git diff --check
+python3 scripts/validate_automation.py
+./scripts/ci_policy_checks.sh
+grep -RInE 'TO''DO|TB''D|FIX''ME|PLACE''HOLDER|example ''only' \
+  AGENTS.md PLANS.md CONTRIBUTING.md docs .agents 2>/dev/null || true
+grep -RInE 'live trading|live-trading|real order|API key|credential|secret' \
+  AGENTS.md PLANS.md CONTRIBUTING.md docs .agents 2>/dev/null || true
+```
+
+Also verify that all current-action claims point to the program, exactly nine
+package identifiers exist in the canonical register, no source/runtime files
+changed, and no secret-bearing ignored file was opened.
+
+Each future package must add the targeted, full-suite, sanitizer, benchmark,
+data, security, or CI evidence required by its canonical acceptance section.
+
+## Risks
+
+- Broad documentation synchronization could rewrite historical authority;
+  preserve historical phase/ADR facts and change only their current-action
+  interpretation.
+- A package label could be mistaken for implementation approval; keep every
+  package Planned / NO-GO until its exact action is authorized.
+- Duplicating package definitions could create drift; this plan and other docs
+  reference the canonical definitions instead of restating them.
+- Correcting governance does not contain runtime defects; retain the
+  operationally unsafe disposition until accepted implementation evidence
+  supports a narrower verdict.
+
+## Rollback
+
+With Wade's approval, revert only the Landing Spot Gate documentation changes
+or the affected future package slice. Never use destructive Git operations,
+discard unrelated work, or roll back a containment package into an enabled
+unsafe runtime. Historical phase/ADR evidence remains preserved.
+
+## Progress Log
+
+- 2026-08-13: Wade locked current focus to nine remediation work packages and
+  directed governance landing-spot strengthening before further progress.
+- 2026-08-13: Authority/phase/ADR review classified historical phase and
+  provider records as non-blocking history, not current execution authority.
+- 2026-08-13: Landing Spot Gate documentation synchronization began on local
+  branch `codex/repository-remediation-lock` from diagnostic baseline commit
+  `7f89c597d3874e5c8782a49a31d42335c8bf1e17`.
+- 2026-08-13: The documentation-only candidate passed Git diff hygiene,
+  automation validation for 23 skills and four offline workflows, CI policy,
+  exact nine-package, no-out-of-range-package, current-action-drift, reference,
+  placeholder, and changed-path scope checks. Markdown link/lint tools were not
+  available locally. Wade acceptance remains pending.
+
+## Deviations
+
+- None recorded at plan creation.
+
+## Completion Evidence
+
+- Landing Spot Gate local verification: complete at the unstaged working-tree
+  candidate epoch; Wade acceptance: pending.
+- WP-0 through WP-8 implementation evidence: pending and not authorized.
+
+## Final Outcome
+
+Open. The focus lock is active and the Landing Spot Gate candidate is locally
+verified. Wade acceptance is required before WP-0 planning may advance, and
+WP-0 implementation requires a separate exact operator GO.
+
 # Plan: Complete Gate 5 OAuth Correlation Controls
 
 - Plan ID: `PLAN-20260809-gate5-oauth-correlation-controls`

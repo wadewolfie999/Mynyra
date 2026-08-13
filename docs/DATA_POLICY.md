@@ -9,8 +9,10 @@
 ## Verified Data Paths
 
 - `data/samples/`: exists and is currently empty.
-- `data/results/`: generated outputs; ignored by Git.
-- `data/archive/`: ignored by Git.
+- `data/results/`: generated outputs; current Git rules ignore `*.csv` and
+  `*.bin`, not the directory or every possible output filename.
+- `data/archive/`: intended generated archive path with the same extension-
+  based limitation.
 - `data/historical/`: referenced by `phase18_burnin`, not present as a tracked directory at verification.
 - `build/phase19_revalidation/`: ignored generated Phase 19 logs/replay artifacts observed locally.
 - `/tmp`: used by tests for temporary fixtures.
@@ -24,7 +26,7 @@ Tracked by default:
 - Tests.
 - Small, intentional sample fixtures with clear provenance.
 
-Not tracked by default:
+Not tracked by policy:
 
 - `build/`.
 - `data/results/`.
@@ -33,6 +35,14 @@ Not tracked by default:
 - Generated replay files.
 - Local logs.
 - Credentials and `.env` files.
+
+Current enforcement caveat: `.gitignore` fully excludes `build/` and local
+secret patterns, but generated containment under `data/results/` and
+`data/archive/` is extension-based. A JSON snapshot or another unmatched
+filename can remain unignored. WP-1 owns the exact directory/path containment
+and fixture-exception design. Until then, verify every generated path with
+`git check-ignore -v` and `git status --short` rather than assuming policy is
+enforced.
 
 Large files require operator review. Git LFS was not configured or verified in this repository, so do not assume LFS is available.
 

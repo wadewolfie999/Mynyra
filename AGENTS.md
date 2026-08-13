@@ -31,6 +31,35 @@ Verified major subsystems:
 - `LiveDataAdapter`, `BrokerGateway`, `AsyncNetworkClient`, `AuthManager`: live-capable data, broker, network, and credential boundaries.
 - `AnalyticsEngine`, `MetricsAggregator`, `LocalMetricsExporter`, `StateSerializer`: result output, metrics, and resume state.
 
+## Current Repository Focus Lock
+
+The sole current implementation focus is the nine-package Repository
+Remediation Program defined in `docs/REPOSITORY_REMEDIATION_PROGRAM.md` and
+governed by `PLAN-20260813-repository-cohesion-remediation` in `PLANS.md`:
+
+1. WP-0 — Live containment.
+2. WP-1 — Persistence and generated-state containment.
+3. WP-2 — Accounting and quantity correctness.
+4. WP-3 — Risk-state repair.
+5. WP-4 — Unified order lifecycle.
+6. WP-5 — Runtime-mode and data contracts.
+7. WP-6 — Transport and provider integration.
+8. WP-7 — CI and observability.
+9. WP-8 — Authority synchronization.
+
+The Landing Spot Gate is governance preparation, not a tenth package. The
+focus lock is active, but WP-0 through WP-8 implementation remains Planned /
+NO-GO until Wade accepts the Landing Spot Gate and separately authorizes the
+exact next package action. New findings must map to an existing package or stop
+for an explicit scope decision. Historical phase, workstream, ADR, and provider-
+gate records remain evidence only and do not pre-empt this queue.
+
+No feature work, provider continuation, later gate, strategy research,
+optimization, deployment, or phase activation may proceed outside this focus
+without a new explicit operator directive. Completing any package does not
+authorize the next package, credentials, provider traffic, orders, risk-limit
+changes, release, deployment, or live trading.
+
 ## Actor Hierarchy
 
 1. Project owner/operator
@@ -125,8 +154,12 @@ Codex and other repository-side agents must not:
 - ADRs: `docs/decisions/`.
 - Sample data directory: `data/samples/` exists and is currently empty.
 - Historical data path referenced by benchmark code: `data/historical/`.
-- Generated result path: `data/results/`, ignored by Git.
-- Generated archive path: `data/archive/`, ignored by Git.
+- Generated result path: `data/results/`; current `.gitignore` ignores CSV and
+  binary artifacts by extension but does not ignore every file in the
+  directory. Exact containment is owned by WP-1.
+- Generated archive path: `data/archive/`; current `.gitignore` ignores CSV and
+  binary artifacts by extension but does not ignore every file in the
+  directory. Exact containment is owned by WP-1.
 - Build directory: `build/`, ignored by Git.
 - Phase 19 generated logs/replay artifacts observed under `build/phase19_revalidation/`.
 - Codex skills: `.agents/skills/`.
@@ -279,6 +312,8 @@ TradeBot defaults to `BACKTEST` or dry-run behavior. Live trading is prohibited 
 
 - Codex instructions: `AGENTS.md`.
 - Planning system: `PLANS.md`.
+- Current remediation program and package gates:
+  `docs/REPOSITORY_REMEDIATION_PROGRAM.md`.
 - Current state: `docs/PROJECT_STATE.md`.
 - Roadmap and phase gates: `docs/ROADMAP.md`.
 - Architecture: `docs/ARCHITECTURE.md`.
@@ -337,6 +372,14 @@ Financial-sensitive changes:
 - `docs/RISK_POLICY.md` and `docs/LIVE_TRADING_READINESS.md` gates are checked.
 - Tests must prove fail-safe behavior for affected paths.
 - Handoff must state prohibited next actions and required approvals.
+
+Repository Remediation Program changes:
+
+- Work maps to exactly one of WP-0 through WP-8 and satisfies that package's
+  entry, acceptance, test, rollback, and authorization requirements.
+- WP-7 evidence and WP-8 authority synchronization close with each accepted
+  package.
+- The next package remains NO-GO until separately authorized.
 
 ## Reporting Contract
 

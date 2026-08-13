@@ -11,8 +11,16 @@ later attempts stopped at generic OAuth failure and a fixed OAuth callback
 timeout. The latest authorized process advanced through OAuth, fixed demo TLS,
 application/account authentication, canonical XAUUSD resolution, and full
 metadata validation before `gate7_subscription_failed`. Gate 7 execution is
-incomplete; residual diagnostics are authorized offline, while provider
-execution, Gate 8, Gate 9, trading messages, and live use remain blocked.
+incomplete. The residual diagnostics authorization is historical under the
+current remediation focus lock; provider execution, Gate 8, Gate 9, trading
+messages, and live use remain blocked.
+
+Current execution overlay: this ADR remains Accepted as the durable sole-path
+architecture decision. Its prior Gate 7 residual authorization is historical,
+not current implementation authority. Under Wade's Repository Remediation
+Program focus lock, any future cTrader work must map to WP-6, satisfy accepted
+predecessor packages, and receive new exact authorization. This overlay does
+not supersede or change the ADR's architecture status.
 
 ## Context
 

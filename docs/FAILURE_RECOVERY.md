@@ -57,7 +57,10 @@ If branch, status, or commits differ from handoff:
 
 ## Generated Artifact Containment
 
-- Generated files under `build/` and `data/results/` may be ignored.
+- `build/` is directory-ignored. Generated CSV/binary files under
+  `data/results/` and `data/archive/` are extension-ignored, but other
+  filenames may not be. Confirm exact paths with `git check-ignore -v` and
+  `git status --short`; WP-1 owns permanent containment correction.
 - Do not stage generated outputs unless approved.
 - Do not delete generated outputs that may be needed as evidence for an active plan without approval.
 

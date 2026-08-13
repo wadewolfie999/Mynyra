@@ -6,6 +6,21 @@
 - Authority level: release governance below operator instruction, `AGENTS.md`, ADRs, risk, and architecture.
 - Audience: operator, maintainers, Codex, reviewers, and release preparers.
 
+## Current Remediation Release Hold
+
+The Repository Remediation Program is the sole current implementation queue.
+While its Landing Spot Gate or any of WP-0 through WP-8 remains unaccepted:
+
+- package work may be committed or pushed only under its own exact operator
+  authorization;
+- no program package, passing test, artifact, historical phase, or provider
+  gate makes the repository releasable or deployable; and
+- software release, executable distribution, deployment, provider execution,
+  orders, and live transition remain NO-GO.
+
+After all packages close, release readiness must be assessed separately from
+the final exact commit; program completion is not release approval.
+
 ## Local Commit Gate
 
 Before a commit:

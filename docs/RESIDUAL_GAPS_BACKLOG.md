@@ -2,15 +2,38 @@
 
 ## Document Control
 
-- Status: Open governance and engineering backlog
-- Baseline: accepted Open API base `400b486` (2026-08-07 inspection)
-- Scope: residual gaps observed after the accepted broker-neutral Phase 22 boundary
+- Status: Frozen diagnostic input; active work is governed by the nine-package
+  Repository Remediation Program
+- Baseline: repository-wide diagnosis at
+  `7f89c597d3874e5c8782a49a31d42335c8bf1e17` (2026-08-13)
+- Scope: preserved residual gaps mapped into WP-0 through WP-8
 - Authority: subordinate to `AGENTS.md`, accepted ADRs, `RISK_POLICY.md`, `ROADMAP.md`, and active approved plans
 - Non-authorization: this document does not authorize a future OAuth execution, credentials in use, cTrader connectivity, account access, market data, orders, or live trading
 
 ## Current Gate
 
-Workstream I and Phase 22 are Complete — Accepted. Wade selected FIBO Group through cTrader for demo-only XAUUSD, closing Phase 23. Official Open API is the sole integration path; Gate 1 and Gate 3 are revalidated, Gate 2 and Gate 5 were accepted by Wade on 2026-08-07, Gate 5.1 is merged and accepted, and PR #25 is merged. Gate 6 execution was completed and accepted by Wade. Wade separately authorized Gate 7; its implementation and prior offline validation passed. Historical attempts stopped at Keychain, OAuth, and callback-timeout boundaries. The latest process reached `gate7_subscription_failed` after full XAUUSD metadata validation. No accepted subscription, quote, or timestamp evidence exists. Residual work is authorized offline; provider execution, Gates 8–9, and live trading remain Blocked / NO-GO.
+Historical Workstream I, Phase 22, and cTrader gate evidence remains preserved.
+It is not the current execution queue. Wade has locked current focus to WP-0
+through WP-8 in `REPOSITORY_REMEDIATION_PROGRAM.md`. The Landing Spot Gate is
+being strengthened; every package implementation, provider continuation, Gates
+8–9, and live trading remain Blocked / NO-GO until separately authorized.
+
+## Program Crosswalk
+
+| Existing backlog area | Controlling package |
+| --- | --- |
+| Live readiness, nominal LIVE behavior, unsafe mode/provider fallback | WP-0 |
+| ENG-003, snapshot/restart state, generated artifacts, replay provenance | WP-1 |
+| Quantity, fees, cash/P&L, multi-symbol marks, benchmark fill ceiling | WP-2 |
+| ENG-002, ENG-005, risk sources, drawdown, VaR, halt/close-only | WP-3 |
+| ENG-001, ENG-004, ENG-006, pending/trigger/cancel/fill/reconcile | WP-4 |
+| DATA-001, DATA-002, runtime topology, timestamps, input contracts | WP-5 |
+| BRK-001 through BRK-003, transport, authentication, provider mapping | WP-6 |
+| OPS-001, QUAL-001, BENCH-001, missing CI and operational evidence | WP-7 |
+| GOV/DOC items, stale claims, file disposition, final consistency | WP-8 |
+
+This crosswalk is classification, not implementation approval. A new finding
+must map to one package or stop for Wade's explicit scope decision.
 
 ## Priority And Status
 
@@ -61,19 +84,16 @@ The current gate sequence is:
 
 ## Recommended Sequencing
 
-1. Resolve ENG-001 through ENG-006 and add the missing end-to-end evidence while remaining broker-neutral.
-2. Preserve the reviewed Gate 7 typed residual diagnostics, bounded heartbeat,
-   first-single-complete-BBO handling, full offline verification, sanitized
-   evidence template, and exact commit/binary identity. Resolve clock health
-   and the remaining preconditions before any separately authorized provider
-   process.
-3. Keep Gate 8–9, demo-order, practice-validation, live-readiness, and live
-   authorization as separate decisions; do not collapse them into Gate 7 or
-   broker selection.
+The canonical sequence is defined only in
+`REPOSITORY_REMEDIATION_PROGRAM.md`: Landing Spot Gate, the WP-0 → WP-6 safety
+spine, WP-7 evidence integrated with each package, and WP-8 authority closeout
+after each package and at program completion. This backlog must not establish a
+competing sequence.
 
 ## References
 
 - `docs/PROJECT_STATE.md`
+- `docs/REPOSITORY_REMEDIATION_PROGRAM.md`
 - `docs/ROADMAP.md`
 - `docs/ARCHITECTURE.md`
 - `docs/RISK_POLICY.md`

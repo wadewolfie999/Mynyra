@@ -2,12 +2,15 @@
 
 ## Document Control
 
-- Status: Active evidence package — provider selection not authorized
+- Status: Superseded historical evidence package — FIBO Group/cTrader was
+  selected later; current work is governed by the Repository Remediation
+  Program
 - Authority: Wade operator directive and explicit research/documentation authorization
 - Effective date: 2026-07-29
 - Workstream: II — Broker Integration Program
-- Formal phase state: Phase 23 Not Started; bounded pre-phase evidence preparation active
-- OANDA state: ON HOLD pending a lawful Iran-resident eligibility path from OANDA Support
+- Formal phase state at creation: Phase 23 Not Started; current phase state is
+  controlled by `ROADMAP.md`
+- OANDA state: permanently cancelled by the later operator decision
 - Non-authorization: no provider selection, account creation, credentials, connectivity, provider-specific implementation, sandbox order, real order, risk change, or live trading
 
 ## Controlling Decision
@@ -78,8 +81,14 @@ Before any account action, the operator should obtain written answers from the P
 
 Do not send identity documents, credentials, tokens, or account identifiers in an initial support inquiry.
 
-## Next Wade Checkpoint
+## Historical Wade Checkpoint
 
-The next decision package should contain written support evidence for FIBO Group and, if pursued, FXOpen; the exact legal entity and terms; demo instrument and API confirmation; adapter-fit comparison; failure-mode implications; and unresolved risks.
+At the time of this evidence package, the next decision package was expected to
+contain written support evidence for FIBO Group and, if pursued, FXOpen; the
+exact legal entity and terms; demo instrument and API confirmation; adapter-fit
+comparison; failure-mode implications; and unresolved risks.
 
-That package ends at Wade's provider-selection checkpoint. Phase 24, provider code, credentials, connectivity, account creation, sandbox orders, and live trading remain blocked.
+That historical checkpoint was superseded by Wade's later FIBO Group/cTrader
+selection. It is not a current task. Any provider work now must map to WP-6;
+credentials, connectivity, account creation, sandbox orders, and live trading
+remain blocked.
