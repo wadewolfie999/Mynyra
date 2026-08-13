@@ -131,9 +131,14 @@ Codex and other repository-side agents must not:
 - Phase 19 generated logs/replay artifacts observed under `build/phase19_revalidation/`.
 - Codex skills: `.agents/skills/`.
 - Codex execution/evidence contract: `docs/CODEX_EXECUTION_EVIDENCE.md`.
-- Python components: none tracked at the time this contract was created.
+- Python runtime components: none. A standard-library-only automation validator
+  is tracked under `scripts/`.
 - Julia components: none tracked at the time this contract was created.
-- Scripts/tooling: tracked validation wrappers exist under `scripts/`, with `.githooks/pre-push` and `.github/workflows/validation.yml`; CMake remains the underlying tooling entrypoint.
+- Scripts/tooling: tracked local wrappers, offline CI/sanitizer helpers,
+  skill/workflow guardrails, and non-executable exact-build evidence packaging exist under
+  `scripts/`, with `.githooks/pre-push` and three read-only GitHub Actions
+  workflows under `.github/workflows/`; CMake remains the underlying build and
+  test entrypoint.
 
 ## Verified Commands
 
@@ -177,6 +182,25 @@ Validation wrapper test:
 
 ```sh
 ./scripts/test.sh
+```
+
+Validate repository skills and workflow safety guardrails:
+
+```sh
+python3 scripts/validate_automation.py
+```
+
+Run the same default-off configure/build/sequential-test path used by ordinary
+CI:
+
+```sh
+./scripts/ci_validate.sh build/ci-validation
+```
+
+Run the scheduled default-off ASan/UBSan path:
+
+```sh
+./scripts/ci_deep_validate.sh build/ci-deep-validation
 ```
 
 Targeted phase test:

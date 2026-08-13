@@ -1,0 +1,51 @@
+name: TradeBot Deep Offline Validation
+
+on:
+  schedule:
+    - cron: "23 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deep-offline-validation
+  cancel-in-progress: false
+
+jobs:
+  sanitizers:
+    name: Default build with ASan and UBSan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      TRADEBOT_BUILD_JOBS: "2"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Run guarded sanitizer validation
+        run: ./scripts/ci_deep_validate.sh build/ci-deep-validation
+
+      - name: Upload sanitizer diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deep-validation-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/ci-deep-validation/CMakeFiles/CMakeConfigureLog.yaml
+            build/ci-deep-validation/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Summarize deep validation
+        if: always()
+        run: |
+          {
+            echo "### TradeBot deep offline validation"
+            echo "- Sanitizers: AddressSanitizer and UndefinedBehaviorSanitizer"
+            echo "- Provider proof targets: disabled"
+            echo "- CTest execution: sequential in one isolated build tree"
+            echo "- This result does not authorize external retries, release, deployment, orders, or live trading."
+          } >> "$GITHUB_STEP_SUMMARY"

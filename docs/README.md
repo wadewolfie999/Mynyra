@@ -101,6 +101,9 @@ Local skill folders contain `SKILL.md` workflow instructions:
 - `../.agents/skills/tradebot-network-live-boundary-review/`
 - `../.agents/skills/tradebot-performance-review/`
 - `../.agents/skills/tradebot-benchmark-review/`
+- `../.agents/skills/tradebot-bounded-change-orchestrator/`
+- `../.agents/skills/tradebot-ci-failure-recovery/`
+- `../.agents/skills/tradebot-offline-artifact-delivery/`
 
 Standard skill workflows:
 
@@ -108,6 +111,16 @@ Standard skill workflows:
 - Pre-Workstream-II authority workflow: `tradebot-git-safety`, `tradebot-repo-hygiene`, `tradebot-authority-state-audit`, `tradebot-phase-gate-audit`, `tradebot-documentation-sync`, `tradebot-pr-readiness-review`, `tradebot-handoff`.
 - Implementation workflow: `tradebot-git-safety`, `tradebot-repo-hygiene`, `tradebot-plan-authoring`, relevant architecture/risk skill, implementation, `tradebot-cpp-build-test`, `tradebot-market-replay-validation`, `tradebot-l2-orderbook-review` when L2/order-book behavior is touched, `tradebot-execution-pipeline-validation` when order lifecycle is touched, `tradebot-network-live-boundary-review` when live/network/auth/broker boundaries are touched, `tradebot-performance-review` and `tradebot-benchmark-review` when performance is claimed, `tradebot-pr-readiness-review`, `tradebot-handoff`.
 - Agent-loop recovery workflow: `tradebot-agent-loop-control`, `tradebot-git-safety`, `tradebot-authority-state-audit`, one bounded corrective task, then stop and report.
+- Bounded offline automation workflow: `tradebot-bounded-change-orchestrator`
+  routes one scoped change through the existing inspection, planning,
+  specialist review, verification, documentation, readiness, and handoff
+  skills with a fixed local repair budget.
+- CI recovery workflow: `tradebot-ci-failure-recovery` preserves and classifies
+  the first failure before a minimal local correction; an external rerun still
+  requires operator approval.
+- Candidate delivery workflow: `tradebot-offline-artifact-delivery` builds and
+  identifies a default-off exact-commit binary but delivers only
+  non-executable validation evidence, without creating a release or deployment.
 
 Skill workflow rules:
 

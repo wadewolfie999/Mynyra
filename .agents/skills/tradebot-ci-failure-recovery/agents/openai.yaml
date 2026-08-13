@@ -1,0 +1,4 @@
+interface:
+  display_name: "TradeBot CI Failure Recovery"
+  short_description: "Diagnose and recover TradeBot CI failures"
+  default_prompt: "Use $tradebot-ci-failure-recovery to diagnose this TradeBot CI failure and prepare a minimal verified fix."
