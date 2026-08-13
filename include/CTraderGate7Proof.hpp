@@ -130,6 +130,14 @@ enum class Gate7ResidualFailure {
     SubscriptionProviderUnavailable,
     SubscriptionProviderRejected,
     SubscriptionUnexpectedPayload,
+    SubscriptionPriorStageResponse,
+    SubscriptionUnrequestedUnsubscribeResponse,
+    SubscriptionSpotBeforeAcknowledgement,
+    SubscriptionSymbolChangedEvent,
+    SubscriptionTraderUpdatedEvent,
+    SubscriptionProhibitedAsyncEvent,
+    SubscriptionOtherSchemaPayload,
+    SubscriptionUnknownPayload,
     SubscriptionCorrelationRejected,
     SubscriptionResponseMalformed,
     SubscriptionAccountMismatch,
@@ -363,6 +371,8 @@ Gate7ResidualFailure classifyGate7SubscriptionSendFailure(
 Gate7ResidualFailure classifyGate7SubscriptionReceiveFailure(
     Gate7TransportOutcome outcome,
     Gate7ProviderErrorCategory providerCategory) noexcept;
+Gate7ResidualFailure classifyGate7UnexpectedSubscriptionPayload(
+    std::uint32_t payloadType) noexcept;
 Gate7ResidualFailure classifyGate7SpotReceiveFailure(
     Gate7TransportOutcome outcome,
     Gate7ProviderErrorCategory providerCategory) noexcept;

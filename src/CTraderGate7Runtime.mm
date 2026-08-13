@@ -34,7 +34,6 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-#include <ctime>
 #include <iostream>
 #include <limits>
 #include <optional>
@@ -323,11 +322,23 @@ bool readBigEndian64(std::string_view input, std::size_t& offset,
     return true;
 }
 
+bool readBigEndian32(std::string_view input, std::size_t& offset,
+                     std::uint32_t& value) noexcept
+{
+    if (input.size() - offset < 4) return false;
+    value = 0;
+    for (int i = 0; i < 4; ++i) {
+        value = (value << 8)
+            | static_cast<std::uint8_t>(input[offset++]);
+    }
+    return true;
+}
+
 bool readSized(std::string_view input, std::size_t& offset,
                std::string& value) noexcept
 {
-    std::uint64_t length = 0;
-    if (!readBigEndian64(input, offset, length)
+    std::uint32_t length = 0;
+    if (!readBigEndian32(input, offset, length)
         || length > 8192 || length > input.size() - offset) return false;
     try {
         value.assign(input.substr(offset, static_cast<std::size_t>(length)));
@@ -1283,8 +1294,9 @@ public:
     {
         Gate7ProviderErrorCategory providerCategory =
             Gate7ProviderErrorCategory::None;
+        std::uint32_t unexpectedType = 0;
         return receiveExpectedDetailed(expected, correlation, payload,
-                                       providerCategory)
+                                       providerCategory, unexpectedType)
             == Gate7TransportOutcome::Expected;
     }
 
@@ -1292,16 +1304,23 @@ public:
         std::uint32_t expected,
         std::string_view expectedCorrelation,
         std::string& payload,
-        Gate7ProviderErrorCategory& providerCategory) noexcept
+        Gate7ProviderErrorCategory& providerCategory,
+        std::uint32_t& unexpectedType) noexcept
     {
         const auto deadline = Clock::now() + NETWORK_TIMEOUT;
         providerCategory = Gate7ProviderErrorCategory::None;
+        unexpectedType = 0;
         while (Clock::now() < deadline) {
             std::uint32_t type = 0;
             std::string correlation;
             const Gate7TransportOutcome received = receiveOneDetailed(
                 type, correlation, payload, deadline);
-            if (received != Gate7TransportOutcome::Expected) return received;
+            if (received != Gate7TransportOutcome::Expected) {
+                if (received == Gate7TransportOutcome::InboundTypeRejected) {
+                    unexpectedType = type;
+                }
+                return received;
+            }
             if (type == HEARTBEAT_EVENT) {
                 secureClear(correlation);
                 secureClear(payload);
@@ -1315,6 +1334,7 @@ public:
                 return control;
             }
             if (type != expected) {
+                unexpectedType = type;
                 secureClear(correlation);
                 secureClear(payload);
                 return Gate7TransportOutcome::UnexpectedAllowedPayload;
@@ -1528,13 +1548,12 @@ private:
                 envelope.Clear();
                 return Gate7TransportOutcome::MalformedEnvelope;
             }
-            if (!CTraderGate7Config::isAllowedInboundPayload(
-                    envelope.payloadtype())) {
+            type = envelope.payloadtype();
+            if (!CTraderGate7Config::isAllowedInboundPayload(type)) {
                 secureClear(frame);
                 envelope.Clear();
                 return Gate7TransportOutcome::InboundTypeRejected;
             }
-            type = envelope.payloadtype();
             if (envelope.has_clientmsgid()) correlation = envelope.clientmsgid();
             if (envelope.has_payload()) payload = envelope.payload();
             secureClear(frame);
@@ -1891,16 +1910,23 @@ Gate7SubscriptionResult subscribeToSpot(
         }
         Gate7ProviderErrorCategory providerCategory =
             Gate7ProviderErrorCategory::None;
+        std::uint32_t unexpectedType = 0;
         const Gate7TransportOutcome received = transport.receiveExpectedDetailed(
             PROTO_OA_SUBSCRIBE_SPOTS_RES, correlation, payload,
-            providerCategory);
+            providerCategory, unexpectedType);
         if (received != Gate7TransportOutcome::Expected) {
             secureClear(payload);
             secureClear(correlation);
-            return {classifyGate7SubscriptionReceiveFailure(
-                        received, providerCategory),
-                    std::nullopt};
+            const Gate7ResidualFailure failure =
+                received == Gate7TransportOutcome::UnexpectedAllowedPayload
+                    || received == Gate7TransportOutcome::InboundTypeRejected
+                ? classifyGate7UnexpectedSubscriptionPayload(unexpectedType)
+                : classifyGate7SubscriptionReceiveFailure(
+                      received, providerCategory);
+            unexpectedType = 0;
+            return {failure, std::nullopt};
         }
+        unexpectedType = 0;
         if (!response.ParseFromString(payload) || !response.IsInitialized()
             || response.payloadtype() != PROTO_OA_SUBSCRIBE_SPOTS_RES) {
             secureClear(payload); secureClear(correlation); response.Clear();
@@ -2034,24 +2060,6 @@ Gate7ResidualFailure receiveFirstCompleteSpot(
     return Gate7ResidualFailure::SpotResponseTimeout;
 }
 
-std::string decimalEvidence(const Decimal64& value)
-{
-    return "units=" + std::to_string(value.units)
-        + ",scale=" + std::to_string(value.scale);
-}
-
-std::string utcSecond(std::uint64_t timestampNs)
-{
-    const std::time_t seconds = static_cast<std::time_t>(timestampNs / 1000000000ULL);
-    std::tm value{};
-    if (gmtime_r(&seconds, &value) == nullptr) return "unavailable";
-    char buffer[32]{};
-    if (std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &value) == 0) {
-        return "unavailable";
-    }
-    return buffer;
-}
-
 } // namespace
 
 bool validateCTraderGate7OfflineConfiguration() noexcept
@@ -2183,7 +2191,6 @@ int runCTraderGate7Proof(bool preflightOnly)
             curl_global_cleanup();
             return fail(RuntimeFailure::TokenRejected);
         }
-
         StrictTransport transport;
         if (!transport.connectDemo()) {
             clearToken(token); clientSecret.clear(); clientId->clear(); clientId.reset();
@@ -2288,22 +2295,10 @@ int runCTraderGate7Proof(bool preflightOnly)
         }
 
         std::cout << "gate7_provider_sequence_complete\n"
-                     "canonical_symbol=XAUUSD\n"
-                  << "symbol_name=" << quote->executionAlias << '\n'
-                  << "digits=" << static_cast<unsigned>(quote->instrument.tickSize.scale) << '\n'
-                  << "pip_position=" << quote->pipPosition << '\n'
-                  << "min_volume=" << decimalEvidence(quote->instrument.minimumQuantity) << '\n'
-                  << "max_volume=" << decimalEvidence(quote->instrument.maximumQuantity) << '\n'
-                  << "step_volume=" << decimalEvidence(quote->instrument.quantityStep) << '\n'
-                  << "lot_size=" << decimalEvidence(quote->instrument.contractSize) << '\n'
-                  << "bid=" << decimalEvidence(quote->bid) << '\n'
-                  << "ask=" << decimalEvidence(quote->ask) << '\n'
-                  << "spread=" << decimalEvidence(quote->spread) << '\n'
-                  << "timestamp_unit=" << CTraderGate7Proof::timestampUnitName(quote->timestamp.unit) << '\n'
-                  << "timestamp_utc=" << utcSecond(quote->timestamp.timestampNs) << '\n'
-                  << "receipt_utc=" << utcSecond(quote->timestamp.receiptTimestampNs) << '\n'
-                  << "freshness_delta_ns=" << quote->timestamp.freshnessDeltaNs << '\n'
-                  <<
+                     "gate7_fibo_demo_account_verified\n"
+                     "gate7_canonical_xauusd_verified\n"
+                     "gate7_single_event_bbo_verified\n"
+                     "gate7_freshness_verified\n"
                      "gate7_exit_code=0\n";
         return 0;
     } catch (...) {
