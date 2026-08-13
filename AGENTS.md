@@ -47,12 +47,15 @@ governed by `PLAN-20260813-repository-cohesion-remediation` in `PLANS.md`:
 8. WP-7 — CI and observability.
 9. WP-8 — Authority synchronization.
 
-The Landing Spot Gate is governance preparation, not a tenth package. The
-focus lock is active, but WP-0 through WP-8 implementation remains Planned /
-NO-GO until Wade accepts the Landing Spot Gate and separately authorizes the
-exact next package action. New findings must map to an existing package or stop
-for an explicit scope decision. Historical phase, workstream, ADR, and provider-
-gate records remain evidence only and do not pre-empt this queue.
+The focus lock is active and its foundational governance structure is
+approved. The objective is to strengthen the infrastructure being built; no
+separate preliminary gate, phase, package, artifact, or approval checkpoint
+exists. WP-0 is approved as the current package. WP-1 is approved and queued
+behind accepted WP-0 evidence. WP-2 through WP-8 remain Planned / NO-GO until
+separately authorized. New findings must map to an existing package or stop
+for an explicit scope decision.
+Historical phase, workstream, ADR, and provider-gate records remain evidence
+only and do not pre-empt this queue.
 
 No feature work, provider continuation, later gate, strategy research,
 optimization, deployment, or phase activation may proceed outside this focus
@@ -295,8 +298,10 @@ Ubuntu compute-node commands are not verified in this workspace. Use the same CM
 Verified code modes in `SystemConfig`:
 
 - `BACKTEST`: default deterministic CSV-driven path.
-- `PAPER`: live-data-like adapter path with simulated local broker behavior.
-- `LIVE`: live data plus live-capable broker execution path.
+- `PAPER`: local live-data-like adapter path with simulated broker behavior.
+- `LIVE`: legacy live-capable market-data path; the default build rejects it
+  before credential/network setup, and broker execution remains separately
+  fail-closed.
 
 Governance vocabulary:
 
@@ -306,7 +311,11 @@ Governance vocabulary:
 - Sandbox: an external test venue or broker sandbox; not a distinct verified code flag.
 - Live trading: any workflow capable of real orders, external account impact, or live venue state mutation.
 
-TradeBot defaults to `BACKTEST` or dry-run behavior. Live trading is prohibited unless explicitly authorized by the operator and all requirements in `docs/LIVE_TRADING_READINESS.md` and `docs/RISK_POLICY.md` are met.
+TradeBot defaults to `BACKTEST` or dry-run behavior. The legacy `LIVE` runtime
+requires a non-default build plus `--unlock-live-runtime`; those technical gates
+are not operational authority. Live trading is prohibited unless explicitly
+authorized by the operator and all requirements in
+`docs/LIVE_TRADING_READINESS.md` and `docs/RISK_POLICY.md` are met.
 
 ## Documentation Authority Map
 

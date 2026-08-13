@@ -21,6 +21,7 @@ python3 scripts/validate_automation.py
 cmake -S . -B "${build_dir}" \
     -DCMAKE_BUILD_TYPE=Debug \
     -DBUILD_TESTING=ON \
+    -DTRADEBOT_ENABLE_LIVE_RUNTIME=OFF \
     -DTRADEBOT_ENABLE_CTRADER_GATE6=OFF \
     -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF \
     -DCMAKE_CXX_FLAGS="${sanitizer_flags}" \

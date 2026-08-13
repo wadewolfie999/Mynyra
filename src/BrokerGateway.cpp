@@ -644,7 +644,9 @@ std::uint64_t BrokerGateway::reconnectLifecycleCount() const noexcept
 bool BrokerGateway::adapterAuthorized() const noexcept
 {
     return m_config.isPaperMode()
-        || (m_config.isLiveMode() && m_liveAdapterApproved);
+        || (m_config.canEnterLiveRuntime()
+            && m_liveAdapterApproved
+            && deterministicAdapter() == nullptr);
 }
 
 DeterministicBrokerAdapter* BrokerGateway::deterministicAdapter() noexcept

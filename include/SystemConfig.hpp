@@ -11,10 +11,11 @@
 // -----------------
 //   BACKTEST  - fully deterministic, CSV-driven replay; no external network
 //               calls are made.  Parity with previous phases is guaranteed.
-//   PAPER     - routes data through LiveDataAdapter (WSS) but all broker
-//               interactions are simulated locally inside BrokerGateway mock.
-//   LIVE      - live-capable mode. Broker execution remains fail-closed unless
-//               a separately approved adapter is injected into BrokerGateway.
+//   PAPER     - routes data through the local LiveDataAdapter simulation; all
+//               broker interactions are simulated by BrokerGateway.
+//   LIVE      - live-capable mode. The runtime requires two explicit technical
+//               gates, and broker execution separately requires an approved
+//               adapter injected into BrokerGateway.
 //
 // Circuit-breaker thresholds (Workstream 7.4)
 // -------------------------------------------
@@ -22,8 +23,14 @@
 //                     Default: 500 ms.  Breach -> CLOSE_ONLY state.
 //   errorRateThresh - Maximum tolerated API errors per minute.
 //                     Default: 5.  Breach -> trading halted.
-#include <string>
 #include <cstdint>
+#include <optional>
+#include <string>
+#include <string_view>
+
+#ifndef TRADEBOT_ENABLE_LIVE_RUNTIME
+#define TRADEBOT_ENABLE_LIVE_RUNTIME 0
+#endif
 
 // -- SystemMode --------------------------------------------------------------
 
@@ -33,14 +40,19 @@ enum class SystemMode : uint8_t {
     LIVE     = 2    // live-capable; execution requires separate adapter approval
 };
 
-// Convert a CLI string (e.g. "paper") to SystemMode.
-// Returns BACKTEST for unrecognised strings.
-inline SystemMode parseModeFlag(const std::string& s) noexcept
+// Convert a CLI string (e.g. "paper") to SystemMode. Invalid values are
+// rejected instead of silently downgrading to BACKTEST.
+inline std::optional<SystemMode> parseModeFlag(std::string_view s) noexcept
 {
     if (s == "PAPER"    || s == "paper")    { return SystemMode::PAPER;    }
     if (s == "LIVE"     || s == "live")     { return SystemMode::LIVE;     }
     if (s == "BACKTEST" || s == "backtest") { return SystemMode::BACKTEST; }
-    return SystemMode::BACKTEST;
+    return std::nullopt;
+}
+
+inline constexpr bool liveRuntimeBuildEnabled() noexcept
+{
+    return TRADEBOT_ENABLE_LIVE_RUNTIME != 0;
 }
 
 inline const char* modeName(SystemMode m) noexcept
@@ -58,6 +70,10 @@ inline const char* modeName(SystemMode m) noexcept
 struct SystemConfig {
     // Operational mode -- set once at startup, read-only thereafter.
     SystemMode mode{SystemMode::BACKTEST};
+
+    // The LIVE runtime requires both the default-off CMake option and the
+    // explicit startup flag. Neither gate is operator authorization.
+    bool liveRuntimeUnlocked{false};
 
     // -- Live adapter settings -----------------------------------------------
     std::string wssEndpoint{"wss://stream.example.com/ws"};
@@ -96,4 +112,8 @@ struct SystemConfig {
     bool isLiveMode()  const noexcept { return mode == SystemMode::LIVE;     }
     bool isPaperMode() const noexcept { return mode == SystemMode::PAPER;    }
     bool isBacktest()  const noexcept { return mode == SystemMode::BACKTEST; }
+    bool canEnterLiveRuntime() const noexcept
+    {
+        return isLiveMode() && liveRuntimeBuildEnabled() && liveRuntimeUnlocked;
+    }
 };

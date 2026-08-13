@@ -18,7 +18,7 @@
 
 ## Repository Remediation Program
 
-- Landing Spot Gate acceptance is identified.
+- Program-foundation and package-specific approval are identified.
 - Change maps to exactly one of WP-0 through WP-8 in
   `REPOSITORY_REMEDIATION_PROGRAM.md`.
 - Predecessor package evidence is accepted or an explicit safe exception is

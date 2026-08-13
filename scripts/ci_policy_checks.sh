@@ -36,6 +36,7 @@ if git grep -nEI -- \
 fi
 
 for option_name in \
+    TRADEBOT_ENABLE_LIVE_RUNTIME \
     TRADEBOT_ENABLE_CTRADER_GATE6 \
     TRADEBOT_ENABLE_CTRADER_GATE7
 do

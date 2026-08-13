@@ -38,6 +38,7 @@ commit_sha="$(git rev-parse HEAD)"
 for required_marker in \
     "commit_sha=${commit_sha}" \
     'build_type=RelWithDebInfo' \
+    'live_runtime=OFF' \
     'ctrader_gate6=OFF' \
     'ctrader_gate7=OFF' \
     'ctest=passed_sequentially'; do
@@ -71,6 +72,7 @@ printf '%s\n' \
     "commit_sha=${commit_sha}" \
     'tracked_tree=clean' \
     'build_type=RelWithDebInfo' \
+    'live_runtime=OFF' \
     'ctrader_gate6=OFF' \
     'ctrader_gate7=OFF' \
     'ctest=passed_sequentially' \

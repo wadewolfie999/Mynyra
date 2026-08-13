@@ -141,8 +141,16 @@ int main(int argc, char* argv[])
                     std::cerr << "[Error] --mode requires an argument: backtest|paper|live\n";
                     return EXIT_FAILURE;
                 }
-                sysCfg.mode = parseModeFlag(std::string(argv[i + 1]));
+                const auto requestedMode = parseModeFlag(argv[i + 1]);
+                if (!requestedMode.has_value()) {
+                    std::cerr << "[Error] invalid --mode value: " << argv[i + 1]
+                              << "; expected backtest|paper|live\n";
+                    return EXIT_FAILURE;
+                }
+                sysCfg.mode = *requestedMode;
                 ++i;
+            } else if (std::strcmp(argv[i], "--unlock-live-runtime") == 0) {
+                sysCfg.liveRuntimeUnlocked = true;
             } else {
                 break;
             }
@@ -158,6 +166,20 @@ int main(int argc, char* argv[])
         }
     } else {
         specs.push_back({"data/BTCUSDT-15.csv", "BTCUSDT-15"});
+    }
+
+    // Fail before file opening, engine construction, credential lookup, or
+    // network startup. Build enablement and this runtime flag are technical
+    // containment gates; they do not constitute live-trading authorization.
+    if (sysCfg.liveRuntimeUnlocked && !sysCfg.isLiveMode()) {
+        std::cerr << "[Error] --unlock-live-runtime is valid only with --mode live.\n";
+        return EXIT_FAILURE;
+    }
+    if (sysCfg.isLiveMode() && !sysCfg.canEnterLiveRuntime()) {
+        std::cerr << "[Error] LIVE runtime is contained: build with "
+                     "TRADEBOT_ENABLE_LIVE_RUNTIME=ON and pass "
+                     "--unlock-live-runtime; operator authorization remains separate.\n";
+        return EXIT_FAILURE;
     }
 
     // If no file specs were collected (e.g. only --mode / --resume flags were

@@ -14,6 +14,11 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 find_package(Threads REQUIRED)
 find_library(DL_LIB dl)
 
+# WP-0 containment gate for the legacy LIVE path in tradebot_core.  This is
+# deliberately independent from the proof-only provider targets below.
+option(TRADEBOT_ENABLE_LIVE_RUNTIME
+    "Compile the legacy LIVE runtime path (still requires an explicit CLI unlock)" OFF)
+
 # Gate 6 proof-only provider bindings. The exact compiler/runtime and pinned
 # schema hashes are part of the accepted Gate 1 provenance contract.
 option(TRADEBOT_ENABLE_CTRADER_GATE6
@@ -221,6 +226,8 @@ set(CORE_SOURCES
 add_library(tradebot_core_lib ${CORE_SOURCES})
 target_include_directories(tradebot_core_lib PUBLIC include)
 target_link_libraries(tradebot_core_lib PUBLIC Threads::Threads)
+target_compile_definitions(tradebot_core_lib PUBLIC
+    TRADEBOT_ENABLE_LIVE_RUNTIME=$<BOOL:${TRADEBOT_ENABLE_LIVE_RUNTIME}>)
 if (DL_LIB)
     target_link_libraries(tradebot_core_lib PUBLIC ${DL_LIB})
 endif()
@@ -277,6 +284,16 @@ if (BUILD_TESTING)
     add_executable(phase22_tests tests/phase22_tests.cpp)
     target_link_libraries(phase22_tests PRIVATE tradebot_core_lib)
     add_test(NAME phase22_tests COMMAND phase22_tests)
+
+    add_executable(wp0_containment_tests tests/wp0_containment_tests.cpp)
+    target_link_libraries(wp0_containment_tests PRIVATE tradebot_core_lib)
+    add_test(NAME wp0_containment_tests COMMAND wp0_containment_tests)
+
+    add_test(
+        NAME wp0_live_startup_rejected
+        COMMAND ${CMAKE_COMMAND}
+            -DTRADEBOT_EXECUTABLE=$<TARGET_FILE:tradebot_core>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/wp0_live_startup_rejected.cmake)
 
     add_executable(ctrader_gate5_1_tests tests/ctrader_gate5_1_tests.cpp)
     target_link_libraries(ctrader_gate5_1_tests PRIVATE tradebot_core_lib)

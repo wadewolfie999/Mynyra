@@ -29,9 +29,9 @@ Financial safety and operator authority cannot be silently overridden by any doc
 ## Active Documents
 
 - `PROJECT_STATE.md`: current verified repository-state summary, constraints, and next safe action; it points to the workstream map and roadmap phase authority.
-- `REPOSITORY_REMEDIATION_PROGRAM.md`: canonical current focus lock, Landing
-  Spot Gate, and WP-0 through WP-8 scope, dependencies, acceptance, tests,
-  approvals, and rollback.
+- `REPOSITORY_REMEDIATION_PROGRAM.md`: canonical current focus lock,
+  infrastructure-foundation definition, and WP-0 through WP-8 scope,
+  dependencies, acceptance, tests, approvals, and rollback.
 - `WORKSTREAM_ARCHITECTURE.md`: conceptually accepted TradeBot Workstream Architecture v1.0 project-level map, Workstream II amendment, Phase 23 evidence rhythm, ownership, and non-authorization gates.
 - `ROADMAP.md`: deterministic phase authority within the Workstreams I-VII project map, including sequence, statuses, gates, and validation boundaries.
 - `ARCHITECTURE.md`: system purpose, component boundaries, data/control flow, and architectural debt.

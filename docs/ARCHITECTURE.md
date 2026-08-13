@@ -21,7 +21,9 @@ The workstream map is a planning/governance artifact only. It does not authorize
 `REPOSITORY_REMEDIATION_PROGRAM.md` defines the sole current cross-cutting
 implementation focus. It does not alter the intended component map below; it
 records that the observed implementation does not yet uphold all of these
-boundaries coherently. WP-0 through WP-8 remain Planned / NO-GO.
+boundaries coherently. WP-0 is approved and current; WP-1 is approved and
+dependency-queued; WP-2 through WP-8 remain Planned / NO-GO except for
+WP-7/WP-8 closure slices integrated into WP-0 and WP-1.
 
 The repository must not advance provider, feature, phase, research,
 optimization, or deployment work until package-specific evidence repairs the
@@ -63,7 +65,7 @@ ADR decisions remain constraints, not proof that implementation is complete.
 ```mermaid
 flowchart LR
     A[CSV or replay tick data] --> B[CsvReader or LocalDataReplayAdapter]
-    C[LiveDataAdapter in PAPER or LIVE] --> D[MarketCandle queue]
+    C[LiveDataAdapter in local PAPER simulation] --> D[MarketCandle queue]
     B --> E[EventLoop]
     D --> E
     E --> F[Strategies]
@@ -85,11 +87,15 @@ flowchart LR
 1. `src/main.cpp` parses `--mode` and `--resume`.
 2. `SystemConfig` defaults to `BACKTEST`.
 3. In `BACKTEST`, file readers drive deterministic candle streams.
-4. In non-backtest modes, `LiveDataAdapter` and `BrokerGateway` are connected.
+4. In `PAPER`, `LiveDataAdapter` and `BrokerGateway` connect to local
+   deterministic simulations. The default build rejects `LIVE` before engine,
+   credential, or network initialization.
 5. Per-symbol strategies and event loops produce signals.
 6. `PortfolioAllocator` weighs strategies.
 7. `RiskEngine` gates new trading actions.
-8. `ExecutionEngine` simulates fills or routes through `BrokerGateway` when bound.
+8. `ExecutionEngine` simulates fills only when no gateway is bound. Once a
+   gateway is bound, an unavailable gateway rejects execution rather than
+   falling back to a local fill.
 9. Analytics and state snapshots write generated outputs.
 
 ## Execution Modes
@@ -97,14 +103,18 @@ flowchart LR
 Verified code modes:
 
 - `BACKTEST`: default deterministic CSV-driven path.
-- `PAPER`: live-data-like adapter path with simulated broker behavior.
-- `LIVE`: live-capable data and broker execution path.
+- `PAPER`: local live-data-like adapter path with deterministic broker behavior.
+- `LIVE`: legacy live-capable market-data path, default-disabled at compile
+  time and requiring `--unlock-live-runtime` in addition to a non-default
+  build; broker execution remains separately fail-closed.
 
 Architecture policy:
 
 - `BACKTEST` and dry-run behavior are safe defaults.
 - `PAPER` must remain simulated locally unless explicitly connected to a sandbox by approved work.
-- `LIVE` must remain locked by policy, operator approval, risk review, and readiness checklist.
+- `LIVE` is technically contained by a default-off build option and an explicit
+  runtime flag. Those gates do not replace operator approval, risk review, or
+  the readiness checklist.
 - Sandbox is a governance concept, not a verified `SystemMode` value.
 
 ## Exchange And Broker Boundary
@@ -298,8 +308,10 @@ codes are memory-only. See `CTRADER_OPEN_API_GATE5.md`.
 
 ## Current Architectural Debt
 
-- The live-capable startup/network/broker surface does not establish a
-  fail-closed runtime boundary; owned by WP-0.
+- The WP-0 candidate establishes a default-off compile/runtime gate, rejects
+  unauthorized LIVE startup before credentials/network setup, and prevents an
+  unavailable bound gateway from creating local fills. Acceptance remains
+  pending until its reviewed branch is merged.
 - Persistence, generated-state containment, accounting/quantity units, risk
   state, order lifecycle, runtime/data contracts, transport/provider mapping,
   CI/observability, and authority synchronization require WP-1 through WP-8.

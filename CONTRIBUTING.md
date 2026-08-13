@@ -200,8 +200,8 @@ contention failure before the passing sequential rerun.
 - Run `python3 scripts/validate_automation.py` after changing any repository
   skill or GitHub Actions workflow.
 - Run `./scripts/ci_validate.sh build/ci-validation` to reproduce the ordinary
-  GitHub Actions path locally. It forces Gate 6 and Gate 7 OFF and executes the
-  full default CTest suite sequentially.
+  GitHub Actions path locally. It forces the legacy LIVE runtime plus Gate 6
+  and Gate 7 OFF and executes the full default CTest suite sequentially.
 - Use `./scripts/ci_deep_validate.sh build/ci-deep-validation` for the default
   ASan/UBSan path used by the scheduled deep workflow.
 - Treat workflow dispatch, rerun, artifact upload, release, deployment, and

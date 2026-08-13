@@ -86,7 +86,7 @@ void test_async_network_client_injection_path()
 void test_live_data_adapter_external_bridge()
 {
     SystemConfig cfg;
-    cfg.mode = SystemMode::LIVE;
+    cfg.mode = SystemMode::PAPER;
     cfg.wssEndpoint = "mock://bench-feed";
     cfg.restEndpoint = "http://127.0.0.1:9";
     cfg.reconnectInitialMs = 10;
@@ -94,7 +94,7 @@ void test_live_data_adapter_external_bridge()
 
     LiveDataAdapter adapter(cfg);
     adapter.connect();
-    require(adapter.isConnected(), "LiveDataAdapter did not establish mock LIVE connection");
+    require(adapter.isConnected(), "LiveDataAdapter did not establish PAPER simulation");
 
     constexpr int N = 200;
     for (int i = 0; i < N; ++i) {

@@ -226,9 +226,9 @@ older plan must first map to WP-0 through WP-8 and receive new exact authority.
 # Plan: Repository Cohesion Remediation Program
 
 - Plan ID: `PLAN-20260813-repository-cohesion-remediation`
-- Status: In Progress — governance-only focus lock active; Landing Spot Gate
-  candidate verified locally and awaiting Wade acceptance; WP-0 through WP-8
-  implementation Planned / NO-GO
+- Status: In Progress — foundational governance approved; WP-0 approved as the
+  current package; WP-1 approved and queued behind accepted WP-0 evidence;
+  WP-2 through WP-8 Planned / NO-GO
 - Owner: Wade
 - Implementer: separately assigned per package
 - Review authority: Wade
@@ -237,18 +237,18 @@ older plan must first map to WP-0 through WP-8 and receive new exact authority.
 - Related issue or decision: 2026-08-13 repository-wide cohesion diagnosis and
   Wade's nine-work-package focus lock
 - Created: 2026-08-13
-- Updated: 2026-08-13
+- Updated: 2026-08-14
 
 ## Objective
 
 Convert the repository-wide diagnosis into one authoritative, dependency-aware
 remediation program and prevent feature, provider, phase, or deployment work
-from advancing until the repository's safety and correctness landing spot is
+from advancing while the repository's foundational infrastructure is being
 strengthened.
 
 Success means:
 
-- the Landing Spot Gate is accepted by Wade;
+- the program's foundational governance is approved and maintained;
 - WP-0 through WP-8 are the only implementation queue;
 - each package is separately planned, authorized, implemented, verified,
   synchronized, and accepted in accordance with
@@ -264,8 +264,8 @@ well-documented and its current offline suites pass, but its live containment,
 persistence, accounting, risk, order lifecycle, runtime/data contracts,
 transport/provider integration, CI/observability, and authority state do not
 yet form an operationally credible whole. Wade directed that current focus be
-locked to nine remediation work packages and that the governance landing spot
-be strengthened before any package implementation proceeds.
+locked to nine remediation work packages so the infrastructure foundation is
+strengthened before feature or provider progression resumes.
 
 Historical Phase 22 and cTrader gate records remain preserved. Their prior
 completion or approval does not override this current queue or authorize a
@@ -277,16 +277,16 @@ provider continuation.
   `docs/REPOSITORY_REMEDIATION_PROGRAM.md`.
 - Synchronize active governance so current work, next safe action, package
   status, evidence, rollback, and approval boundaries agree.
-- After Landing Spot Gate acceptance, create one bounded implementation slice
-  at a time from the canonical package definition.
+- Create one bounded implementation slice at a time from the canonical package
+  definition and its approved sequence.
 - Require WP-7 evidence and WP-8 documentation/authority closeout for every
   accepted package.
 
 ## Out Of Scope
 
 - Source, header, test, CMake, workflow, credential, generated-artifact,
-  financial-control, runtime, provider, order, deployment, or live mutation as
-  part of the Landing Spot Gate.
+  financial-control, runtime, provider, order, deployment, or live mutation
+  hidden inside governance work.
 - Any tenth package, feature expansion, new strategy, new provider, phase
   activation, optimization, or platform selection without Wade's explicit
   scope revision.
@@ -327,20 +327,22 @@ provider continuation.
 
 ## Authorization Boundary
 
-Wade's 2026-08-13 direction authorizes the governance-only Landing Spot Gate:
-authoring this plan, creating the canonical remediation document, and
-synchronizing affected governance files. It does not authorize WP-0 through
-WP-8 source implementation, staging, commit, push, publication, workflow
-dispatch, credentials, provider traffic, retry, later gates, orders, risk-
-limit changes, release, deployment, or live use.
+Wade's 2026-08-13 direction authorized the foundational governance structure.
+On 2026-08-14 Wade approved that structure and both WP-0 and WP-1 handoff
+boundaries. This authorizes offline planning and implementation within the
+canonical WP-0 scope, followed—only after accepted WP-0 evidence—by offline
+planning and implementation within the canonical WP-1 scope.
 
-There is no external-process attempt budget in the Landing Spot Gate because
-external activity is prohibited. Stop after local documentation verification
-and present the candidate for Wade's acceptance.
+Wade's 2026-08-14 follow-up explicitly authorizes staging, commit, push, PR,
+and merge for WP-0 and, after WP-0 is merged and accepted, the same sequence
+for WP-1. This approval does not authorize credential-value access, provider
+traffic, external retries, demo or real orders, risk-limit changes, release,
+deployment, live use, or workflow dispatch. External process/attempt budget is
+zero for WP-0 and WP-1.
 
 ## Files Expected to Change
 
-Landing Spot Gate only:
+Foundational governance work:
 
 - `AGENTS.md`, `PLANS.md`, and `CONTRIBUTING.md`.
 - `docs/REPOSITORY_REMEDIATION_PROGRAM.md` and affected current-state,
@@ -351,8 +353,10 @@ Landing Spot Gate only:
 No source, header, test, CMake, script, workflow, ADR status, credential, or
 generated artifact is expected to change.
 
-Future package files are controlled by the canonical package definition and a
-separately approved package slice; this plan does not pre-authorize them.
+The approved WP-0 slice may change `SystemConfig`, startup, `LiveDataAdapter`,
+`BrokerGateway`/`ExecutionEngine` readiness behavior, CMake/default-off CI
+guards, focused tests, and directly affected documentation. The approved WP-1
+slice is controlled by its canonical definition and remains dependency-queued.
 
 ## Implementation Steps
 
@@ -362,13 +366,16 @@ separately approved package slice; this plan does not pre-authorize them.
    exclusions, acceptance, tests, approval, and rollback.
 3. Synchronize governance files and freeze conflicting next-action language.
 4. Run documentation, automation, scope, and Git-diff validation.
-5. Present the Landing Spot Gate candidate to Wade and stop.
-6. After separate acceptance, prepare WP-0's exact implementation plan slice;
-   do not begin implementation without a second exact GO.
+5. Record Wade's approval of the foundational governance and WP-0/WP-1
+   handoff boundaries.
+6. Prepare and execute WP-0's exact offline implementation slice.
+7. Complete WP-7 evidence and WP-8 synchronization for WP-0 and obtain its
+   acceptance before activating WP-1.
+8. Execute WP-1 only after that dependency is satisfied.
 
 ## Verification
 
-Landing Spot Gate:
+Foundational governance verification:
 
 ```sh
 git status --short
@@ -394,8 +401,9 @@ data, security, or CI evidence required by its canonical acceptance section.
 - Broad documentation synchronization could rewrite historical authority;
   preserve historical phase/ADR facts and change only their current-action
   interpretation.
-- A package label could be mistaken for implementation approval; keep every
-  package Planned / NO-GO until its exact action is authorized.
+- A package label could be mistaken for implementation approval; preserve the
+  approved status of WP-0 and conditional WP-1 while keeping WP-2 through WP-8
+  Planned / NO-GO.
 - Duplicating package definitions could create drift; this plan and other docs
   reference the canonical definitions instead of restating them.
 - Correcting governance does not contain runtime defects; retain the
@@ -404,25 +412,41 @@ data, security, or CI evidence required by its canonical acceptance section.
 
 ## Rollback
 
-With Wade's approval, revert only the Landing Spot Gate documentation changes
-or the affected future package slice. Never use destructive Git operations,
-discard unrelated work, or roll back a containment package into an enabled
-unsafe runtime. Historical phase/ADR evidence remains preserved.
+With Wade's approval, revert only the foundational governance documentation
+changes or the affected future package slice. Never use destructive Git
+operations, discard unrelated work, or roll back a containment package into an
+enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
 
 ## Progress Log
 
-- 2026-08-13: Wade locked current focus to nine remediation work packages and
-  directed governance landing-spot strengthening before further progress.
+- 2026-08-13: Wade locked current focus to nine remediation work packages to
+  strengthen the infrastructure foundation before further progress.
 - 2026-08-13: Authority/phase/ADR review classified historical phase and
   provider records as non-blocking history, not current execution authority.
-- 2026-08-13: Landing Spot Gate documentation synchronization began on local
+- 2026-08-13: Foundational governance synchronization began on local
   branch `codex/repository-remediation-lock` from diagnostic baseline commit
   `7f89c597d3874e5c8782a49a31d42335c8bf1e17`.
 - 2026-08-13: The documentation-only candidate passed Git diff hygiene,
   automation validation for 23 skills and four offline workflows, CI policy,
   exact nine-package, no-out-of-range-package, current-action-drift, reference,
   placeholder, and changed-path scope checks. Markdown link/lint tools were not
-  available locally. Wade acceptance remains pending.
+  available locally. Acceptance was pending at that candidate epoch.
+- 2026-08-14: Wade clarified that the intended objective is strengthening the
+  infrastructure foundation, not creating a preliminary gate, and approved the
+  foundational governance plus the WP-0 and WP-1 handoff boundaries. WP-0 is
+  current; WP-1 remains dependency-queued behind accepted WP-0 evidence.
+- 2026-08-14: Wade authorized the complete stage, commit, push, PR, and merge
+  sequence for WP-0 and then WP-1. External/provider actions remain excluded.
+- 2026-08-14: WP-0 implementation started on
+  `codex/wp0-live-containment` from merged foundational commit
+  `edf2a443d209cfc40e7d7269af43af2e72b3a617`.
+- 2026-08-14: The WP-0 working-tree candidate passed the full default-off
+  RelWithDebInfo build and all nine sequential CTest cases via
+  `./scripts/ci_validate.sh build/wp0-ci-validation`; the isolated ASan/UBSan
+  build and the same nine tests passed via
+  `./scripts/ci_deep_validate.sh build/wp0-ci-deep-validation`. Automation and
+  CI policy checks passed. The build retained the two known unused-variable
+  warnings in `AsyncNetworkClient.cpp` and `RiskEngine.cpp`.
 
 ## Deviations
 
@@ -430,15 +454,20 @@ unsafe runtime. Historical phase/ADR evidence remains preserved.
 
 ## Completion Evidence
 
-- Landing Spot Gate local verification: complete at the unstaged working-tree
-  candidate epoch; Wade acceptance: pending.
-- WP-0 through WP-8 implementation evidence: pending and not authorized.
+- Foundational governance verification and Wade acceptance: complete in merged
+  PR #34 at commit `edf2a443d209cfc40e7d7269af43af2e72b3a617`.
+- WP-0: working-tree implementation and verification complete; exact-commit,
+  PR, merge, and acceptance evidence pending.
+- WP-1: approved but inactive until WP-0 acceptance; implementation evidence
+  pending.
+- WP-2 through WP-8: implementation evidence pending and not authorized.
 
 ## Final Outcome
 
-Open. The focus lock is active and the Landing Spot Gate candidate is locally
-verified. Wade acceptance is required before WP-0 planning may advance, and
-WP-0 implementation requires a separate exact operator GO.
+Open. The focus lock and foundational governance are approved. WP-0 is the
+current authorized package. WP-1 is authorized but must not activate until
+WP-0, its WP-7 evidence, and its WP-8 synchronization are accepted. WP-2
+through WP-8 remain Planned / NO-GO.
 
 # Plan: Complete Gate 5 OAuth Correlation Controls
 

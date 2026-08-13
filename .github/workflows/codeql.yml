@@ -40,7 +40,11 @@ jobs:
 
       - name: Build default-off core
         run: |
-          cmake -S . -B build/codeql -DCMAKE_BUILD_TYPE=RelWithDebInfo
+          cmake -S . -B build/codeql \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DTRADEBOT_ENABLE_LIVE_RUNTIME=OFF \
+            -DTRADEBOT_ENABLE_CTRADER_GATE6=OFF \
+            -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF
           cmake --build build/codeql --parallel 2
 
       - name: Analyze

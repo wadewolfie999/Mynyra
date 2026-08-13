@@ -121,7 +121,6 @@ The residual offline patch, full verification matrix, final review, and
 sanitized persistent evidence template are complete. Wade authorized one local
 commit and exact-commit rebuild; their identities are recorded in the ignored
 handoff and do not authorize provider traffic. The old provider checkpoint is
-not the current next action. Under the remediation focus lock, stop after the
-Landing Spot Gate candidate; future provider integration is WP-6 work and
-requires accepted predecessors plus new exact approval. Do not retry or begin
-Gate 8.
+not the current next action. Under the remediation focus lock, future provider
+integration is WP-6 work and requires accepted predecessors plus new exact
+approval. Do not retry or begin Gate 8.

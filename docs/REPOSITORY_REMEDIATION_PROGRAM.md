@@ -5,9 +5,9 @@
 - Purpose: define the sole current remediation focus, its nine work packages,
   their dependencies, entry and exit gates, evidence requirements, and safety
   boundaries.
-- Status: focus lock active; Landing Spot Gate candidate locally verified and
-  awaiting Wade acceptance; WP-0 through WP-8 implementation remains Planned /
-  NO-GO.
+- Status: focus lock and foundational governance approved; WP-0 approved as
+  the current package; WP-1 approved and queued behind accepted WP-0 evidence;
+  WP-2 through WP-8 Planned / NO-GO.
 - Owner and review authority: Wade.
 - Program plan: `PLAN-20260813-repository-cohesion-remediation` in
   `../PLANS.md`.
@@ -18,9 +18,12 @@
   plan. It overlays but does not rewrite historical phase or ADR records.
 
 This program converts the repository-wide cohesion diagnosis into an exact
-execution queue. It does not authorize source changes, credential access,
-provider traffic, order activity, financial-limit changes, staging, commit,
-push, publication, deployment, or live trading.
+execution queue. Wade's 2026-08-14 approval authorizes offline WP-0 work and
+conditional offline WP-1 work within their canonical scopes. It does not
+authorize credential access, provider traffic, order activity, financial-limit
+changes, workflow dispatch, release, deployment, or live trading. Wade's
+follow-up separately authorizes staging, commit, push, PR, and merge for WP-0
+and then dependency-gated WP-1.
 
 ## Focus Lock
 
@@ -34,8 +37,9 @@ Until Wade explicitly changes this lock:
    is created implicitly.
 4. Historical phase and provider-gate records remain evidence, not current
    execution authority.
-5. A package title or `Approved` plan does not authorize implementation. Each
-   package requires its own exact operator GO after its entry gate is reviewed.
+5. A package title alone does not authorize implementation. WP-0 and WP-1 have
+   exact operator approval recorded here; WP-2 through WP-8 require separate
+   operator GO after their entry conditions are reviewed.
 6. Live trading, real or demo orders, provider execution, credential-value
    access, risk-limit changes, release, and deployment remain separate NO-GO
    actions even after all nine packages are complete.
@@ -60,12 +64,14 @@ Observed baseline evidence includes:
 Passing tests are evidence only for their covered behavior. They do not
 override the cross-module defects that define these packages.
 
-## Landing Spot Gate
+## Approved Program Foundation
 
-The Landing Spot Gate is governance preparation, not a work package. It is
-accepted only when Wade reviews the candidate and explicitly confirms it.
+The objective is to strengthen the infrastructure foundation. It does not
+define a separate preliminary gate, phase, package, artifact, or approval
+checkpoint. The foundational governance structure was merged in PR #34 and
+explicitly approved by Wade on 2026-08-14.
 
-Required conditions:
+The approved foundation establishes:
 
 - `AGENTS.md`, `PLANS.md`, `PROJECT_STATE.md`, `ROADMAP.md`, workflow, risk,
   testing, security, release, contributor, and index documents point to this
@@ -76,36 +82,37 @@ Required conditions:
   acceptance criteria, tests, approval boundary, and rollback rule.
 - Historical phase, ADR, and cTrader evidence remains historically accurate
   but is not represented as active work.
-- No source, test, CMake, workflow, credential, generated artifact, financial
-  control, runtime mode, or provider state changes as part of the landing spot.
+- Governance work does not conceal source, test, CMake, workflow, credential,
+  generated-artifact, financial-control, runtime-mode, or provider-state
+  changes.
 - Documentation validation, automation-policy validation, scope review, and
   Git diff hygiene pass, with unavailable checks reported.
-
-Landing Spot Gate exit authorizes only the next planning/review action for
-WP-0. It does not authorize WP-0 implementation.
 
 ## Package Register
 
 | Package | Name | Baseline severity | Status | Primary dependencies |
 | --- | --- | --- | --- | --- |
-| WP-0 | Live containment | Critical | Planned / NO-GO | Landing Spot Gate |
-| WP-1 | Persistence and generated-state containment | Critical | Planned / NO-GO | WP-0 |
+| WP-0 | Live containment | Critical | Approved — current | Approved program foundation |
+| WP-1 | Persistence and generated-state containment | Critical | Approved — queued | Accepted WP-0 evidence |
 | WP-2 | Accounting and quantity correctness | High | Planned / NO-GO | WP-1 |
 | WP-3 | Risk-state repair | High | Planned / NO-GO | WP-2 |
 | WP-4 | Unified order lifecycle | High | Planned / NO-GO | WP-0 through WP-3 |
 | WP-5 | Runtime-mode and data contracts | High | Planned / NO-GO | WP-0 through WP-4 |
 | WP-6 | Transport and provider integration | High | Planned / NO-GO | WP-0 through WP-5; WP-7 controls as needed |
-| WP-7 | CI and observability | High | Planned / NO-GO | Landing Spot Gate; integrates with every package |
-| WP-8 | Authority synchronization | High | Planned / NO-GO | Integrates with every package; closes after WP-0 through WP-7 |
+| WP-7 | CI and observability | High | Planned / NO-GO except approved WP-0/WP-1 evidence slices | Integrates with every package |
+| WP-8 | Authority synchronization | High | Planned / NO-GO except approved WP-0/WP-1 synchronization slices | Integrates with every package; closes after WP-0 through WP-7 |
 
+`Approved — current` authorizes the named package's offline planning and
+implementation within its canonical scope. `Approved — queued` carries the
+same bounded authority but cannot activate until its dependency is accepted.
 `Planned / NO-GO` means that problem definition and sequencing are accepted as
-the focal queue, but source implementation has not been authorized.
+the focal queue, but implementation has not been authorized.
 
 ## Sequencing And Parallelism
 
 - Safety spine: WP-0 → WP-1 → WP-2 → WP-3 → WP-4 → WP-5 → WP-6.
-- WP-7 may establish package-specific test and observability scaffolding after
-  the Landing Spot Gate, but only through its own approved slice. It must add
+- WP-7 may establish package-specific test and observability scaffolding only
+  through the currently approved WP-0 or WP-1 slice. It must add
   evidence before or with the behavior it is intended to protect.
 - WP-8 runs as a documentation/authority closeout slice after each accepted
   package and performs final program reconciliation last.
@@ -154,6 +161,11 @@ credentials, network access, or order construction.
 - BACKTEST and simulated PAPER behavior remain explicit and regression-tested.
 - Full default CTest, targeted mode/gateway tests, sanitizer coverage, CI policy
   checks, and a no-provider side-effect review pass.
+
+The approved implementation uses `TRADEBOT_ENABLE_LIVE_RUNTIME=OFF` as the
+normal build state plus `--unlock-live-runtime` as the second technical gate.
+Both must pass before the legacy LIVE adapter may load credentials or start its
+network client. These gates never grant operator or provider authority.
 
 ### Approval And Rollback
 

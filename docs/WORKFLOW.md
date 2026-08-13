@@ -12,7 +12,7 @@ The current implementation queue is locked to WP-0 through WP-8 in
 `REPOSITORY_REMEDIATION_PROGRAM.md`. Before ordinary feature, phase, provider,
 research, optimization, or deployment workflow is considered:
 
-1. Confirm the Landing Spot Gate is accepted.
+1. Confirm the program foundation and the exact package are approved.
 2. Map the task to exactly one package; cross-package dependencies must be
    explicit and cannot create an implicit tenth package.
 3. Revalidate the package's observed baseline facts at the current commit.

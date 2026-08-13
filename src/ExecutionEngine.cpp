@@ -147,6 +147,16 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
 
     ++m_signalCount;
 
+    // Once a gateway is bound it is the only execution boundary. Never turn
+    // transport/readiness failure into a local fill that could be mistaken for
+    // externally executed state.
+    if (m_gateway && !m_gateway->isConnected()) {
+        ++m_blockedCount;
+        std::cout << "[EXECUTION] " << (signal == Signal::BUY ? "BUY" : "SELL")
+                  << " blocked: bound BrokerGateway is unavailable\n";
+        return false;
+    }
+
     if (signal == Signal::BUY) {
         if (!m_riskEngine.canTrade()) {
             ++m_blockedCount;
