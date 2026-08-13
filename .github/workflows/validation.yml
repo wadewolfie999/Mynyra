@@ -11,88 +11,96 @@ permissions:
   contents: read
 
 concurrency:
-  group: validation-${{ github.workflow }}-${{ github.ref }}
+  group: validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  policy:
-    name: Offline safety policy
+  governance:
+    name: Automation and offline-policy governance
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
-
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Check out exact revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: Check repository and workflow boundaries
-        run: bash scripts/ci_policy_checks.sh
+      - name: Validate skills and workflow guardrails
+        run: python3 scripts/validate_automation.py
 
-  build-test:
-    name: C++20 ${{ matrix.compiler }}
+      - name: Validate shell syntax
+        run: bash -n scripts/*.sh .githooks/pre-push
+
+      - name: Enforce offline policy
+        run: ./scripts/ci_policy_checks.sh
+
+  validate:
+    name: validate
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        compiler:
-          - gcc
-          - clang
-
+    timeout-minutes: 30
+    env:
+      CC: gcc
+      CXX: g++
+      TRADEBOT_BUILD_JOBS: "2"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Check out exact revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: Select compiler
+      - name: Configure, build, and test with GCC
+        run: ./scripts/ci_validate.sh build/ci-validation
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: validation-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/ci-validation/CMakeFiles/CMakeConfigureLog.yaml
+            build/ci-validation/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Summarize offline boundary
+        if: always()
         run: |
-          if [[ "${{ matrix.compiler }}" == "clang" ]]; then
-            echo "CC=clang" >> "$GITHUB_ENV"
-            echo "CXX=clang++" >> "$GITHUB_ENV"
-          else
-            echo "CC=gcc" >> "$GITHUB_ENV"
-            echo "CXX=g++" >> "$GITHUB_ENV"
-          fi
+          {
+            echo "### TradeBot required GCC validation"
+            echo "- Provider proof targets: disabled"
+            echo "- Credentials and repository secrets: unused"
+            echo "- CTest execution: sequential"
+            echo "- This result does not authorize release, deployment, orders, or live trading."
+          } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Configure default-off build
-        run: cmake -S . -B "build/${{ matrix.compiler }}" -DCMAKE_BUILD_TYPE=Debug
+  clang:
+    name: C++20 clang
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CC: clang
+      CXX: clang++
+      TRADEBOT_BUILD_JOBS: "2"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
-      - name: Verify provider proofs remain disabled
-        run: |
-          grep -q '^TRADEBOT_ENABLE_CTRADER_GATE6:BOOL=OFF$' "build/${{ matrix.compiler }}/CMakeCache.txt"
-          grep -q '^TRADEBOT_ENABLE_CTRADER_GATE7:BOOL=OFF$' "build/${{ matrix.compiler }}/CMakeCache.txt"
-
-      - name: Build
-        run: cmake --build "build/${{ matrix.compiler }}" --parallel 2
-
-      - name: Test
-        run: ctest --test-dir "build/${{ matrix.compiler }}" --output-on-failure
+      - name: Configure, build, and test with Clang
+        run: ./scripts/ci_validate.sh build/ci-clang
 
   sanitizers:
     name: ASan and UBSan
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
-      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
-      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-
+      TRADEBOT_BUILD_JOBS: "2"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Check out exact revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
-      - name: Configure sanitizer build
-        run: |
-          cmake -S . -B build/sanitizers \
-            -DCMAKE_BUILD_TYPE=Debug \
-            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer" \
-            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
-
-      - name: Build
-        run: cmake --build build/sanitizers --parallel 2
-
-      - name: Test
-        run: ctest --test-dir build/sanitizers --output-on-failure
+      - name: Configure, build, and test with sanitizers
+        run: ./scripts/ci_deep_validate.sh build/ci-sanitizers

@@ -177,21 +177,43 @@ See `DEPENDENCY_POLICY.md`.
 - The tracked policy checker rejects credential-like tracked paths,
   private-key material, provider-capable workflow steps, enabled Gate 6/Gate 7
   proof targets, and a non-`BACKTEST` default.
-- Normal CI and release-candidate packaging must remain provider-free: no
+- Normal CI and evidence packaging must remain provider-free: no
   OAuth, browser flow, Keychain access, account access, market-data request,
   reconnect, order, or live endpoint operation.
 - CodeQL may write security-analysis results only; it has no repository-content
   write permission.
-- Workflow artifacts must exclude hidden files and contain only the declared
-  binary, checksum manifest, and non-sensitive build metadata.
+- Workflow evidence must exclude hidden files and contain only the declared
+  CTest log, license, manifest, and checksum list; the live-capable executable
+  must not be uploaded.
 
 ## Shell-Script Safety
 
-- Tracked validation shell scripts exist under `scripts/`, with `.githooks/pre-push`.
+- Tracked validation, sanitizer, and offline candidate-packaging shell scripts
+  exist under `scripts/`, with `.githooks/pre-push`.
 - Do not add or materially change shell scripts without review.
 - Avoid destructive commands.
 - Avoid printing environment variables that may contain secrets.
 - Prefer explicit paths and quoted variables when scripts are introduced.
+
+## GitHub Actions Safety
+
+- Keep repository permissions explicitly read-only and use GitHub-hosted
+  runners for the offline validation/delivery workflows. Disable persisted Git
+  credentials on every checkout step and pin every third-party action to a
+  reviewed full commit SHA.
+- Do not use `pull_request_target`, self-hosted runners, repository or
+  environment secrets, credential stores, provider endpoints, or write-scoped
+  tokens in ordinary validation or candidate delivery.
+- Force Gate 6 and Gate 7 OFF in repository automation. Workflow summaries and
+  artifact manifests must state that release, deployment, provider, order, and
+  live authority are absent.
+- Validate workflow guardrails and repository skill metadata with
+  `python3 scripts/validate_automation.py`.
+- Upload failure diagnostics and validation evidence only from offline
+  build/test locations and retain them briefly. Do not upload the live-capable
+  executable, environment dumps, credential-like files, provider payloads,
+  account identifiers, or ignored handoffs. Enforce the evidence bundle's
+  exact entry allowlist again in the workflow before upload.
 
 ## Network Services
 

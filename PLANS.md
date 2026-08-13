@@ -2375,3 +2375,270 @@ documents. Volatile phase/gate snapshots were removed from skills. The update
 is validated and Wade authorized its Git publication and merge. That authority
 does not include provider traffic, credentials, later gates, orders, risk
 changes, or live behavior; Git and GitHub retain the publication evidence.
+
+# Plan: Add Bounded Autonomous Skills And Offline CI Delivery
+
+- Plan ID: `PLAN-20260813-autonomous-skills-ci-delivery`
+- Status: Publishing — local implementation and verification complete; Wade
+  authorized the remaining Git/GitHub execution path on 2026-08-13
+- Owner: Operator
+- Implementer: Codex
+- Review authority: Operator
+- Related roadmap phase: Repository governance and offline engineering tooling;
+  no phase transition
+- Related issue or decision: Operator request for autonomous project skills and
+  GitHub Actions CI/CD
+- Created: 2026-08-13
+- Updated: 2026-08-13
+
+## Objective
+
+Increase safe repository autonomy with reusable bounded-maintenance skills,
+continuous offline verification, and manually requested delivery of verified
+non-executable build/test evidence.
+
+## Context
+
+The repository has one basic Ubuntu validation workflow and a broad set of
+domain review skills, but it lacks a reusable autonomous change coordinator,
+CI-failure recovery procedure, artifact-delivery procedure, scheduled deeper
+validation, and exact-artifact manifests produced by GitHub Actions.
+
+## Scope
+
+- Add three repository-owned skills for bounded offline change orchestration,
+  CI failure recovery, and offline artifact delivery.
+- Harden pull-request and push validation with least-privilege permissions,
+  concurrency control, deterministic build settings, logs, and job summaries.
+- Add scheduled sanitizer validation and a manual, test-gated evidence-delivery
+  workflow with SHA-256 provenance but no executable payload.
+- Integrate Wade-requested PR #29 with a tracked offline policy checker,
+  required GCC plus supplemental Clang validation, per-PR sanitizers, CodeQL,
+  and review-only monthly Dependabot proposals while preserving immutable
+  action pins and the non-executable delivery boundary.
+- Synchronize documentation and validate skills, workflows, scripts, and the
+  default C++ build/test path.
+
+## Out of Scope
+
+- Provider traffic, browser OAuth, credentials, account access, market data,
+  orders, risk-limit changes, Gates 8–9, deployment to any runtime environment,
+  GitHub Releases, package registries, production infrastructure, or live
+  trading.
+- Automatic commits, pushes, merges, releases, issue creation, or secret use.
+- C++ runtime behavior, public interfaces, or dependencies.
+
+## Preconditions
+
+- Start from tracked-clean `main` commit
+  `c9e7cc0fbacf1096ce744690da5d9d21eb909708`.
+- Work on scoped branch `codex/autonomous-skills-ci`.
+- Preserve ignored build, data, output, handoff, and credential-like artifacts.
+
+## Assumptions
+
+- “CD” means delivery of an offline validation-evidence bundle to the manually
+  dispatched GitHub Actions run, not executable distribution, deployment, or
+  release publication.
+- GitHub-hosted Ubuntu runners are suitable for the default, provider-free
+  build. macOS-only opt-in provider proof targets remain excluded.
+
+## Invariants
+
+- `BACKTEST` remains the default and no workflow enables Gate 6, Gate 7,
+  `PAPER`, `LIVE`, broker connectivity, or credential loading.
+- Normal CI requires no repository secrets and has read-only repository
+  permissions.
+- Full CTest suites in different build trees run sequentially.
+- Skills may execute reversible local inspection/edit/verification only within
+  the active task; Git publication and every external or live action retain
+  separate operator gates.
+
+## Authorization Boundary
+
+The operator initially authorized repository-local autonomous skills, GitHub
+Actions CI/CD definitions, local edits, and offline verification. On
+2026-08-13 Wade explicitly authorized the remaining task-finalization path:
+stage only this plan's 25-path allowlist, commit, push the scoped branch, open
+and update its PR, dispatch and rerun these task-specific workflows as needed,
+make bounded corrections supported by new CI evidence, and merge after all
+required checks pass. Wade then explicitly added PR #29 to the merge scope and
+authorized the remaining finalization limitations. Corrections to #29 may
+preserve its offline policy, compiler, sanitizer, CodeQL, and Dependabot value,
+but may not distribute the live-capable executable. This does not authorize
+executable release, deployment, provider execution, credential use, later
+gates, orders, financial changes, or live use. Stop after the merged `main`
+state and workflow evidence are verified.
+
+## Files Expected to Change
+
+- `.agents/skills/tradebot-bounded-change-orchestrator/`
+- `.agents/skills/tradebot-ci-failure-recovery/`
+- `.agents/skills/tradebot-offline-artifact-delivery/`
+- `.github/workflows/validation.yml`
+- `.github/workflows/deep-validation.yml`
+- `.github/workflows/offline-artifact-delivery.yml`
+- `.github/workflows/codeql.yml`
+- `.github/dependabot.yml`
+- `scripts/ci_policy_checks.sh`
+- `scripts/`, `docs/`, `CONTRIBUTING.md`, and this plan.
+
+## Implementation Steps
+
+1. Initialize and author the three skills with narrow authority and explicit
+   stop conditions.
+2. Add deterministic local helpers shared by developers and GitHub Actions.
+3. Harden ordinary CI, add scheduled sanitizer coverage, and add manual
+   checksum-bearing artifact delivery.
+4. Synchronize testing, workflow, release, security, contributor, and skill
+   index documentation.
+5. Validate skills and YAML, run shell syntax checks, execute the helpers, run
+   the default build/full CTest suite, and review diff/hygiene evidence.
+6. Reconcile and merge PR #29 after #30, retaining its additional offline
+   assurance while removing mutable action tags and executable artifact
+   delivery.
+
+## Verification
+
+- Validate each new skill with the installed skill-creator validator.
+- Parse all workflow YAML and inspect action permissions/triggers.
+- Run `bash -n` for changed shell scripts and execute offline validation helpers.
+- Run the default CMake build and full CTest suite sequentially.
+- Run documentation audits, `git diff --check`, changed-file classification,
+  secret-like path review, and final diff review.
+
+## Risks
+
+- A workflow could accidentally widen external or live authority; prevent this
+  with default-only CMake options, no secrets, read-only permissions, and
+  explicit prohibited-action checks.
+- The default executable retains an explicitly gated live-capable mode; never
+  distribute it through this workflow. Deliver only its hash, the manifest, and
+  offline test evidence.
+- Automated evidence delivery could be mistaken for release approval; keep it
+  manual, ephemeral, non-deploying, and documented as evidence only.
+- Scheduled sanitizer output can be flaky under shared-resource contention;
+  use one build tree and sequential CTest execution.
+
+## Rollback
+
+With operator approval, revert only this plan's skills, workflows, helpers, and
+documentation changes. No provider, credential, account, order, deployment, or
+live state exists to unwind.
+
+## Progress Log
+
+- 2026-08-13: Inspected Git, current phase/gate authority, release/risk policy,
+  existing skills, scripts, CMake targets, tests, and the current workflow.
+- 2026-08-13: Created the scoped local branch and recorded the offline-only
+  automation boundary.
+- 2026-08-13: Initialized and authored three skills, added deterministic
+  automation helpers, and implemented ordinary, scheduled sanitizer, and manual
+  candidate-delivery workflows with read-only/no-secret/default-off guards.
+- 2026-08-13: Synchronized affected testing, workflow, failure-recovery,
+  release, security, contributor, state, index, and evidence documentation.
+- 2026-08-13: The first deep-validation test run aborted all seven tests because
+  Apple ASan does not support `detect_leaks=1`. The helper now disables leak
+  detection only on Darwin while retaining it on Linux; a fresh informative
+  rerun is pending.
+- 2026-08-13: Network/live-boundary review confirmed the default executable can
+  enter a separately gated live-capable mode. Candidate delivery was therefore
+  narrowed to non-executable CTest/manifests/checksum evidence; no binary is
+  uploaded.
+- 2026-08-13: Final evidence review added a build-local success marker written
+  only after sequential CTest passes and bound it to the exact commit and
+  default-off configuration; packaging rejects stale or mismatched build trees.
+- 2026-08-13: Independent read-only forward tests passed: CI recovery refused
+  blind reruns/check disabling, and evidence delivery refused executable
+  release/deployment from the dirty candidate tree.
+- 2026-08-13: Final workflow review duplicated the exact four-entry evidence
+  allowlist and non-release/non-deployment/non-live assertions in the workflow
+  itself so a changed packaging helper cannot silently widen the upload.
+- 2026-08-13: Official GitHub documentation and action repositories confirmed
+  current Checkout v6.0.2 and Upload Artifact v7.0.1 behavior. All action uses
+  were upgraded and pinned to their immutable full release commit SHAs.
+- 2026-08-13: Wade authorized staging this plan's exact 25-path scope, commit,
+  push, PR publication/update, task-specific workflow dispatch/rerun, bounded
+  evidence-backed CI fixes, and merge after green checks. Executable release,
+  deployment, credentials, provider traffic, later gates, orders, risk changes,
+  and live use remain outside scope.
+- 2026-08-13: Wade's finalization authority was used to install host-only
+  Actionlint 1.7.12 and ShellCheck 0.11.0. Initial Actionlint found only three
+  equivalent summary-redirection style findings; workflow summaries were
+  mechanically grouped and fresh verification was started. No repository
+  runtime or required dependency was added.
+- 2026-08-13: PR #30's four workflow jobs passed, but branch protection
+  correctly blocked merge because the hardened build job no longer emitted the
+  repository's required legacy `validate` status context. The job key and
+  visible name were restored to `validate`; governance remains a separate
+  required-by-workflow job and no check, permission, or assertion was removed.
+- 2026-08-13: PR #30 merged as `1a965a877c626ae7387eacde23585abe98841b50`.
+  Wade added PR #29 to the completion scope. Its CodeQL, GCC/Clang, sanitizer,
+  Dependabot, and offline-policy additions were retained; mutable action tags
+  were replaced with reviewed full SHAs, the required `validate` context was
+  preserved, and its executable release-candidate workflow was removed in
+  favor of #30's non-executable exact-commit evidence delivery.
+
+## Deviations
+
+- Direct execution of the system skill scaffold failed because the file was not
+  executable; invoking the same script through Python succeeded without a
+  repository or dependency change.
+- The first deep validation failed as recorded above. The failure and
+  platform-specific correction were preserved; two subsequent sanitizer runs
+  passed 7/7, including the final evidence epoch.
+- One packaging-fixture command was rejected before execution because its
+  temporary cleanup used a recursive removal. The safe rerun left isolated
+  `/tmp/tradebot-package-*` fixtures and did not alter repository artifacts.
+- The first checksum-fixture check ran from the parent directory and therefore
+  could not resolve relative entries. The unchanged package passed when checked
+  from its intended directory, matching the workflow.
+- The first comprehensive whitespace/status audit used zsh's reserved `path`
+  variable as a loop name, which temporarily removed `git` from that audit
+  process's command search path. The corrected read-only audit used a neutral
+  variable and passed; repository state was not mutated by the failed attempt.
+- The first PR evidence epoch exposed a branch-protection compatibility defect:
+  all new jobs passed, but required context `validate` was absent because the
+  build job had been renamed. This was classified as a workflow-configuration
+  defect and corrected without bypassing or changing branch protection.
+
+## Completion Evidence
+
+- Branch `codex/autonomous-skills-ci` derives from tracked-clean `main`/
+  `origin/main` commit `c9e7cc0fbacf1096ce744690da5d9d21eb909708`.
+- `scripts/validate_automation.py` passed for all 23 repository skills and all
+  three workflows. The installed skill-creator validator passed 23/23; all
+  skill UI metadata and workflow YAML parsed successfully.
+- GitHub action dependencies are pinned to official Checkout v6.0.2 commit
+  `de0fac2e4500dabe0009e67214ff5f5447ce83dd` and Upload Artifact v7.0.1
+  commit `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`.
+- Shell syntax, ShellCheck 0.11.0, Actionlint 1.7.12, and `git diff --check`
+  passed after the three mechanical workflow-summary style corrections. Ruby
+  YAML parsing and repository-specific workflow guardrails also passed.
+- `./scripts/ci_validate.sh build/autonomy-validation` configured and built the
+  default-off `RelWithDebInfo` tree, then passed the full sequential CTest suite
+  7/7. The build emitted only the two existing documented warnings in
+  `AsyncNetworkClient.cpp` and `RiskEngine.cpp`.
+- `./scripts/ci_deep_validate.sh build/autonomy-deep-validation` passed the
+  final default-off ASan/UBSan sequential suite 7/7. The preceding informative
+  rerun also passed 7/7 after the recorded Apple leak-detection correction.
+- Isolated packaging fixtures proved exact commit/config/success-marker
+  binding, checksum validity, the four-file non-executable allowlist,
+  executable exclusion, and dirty-tree, existing-output, and stale-marker
+  refusal.
+- Documentation audit found zero placeholder hits. All 442 safety-term hits and
+  the 17 changed-line hits were reviewed as intentional safety/authorization
+  language.
+- No C++ source, headers, tests, CMake, dependencies, credentials, provider
+  state, orders, risk limits, runtime modes, or live behavior changed. No
+  workflow was dispatched and no external upload, release, or deployment
+  occurred.
+
+## Final Outcome
+
+Three bounded automation skills, hardened ordinary CI, scheduled sanitizer CI,
+and manual non-executable validation-evidence delivery are locally verified.
+The default live-capable executable is intentionally not distributed. Wade has
+authorized the remaining scoped Git/GitHub publication and merge sequence;
+executable publication, deployment, release, provider action, credential use,
+later-gate work, order action, risk change, and live action remain prohibited.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TradeBot Offline Evidence Delivery"
+  short_description: "Deliver verified non-executable build evidence"
+  default_prompt: "Use $tradebot-offline-artifact-delivery to prepare verified offline evidence without distributing the live-capable executable."

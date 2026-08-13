@@ -50,6 +50,28 @@
 - Run suites from different build trees sequentially unless every shared resource is isolated.
 - Update docs and handoff.
 
+## Bounded Autonomous Change Workflow
+
+- Use `tradebot-bounded-change-orchestrator` for one scoped offline change that
+  spans planning, implementation, specialist review, verification, and docs.
+- Budget one implementation pass and no more than two diagnose-and-correct
+  cycles for the same local failure mechanism.
+- Preserve the first failure and state the new evidence before every rerun.
+- Stop before staging, commit, push, workflow dispatch, provider access,
+  deployment, orders, risk changes, or live use unless the operator separately
+  authorizes the exact action.
+
+## CI Failure Workflow
+
+- Use `tradebot-ci-failure-recovery` to preserve the exact revision, runner,
+  first failing command, and relevant redacted diagnostics.
+- Classify deterministic repository defects separately from workflow defects,
+  toolchain differences, resource contention, and GitHub infrastructure.
+- Reproduce the narrowest equivalent check locally before correcting it.
+- Never weaken tests, sanitizers, permissions, redaction, or default-off gates
+  merely to obtain a green run. Triggering an external rerun is a separate
+  operator action.
+
 ## Phase Work Workflow
 
 - Confirm phase marker in `ROADMAP.md` and `PROJECT_STATE.md`.

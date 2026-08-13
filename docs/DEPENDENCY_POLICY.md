@@ -21,10 +21,14 @@
   their license at pinned upstream revision
   `3fd8bddfbe0cfc2ecfda079623dc4e498af11e66`; configure-time SHA-256 checks
   fail closed before binding generation.
-- GitHub automation uses official `actions/checkout`,
-  `actions/upload-artifact`, and `github/codeql-action` actions. Dependabot
-  proposes monthly GitHub Actions version updates for review; it does not merge
-  them.
+- GitHub-hosted workflows use official `actions/checkout` v6.0.2 and
+  `actions/upload-artifact` v7.0.1 and `github/codeql-action` v4.37.6 pinned to
+  reviewed full commit SHAs. Checkout never persists credentials. Validation
+  and evidence delivery retain read-only repository permissions; CodeQL adds
+  only the security-event upload permission required for its analysis result.
+  Dependabot proposes monthly GitHub Actions pin updates for review and never
+  merges them. Action upgrades require the same source, runtime, permission,
+  and rollback review as other tooling dependencies.
 
 ## Addition Rules
 

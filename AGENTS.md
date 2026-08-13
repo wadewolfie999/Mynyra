@@ -131,11 +131,16 @@ Codex and other repository-side agents must not:
 - Phase 19 generated logs/replay artifacts observed under `build/phase19_revalidation/`.
 - Codex skills: `.agents/skills/`.
 - Codex execution/evidence contract: `docs/CODEX_EXECUTION_EVIDENCE.md`.
-- Python components: none tracked at the time this contract was created.
+- Python runtime components: none. A standard-library-only automation validator
+  is tracked under `scripts/`.
 - Julia components: none tracked at the time this contract was created.
-- Scripts/tooling: tracked validation wrappers and the offline policy checker
-  exist under `scripts/`, with `.githooks/pre-push` and workflows under
-  `.github/workflows/`; CMake remains the underlying tooling entrypoint.
+- Scripts/tooling: tracked local wrappers, offline CI/sanitizer helpers, an
+  offline policy checker, skill/workflow guardrails, and non-executable
+  exact-build evidence packaging exist under `scripts/`, with
+  `.githooks/pre-push` and four GitHub Actions workflows under
+  `.github/workflows/`. Validation and evidence delivery retain read-only
+  repository permissions; CodeQL adds only `security-events: write`. CMake
+  remains the underlying build and test entrypoint.
 
 ## Verified Commands
 
@@ -185,6 +190,25 @@ Offline CI policy:
 
 ```sh
 ./scripts/ci_policy_checks.sh
+```
+
+Validate repository skills and workflow safety guardrails:
+
+```sh
+python3 scripts/validate_automation.py
+```
+
+Run the same default-off configure/build/sequential-test path used by ordinary
+CI:
+
+```sh
+./scripts/ci_validate.sh build/ci-validation
+```
+
+Run the scheduled default-off ASan/UBSan path:
+
+```sh
+./scripts/ci_deep_validate.sh build/ci-deep-validation
 ```
 
 Targeted phase test:

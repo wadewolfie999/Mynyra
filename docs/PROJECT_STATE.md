@@ -5,9 +5,10 @@
 - Purpose: authoritative current-state summary for TradeBot.
 - Authority level: current-state evidence below active approved plans and above the roadmap; the project workstream map is defined in `WORKSTREAM_ARCHITECTURE.md`, and phase definitions and statuses are delegated to `ROADMAP.md`.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and handoff recipients.
-- Last documentation/state audit: 2026-08-13 against residual Gate 7 branch
-  `codex/gate7-residual-diagnostics-and-proof` from authoritative merged
-  `origin/main` `f63a03b63a81d37203376d1e2dea267ece115c89`.
+- Last documentation/state audit: 2026-08-13 against authoritative merged
+  `main`/`origin/main` commit
+  `c9e7cc0fbacf1096ce744690da5d9d21eb909708` and the scoped local automation
+  branch derived from it.
 - Last CMake/CTest verification evidence: 2026-08-13.
 - Codex execution/evidence governance is centralized in
   `CODEX_EXECUTION_EVIDENCE.md`; skills carry durable domain procedure and must
@@ -82,6 +83,16 @@ This document represents current state only. Historical execution belongs in Git
 ## In-Progress Work
 
 - Repository governance and Codex skill-system maintenance.
+- Bounded offline repository automation under
+  `PLAN-20260813-autonomous-skills-ci-delivery`: three new repo-local skills,
+  hardened GCC/Clang CI, per-change and scheduled deep sanitizer validation,
+  offline-policy enforcement, CodeQL, review-only Dependabot proposals, and
+  manual checksum-bearing non-executable validation-evidence delivery. Local
+  verification completed for PR #30, which merged as `1a965a8`; Wade added PR
+  #29 to the authorized Git/GitHub publication, workflow-validation,
+  correction, and merge sequence on 2026-08-13. Executable publication,
+  release, deployment, provider traffic, credentials, orders, risk changes,
+  and live use remain unauthorized.
 - Gate 7 residual diagnostics and first-single-complete-BBO correction under
   `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`. The prior OAuth
   diagnostic plan is complete and is not an active implementation authority.
@@ -137,7 +148,9 @@ This document represents current state only. Historical execution belongs in Git
   `CTRADER_OPEN_API_GATE3_BASELINE_INTEGRITY.md`,
   `CTRADER_OPEN_API_GATE5.md`, and ADR 0004 define the sole Open API protocol,
   numeric, baseline, OAuth, secret, account-ID, and demo-only boundary.
-- `.agents/skills/` TradeBot skill files are present locally, including `tradebot-git-safety`.
+- `.agents/skills/` contains 23 TradeBot skills, including bounded change
+  orchestration, CI failure recovery, offline artifact delivery, and Git
+  safety workflows.
 - `CODEX_EXECUTION_EVIDENCE.md` defines shared authorization, evidence-epoch,
   exact-artifact, retry, resource-isolation, sensitive-memory, and handoff
   procedure for those skills.
