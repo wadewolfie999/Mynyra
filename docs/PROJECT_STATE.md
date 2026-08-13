@@ -6,10 +6,10 @@
 - Authority level: current-state evidence below active approved plans and above the roadmap; the project workstream map is defined in `WORKSTREAM_ARCHITECTURE.md`, and phase definitions and statuses are delegated to `ROADMAP.md`.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and handoff recipients.
 - Last documentation/state audit: 2026-08-13 against authoritative merged
-  `main`/`origin/main` commit
-  `c9e7cc0fbacf1096ce744690da5d9d21eb909708` and the scoped local automation
-  branch derived from it.
-- Last CMake/CTest verification evidence: 2026-08-13.
+  `main` through PR #29; the automation implementation merge commit is
+  `6325a8b2e8356464b661de3f32c8d4816149ea9a`.
+- Last CMake/CTest verification evidence: 2026-08-13 on final automation
+  implementation commit `6325a8b2e8356464b661de3f32c8d4816149ea9a`.
 - Codex execution/evidence governance is centralized in
   `CODEX_EXECUTION_EVIDENCE.md`; skills carry durable domain procedure and must
   resolve volatile branch, phase, gate, provider, and approval state at use
@@ -79,20 +79,17 @@ This document represents current state only. Historical execution belongs in Git
 - Accepted Phase 22 broker-neutral implementation under `PLAN-20260624-workstream-i-broker-neutral-completion`; broker-dependent connectivity remains unauthorized.
 - Runtime modes verified in `SystemConfig`: `BACKTEST`, `PAPER`, `LIVE`; default is `BACKTEST`.
 - Credential loading verified through `AuthManager` and `SystemConfig` env names `AIIO_API_KEY` and `AIIO_API_SECRET`.
+- `PLAN-20260813-autonomous-skills-ci-delivery` is complete. PRs #30 and #29
+  merged three bounded repository skills, offline-policy-governed GCC/Clang and
+  sanitizer CI, scheduled deep validation, pinned CodeQL, review-only monthly
+  Dependabot proposals, and manual checksum-bearing non-executable evidence
+  delivery. Final-main ordinary validation, CodeQL, deep validation, and
+  evidence delivery passed on commit `6325a8b2e8356464b661de3f32c8d4816149ea9a`.
+  Dependabot opened PR #32 for review without auto-merging it.
 
 ## In-Progress Work
 
 - Repository governance and Codex skill-system maintenance.
-- Bounded offline repository automation under
-  `PLAN-20260813-autonomous-skills-ci-delivery`: three new repo-local skills,
-  hardened GCC/Clang CI, per-change and scheduled deep sanitizer validation,
-  offline-policy enforcement, CodeQL, review-only Dependabot proposals, and
-  manual checksum-bearing non-executable validation-evidence delivery. Local
-  verification completed for PR #30, which merged as `1a965a8`; Wade added PR
-  #29 to the authorized Git/GitHub publication, workflow-validation,
-  correction, and merge sequence on 2026-08-13. Executable publication,
-  release, deployment, provider traffic, credentials, orders, risk changes,
-  and live use remain unauthorized.
 - Gate 7 residual diagnostics and first-single-complete-BBO correction under
   `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`. The prior OAuth
   diagnostic plan is complete and is not an active implementation authority.
