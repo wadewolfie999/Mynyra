@@ -2379,8 +2379,8 @@ changes, or live behavior; Git and GitHub retain the publication evidence.
 # Plan: Add Bounded Autonomous Skills And Offline CI Delivery
 
 - Plan ID: `PLAN-20260813-autonomous-skills-ci-delivery`
-- Status: Publishing — local implementation and verification complete; Wade
-  authorized the remaining Git/GitHub execution path on 2026-08-13
+- Status: Complete — PRs #30 and #29 merged; final-main workflow and artifact
+  evidence verified on 2026-08-13
 - Owner: Operator
 - Implementer: Codex
 - Review authority: Operator
@@ -2447,8 +2447,9 @@ validation, and exact-artifact manifests produced by GitHub Actions.
 
 - `BACKTEST` remains the default and no workflow enables Gate 6, Gate 7,
   `PAPER`, `LIVE`, broker connectivity, or credential loading.
-- Normal CI requires no repository secrets and has read-only repository
-  permissions.
+- Validation and evidence delivery require no repository secrets and retain
+  read-only repository permissions. CodeQL adds only `security-events: write`
+  for its analysis result.
 - Full CTest suites in different build trees run sequentially.
 - Skills may execute reversible local inspection/edit/verification only within
   the active task; Git publication and every external or live action retain
@@ -2578,6 +2579,16 @@ live state exists to unwind.
   were replaced with reviewed full SHAs, the required `validate` context was
   preserved, and its executable release-candidate workflow was removed in
   favor of #30's non-executable exact-commit evidence delivery.
+- 2026-08-13: PR #31 advanced `main` while #29's first fresh CodeQL epoch was
+  running. Strict branch protection correctly invalidated the now-stale
+  `validate` context. The new `main` was merged into #29 without altering its
+  Gate 7 patch, and local default/sanitizer plus all six GitHub checks passed on
+  the replacement exact head `1392428972ff4adb8fa743c2e99d888ceaf7fc3e`.
+- 2026-08-13: PR #29 merged as
+  `6325a8b2e8356464b661de3f32c8d4816149ea9a`. Final-main ordinary validation,
+  CodeQL, manually dispatched deep validation, and manually dispatched
+  non-executable evidence delivery all completed successfully. Dependabot's
+  first review-only update also completed and opened PR #32 without merging it.
 
 ## Deviations
 
@@ -2601,17 +2612,36 @@ live state exists to unwind.
   all new jobs passed, but required context `validate` was absent because the
   build job had been renamed. This was classified as a workflow-configuration
   defect and corrected without bypassing or changing branch protection.
+- A concurrent checkout moved the original candidate onto local `main` just
+  before its first commit. The scoped branch was pointed at that commit, the
+  worktree was switched back to the scoped branch, and local `main` was restored
+  to the unchanged `origin/main` tip without discarding files or rewriting the
+  candidate commit.
+- The first administrative merge attempt for PR #29 was rejected because PR
+  #31 had advanced the strict base during #29's check run. No check or branch
+  policy was bypassed; #29 incorporated the new base and passed a wholly fresh
+  check epoch before merge.
+- The final-main CodeQL run succeeded with a non-failing annotation that manual
+  build mode cannot create an overlay-base database and therefore used a normal
+  full database.
+- A final optional rerun of the installed skill-creator validator could not
+  import host-side `PyYAML` in either discovered Python runtime. The same 23
+  unchanged skills had already passed that validator before commit, and the
+  repository's standard-library validator passed on every later exact commit
+  and in GitHub Actions; no dependency was added to mask the host-tool issue.
 
 ## Completion Evidence
 
 - Branch `codex/autonomous-skills-ci` derives from tracked-clean `main`/
   `origin/main` commit `c9e7cc0fbacf1096ce744690da5d9d21eb909708`.
 - `scripts/validate_automation.py` passed for all 23 repository skills and all
-  three workflows. The installed skill-creator validator passed 23/23; all
+  four workflows. The installed skill-creator validator passed 23/23 before
+  commit; all
   skill UI metadata and workflow YAML parsed successfully.
 - GitHub action dependencies are pinned to official Checkout v6.0.2 commit
   `de0fac2e4500dabe0009e67214ff5f5447ce83dd` and Upload Artifact v7.0.1
-  commit `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`.
+  commit `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`. CodeQL v4.37.6 is pinned to
+  `5595ccaf912efad79be6eef63a5619ff05969be3`.
 - Shell syntax, ShellCheck 0.11.0, Actionlint 1.7.12, and `git diff --check`
   passed after the three mechanical workflow-summary style corrections. Ruby
   YAML parsing and repository-specific workflow guardrails also passed.
@@ -2626,19 +2656,41 @@ live state exists to unwind.
   binding, checksum validity, the four-file non-executable allowlist,
   executable exclusion, and dirty-tree, existing-output, and stale-marker
   refusal.
-- Documentation audit found zero placeholder hits. All 442 safety-term hits and
-  the 17 changed-line hits were reviewed as intentional safety/authorization
+- PR #30 merged at `1a965a877c626ae7387eacde23585abe98841b50`;
+  PR #29 merged at final automation implementation commit
+  `6325a8b2e8356464b661de3f32c8d4816149ea9a` after all six checks passed on its
+  exact head.
+- Final-main TradeBot Validation run `31677158897` passed governance, required
+  GCC `validate`, Clang, and ASan/UBSan jobs. CodeQL run `31677158892` passed.
+  Manually dispatched deep-validation run `31677196914` passed its Linux
+  ASan/UBSan build and sequential 7/7 CTest suite.
+- Manually dispatched delivery run `31677200037` built exact commit
+  `6325a8b2e8356464b661de3f32c8d4816149ea9a`, passed the sequential 7/7 suite,
+  and uploaded artifact `tradebot-offline-evidence-6325a8b2e835` (artifact ID
+  `9172004644`, archive digest
+  `sha256:32575bc8cdfa745ed2a315a99aaed2e5cad4712c8999ee6c0f9684d1343a0063`,
+  expiry 2026-08-27). The downloaded archive contained only
+  `CTEST_RESULTS.log`, `LICENSE`, `MANIFEST.txt`, and `SHA256SUMS`; checksum
+  verification passed. The manifest SHA-256 is
+  `eed5d3e02cd3716806018205e2917cb69e02c9df4afc62fd4d9bcfae5b7e5194`,
+  and the checksum-list SHA-256 is
+  `4c5ba29e4c8d09b0b1f91ef2057078d7f13265ce795220d2375c74e46e637878`.
+- Dependabot run `31677164938` succeeded and opened review-only PR #32 for an
+  Actions pin update; it did not auto-merge or alter `main`.
+- Documentation audit found zero placeholder hits. All 453 safety-term hits and
+  the three changed-line hits were reviewed as intentional safety/authorization
   language.
-- No C++ source, headers, tests, CMake, dependencies, credentials, provider
-  state, orders, risk limits, runtime modes, or live behavior changed. No
-  workflow was dispatched and no external upload, release, or deployment
-  occurred.
+- This plan changed no C++ source, headers, tests, CMake, C++ runtime dependency,
+  credentials, provider state, orders, risk limits, runtime modes, or live
+  behavior. The only external upload was the authorized short-lived
+  non-executable evidence artifact; no release or deployment occurred.
 
 ## Final Outcome
 
-Three bounded automation skills, hardened ordinary CI, scheduled sanitizer CI,
-and manual non-executable validation-evidence delivery are locally verified.
-The default live-capable executable is intentionally not distributed. Wade has
-authorized the remaining scoped Git/GitHub publication and merge sequence;
-executable publication, deployment, release, provider action, credential use,
+Complete. Three bounded automation skills, policy-governed GCC/Clang and
+sanitizer CI, scheduled deep validation, pinned CodeQL, review-only Dependabot,
+and manual non-executable validation-evidence delivery are merged and verified
+on final implementation commit `6325a8b2e8356464b661de3f32c8d4816149ea9a`.
+The default live-capable executable was intentionally not distributed.
+Executable publication, deployment, release, provider action, credential use,
 later-gate work, order action, risk change, and live action remain prohibited.
