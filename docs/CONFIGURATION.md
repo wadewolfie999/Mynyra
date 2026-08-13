@@ -148,6 +148,10 @@ Financial limit changes require operator approval.
 - Phase 18 default replay path: `data/historical/BTCUSDT-L2-1M.bin`.
 
 Generated outputs are ignored by Git unless intentionally versioned.
+`--resume <path>` accepts only canonical version-12 BACKTEST snapshots. PAPER
+and LIVE resume are rejected because external order lifecycle and reconciliation
+state is not yet restart-safe. Snapshot version migration is explicit; versions
+9 and 11 are not loaded automatically.
 
 ## Configuration Change Rules
 

@@ -73,6 +73,29 @@ public:
 
     PortfolioManager() = default;
 
+    struct PositionSnapshot {
+        Position position;
+        uint64_t entryTimestamp{0};
+        double entryFee{0.0};
+        std::string strategyId;
+    };
+
+    struct Snapshot {
+        double cash{STARTING_CASH};
+        std::vector<PositionSnapshot> positions;
+        double unrealizedPnL{0.0};
+        double totalEquity{STARTING_CASH};
+        double maxEquity{STARTING_CASH};
+        double currentDrawdown{0.0};
+        double maxDrawdown{0.0};
+        int tradeCount{0};
+        double totalFeesPaid{0.0};
+        std::vector<TradeRecord> tradeLog;
+        int roundTripCount{0};
+        std::list<OrderRecord> pendingOrders;
+        uint64_t nextOrderId{1};
+    };
+
     // Open a long position for `symbol` using all available cash at the net fill price.
     // `capitalToCommit` specifies how much cash to allocate to this position.
     // Pass 0.0 (default) to allocate ALL remaining cash (single-asset behaviour).
@@ -137,30 +160,16 @@ public:
         double high, double low, double close,
         uint64_t timestamp) noexcept;
 
-    // Read-only access to the pending order queue (for serialisation).
-    const std::list<OrderRecord>& getPendingOrders() const noexcept;
-
-    // Restore pending orders from a snapshot (used by --resume path).
-    void restorePendingOrders(const std::list<OrderRecord>& orders) noexcept;
-
-    // ── Phase 9: Bulk state restore (used by StateSerializer::loadSnapshot) ──
-    // Atomically replaces cash, open positions, and accounting accumulators
-    // from a serialised snapshot.  `positions` is a vector of tuples:
-    //   (symbol, quantity, entryPrice, entryTimestamp, entryFee)
-    void restoreState(
-        double cash,
-        const std::vector<std::tuple<std::string,double,double,uint64_t,double>>& positions,
-        double totalFeesPaid,
-        double maxEquity,
-        double maxDrawdown,
-        int    tradeCount,
-        int    roundTripCount) noexcept;
-
     int    getTradeCount()       const noexcept;
     int    getRoundTripCount()   const noexcept; // completed buy+sell pairs
 
     // Access the full closed-trade log.
     const std::vector<TradeRecord>& getTradeLog() const noexcept;
+
+    // Complete, single persistence contract. Supersedes the incomplete Phase-9
+    // tuple and pending-order restore helpers.
+    Snapshot snapshotState() const;
+    void restoreState(const Snapshot& snapshot);
 
 private:
     // Per-symbol open-position state (entry metadata lives alongside Position).

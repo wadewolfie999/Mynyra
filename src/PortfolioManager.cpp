@@ -2,7 +2,6 @@
 #include <algorithm>
 #include <stdexcept>
 #include <cmath>
-#include <tuple>
 
 void PortfolioManager::openLong(const std::string& symbol, double netPrice,
                                 uint64_t timestamp, double fee,
@@ -246,6 +245,63 @@ const std::vector<TradeRecord>& PortfolioManager::getTradeLog() const noexcept
     return m_tradeLog;
 }
 
+PortfolioManager::Snapshot PortfolioManager::snapshotState() const
+{
+    Snapshot snapshot;
+    snapshot.cash = m_cash;
+    snapshot.unrealizedPnL = m_unrealizedPnL;
+    snapshot.totalEquity = m_totalEquity;
+    snapshot.maxEquity = m_maxEquity;
+    snapshot.currentDrawdown = m_currentDrawdown;
+    snapshot.maxDrawdown = m_maxDrawdown;
+    snapshot.tradeCount = m_tradeCount;
+    snapshot.totalFeesPaid = m_totalFeesPaid;
+    snapshot.tradeLog = m_tradeLog;
+    snapshot.roundTripCount = m_roundTripCount;
+    snapshot.pendingOrders = m_pendingOrders;
+    snapshot.nextOrderId = m_nextOrderId;
+    snapshot.positions.reserve(m_positions.size());
+    for (const auto& [symbol, state] : m_positions) {
+        if (!state.m_hasPosition) { continue; }
+        snapshot.positions.push_back({state.m_position, state.m_entryTimestamp,
+                                      state.m_entryFee, state.m_strategyId});
+    }
+    std::sort(snapshot.positions.begin(), snapshot.positions.end(),
+              [](const PositionSnapshot& lhs, const PositionSnapshot& rhs) {
+                  return lhs.position.symbol < rhs.position.symbol;
+              });
+    return snapshot;
+}
+
+void PortfolioManager::restoreState(const Snapshot& snapshot)
+{
+    std::unordered_map<std::string, PositionState> positions;
+    positions.reserve(snapshot.positions.size());
+    for (const auto& persisted : snapshot.positions) {
+        PositionState state;
+        state.m_position = persisted.position;
+        state.m_hasPosition = true;
+        state.m_entryTimestamp = persisted.entryTimestamp;
+        state.m_entryFee = persisted.entryFee;
+        state.m_strategyId = persisted.strategyId;
+        positions.emplace(persisted.position.symbol, std::move(state));
+    }
+
+    m_cash = snapshot.cash;
+    m_positions = std::move(positions);
+    m_unrealizedPnL = snapshot.unrealizedPnL;
+    m_totalEquity = snapshot.totalEquity;
+    m_maxEquity = snapshot.maxEquity;
+    m_currentDrawdown = snapshot.currentDrawdown;
+    m_maxDrawdown = snapshot.maxDrawdown;
+    m_tradeCount = snapshot.tradeCount;
+    m_totalFeesPaid = snapshot.totalFeesPaid;
+    m_tradeLog = snapshot.tradeLog;
+    m_roundTripCount = snapshot.roundTripCount;
+    m_pendingOrders = snapshot.pendingOrders;
+    m_nextOrderId = snapshot.nextOrderId;
+}
+
 // ── Phase 9: Pending Order Queue ─────────────────────────────────────────────
 
 uint64_t PortfolioManager::placePendingOrder(const OrderRecord& order) noexcept
@@ -352,60 +408,4 @@ std::vector<OrderFillResult> PortfolioManager::evaluatePendingOrders(
         }
     }
     return fills;
-}
-
-const std::list<OrderRecord>& PortfolioManager::getPendingOrders() const noexcept
-{
-    return m_pendingOrders;
-}
-
-void PortfolioManager::restorePendingOrders(const std::list<OrderRecord>& orders) noexcept
-{
-    m_pendingOrders = orders;
-    // Reset counter to max existing id + 1 to avoid collisions.
-    uint64_t maxId = 0;
-    for (const auto& ord : m_pendingOrders) {
-        if (ord.orderId > maxId) { maxId = ord.orderId; }
-    }
-    m_nextOrderId = maxId + 1;
-}
-
-// ── Phase 9: Bulk state restore ───────────────────────────────────────────────
-
-void PortfolioManager::restoreState(
-    double cash,
-    const std::vector<std::tuple<std::string,double,double,uint64_t,double>>& posVec,
-    double totalFeesPaid,
-    double maxEquity,
-    double maxDrawdown,
-    int    tradeCount,
-    int    roundTripCount) noexcept
-{
-    // Reset all mutable state.
-    m_cash            = cash;
-    m_positions.clear();
-    m_unrealizedPnL   = 0.0;
-    m_totalFeesPaid   = totalFeesPaid;
-    m_maxEquity       = maxEquity;
-    m_maxDrawdown     = maxDrawdown;
-    m_tradeCount      = tradeCount;
-    m_roundTripCount  = roundTripCount;
-    m_currentDrawdown = (maxEquity > 0.0)
-                        ? (maxEquity - (cash)) / maxEquity   // conservative; updatePnL will refine
-                        : 0.0;
-
-    // Reconstruct open positions.
-    double mtmSum = 0.0;
-    for (const auto& [sym, qty, entryPrice, entryTs, entryFee] : posVec) {
-        PositionState& st      = m_positions[sym];
-        st.m_hasPosition       = true;
-        st.m_position.symbol   = sym;
-        st.m_position.quantity = qty;
-        st.m_position.entryPrice = entryPrice;
-        st.m_position.isLong   = true;
-        st.m_entryTimestamp    = entryTs;
-        st.m_entryFee          = entryFee;
-        mtmSum                += qty * entryPrice;
-    }
-    m_totalEquity = m_cash + mtmSum;
 }

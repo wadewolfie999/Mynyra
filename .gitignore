@@ -35,9 +35,16 @@ config/local/
 # Testing
 Testing/
 
-# Benchmark/replay artifacts
-*.bin
-*.csv
+# Generated state, market-data caches, reports, and operator evidence.
+# Intentional fixtures elsewhere (for example data/samples/*.csv) remain
+# visible to source control.
+data/results/
+data/archive/
+data/historical/
+output/
+handoff/
+handoffs/
+artifacts/
 
 # IDE/editor
 .vscode/

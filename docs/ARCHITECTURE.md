@@ -21,8 +21,8 @@ The workstream map is a planning/governance artifact only. It does not authorize
 `REPOSITORY_REMEDIATION_PROGRAM.md` defines the sole current cross-cutting
 implementation focus. It does not alter the intended component map below; it
 records that the observed implementation does not yet uphold all of these
-boundaries coherently. WP-0 is approved and current; WP-1 is approved and
-dependency-queued; WP-2 through WP-8 remain Planned / NO-GO except for
+boundaries coherently. WP-0 is merged and accepted; WP-1 is approved and
+current; WP-2 through WP-8 remain Planned / NO-GO except for
 WP-7/WP-8 closure slices integrated into WP-0 and WP-1.
 
 The repository must not advance provider, feature, phase, research,
@@ -96,7 +96,9 @@ flowchart LR
 8. `ExecutionEngine` simulates fills only when no gateway is bound. Once a
    gateway is bound, an unavailable gateway rejects execution rather than
    falling back to a local fill.
-9. Analytics and state snapshots write generated outputs.
+9. Analytics writes generated outputs. BACKTEST checkpoints write canonical,
+   checksummed version-12 snapshots by atomic replacement; any checkpoint
+   failure stops processing.
 
 ## Execution Modes
 
@@ -245,7 +247,14 @@ Strategies emit signals and should not directly mutate portfolio state, bypass r
 
 ## Analytics And Persistence Boundary
 
-`AnalyticsEngine`, `MetricsAggregator`, `LocalMetricsExporter`, and `StateSerializer` write generated results, latency reports, metrics, and snapshots. Generated outputs belong under ignored paths unless intentionally versioned.
+`AnalyticsEngine`, `MetricsAggregator`, `LocalMetricsExporter`, and
+`StateSerializer` write generated results, latency reports, metrics, and
+snapshots. `StateSerializer` owns a complete BACKTEST restart contract for
+portfolio/accounting, pending-order identity, risk, regime, and allocation
+state. It validates into detached state before a single commit to the runtime
+objects. PAPER/LIVE resume remains fail-closed until WP-4 supplies a unified,
+reconcilable broker lifecycle. Generated outputs belong under exact ignored
+directories unless intentionally versioned.
 
 ## Testing Architecture
 

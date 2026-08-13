@@ -57,12 +57,28 @@ If branch, status, or commits differ from handoff:
 
 ## Generated Artifact Containment
 
-- `build/` is directory-ignored. Generated CSV/binary files under
-  `data/results/` and `data/archive/` are extension-ignored, but other
-  filenames may not be. Confirm exact paths with `git check-ignore -v` and
-  `git status --short`; WP-1 owns permanent containment correction.
+- `build/`, `data/results/`, `data/archive/`, `data/historical/`, `output/`,
+  `artifacts/`, `handoff/`, and `handoffs/` are directory-ignored. CI asserts
+  these rules and verifies that intentional CSV/binary fixtures remain visible.
 - Do not stage generated outputs unless approved.
 - Do not delete generated outputs that may be needed as evidence for an active plan without approval.
+
+## Snapshot Or Checkpoint Failure
+
+- Version-12 snapshots are BACKTEST-only. PAPER/LIVE resume is rejected before
+  file opening, adapter construction, credential access, or broker work because
+  broker lifecycle and reconciliation recovery belongs to WP-4.
+- Snapshot load validates the complete envelope, checksum, schema, version,
+  payload, and cross-field invariants before mutating portfolio, risk, regime,
+  allocator, or checkpoint time.
+- Unsupported older versions fail with a migration-required diagnostic; no
+  implicit migration is attempted.
+- A nonempty steady-clock API-error window is not portable across restart and
+  makes checkpointing fail. A durable external halt and latency close-only
+  state remain conservative and round-trip exactly.
+- Checkpoints write a same-directory temporary file and rename it only after a
+  complete flush. A failed write retains the previous snapshot and stops the
+  event loop with an actionable error.
 
 ## Credential Or Secret Incident
 

@@ -7,6 +7,7 @@
 #include "ExecutionEngine.hpp"
 #include "PortfolioManager.hpp"
 #include <cstdint>
+#include <string>
 #include <vector>
 
 class AnalyticsEngine;
@@ -31,7 +32,8 @@ public:
 
     // Phase 9 serializer (legacy save, no regime state).
     void setStateSerializer(StateSerializer* serializer,
-                            uint64_t checkpointIntervalSecs = 86400) noexcept;
+                            uint64_t checkpointIntervalSecs = 86400,
+                            std::string checkpointPath = "data/results/snapshot.json") noexcept;
 
     // Phase 11: inject RegimeDetector so EventLoop drives regime updates and
     // uses the full Phase 11 saveSnapshot overload.
@@ -62,4 +64,5 @@ private:
     StateSerializer* m_serializer{nullptr};
     uint64_t         m_checkpointIntervalSec{0};
     uint64_t         m_lastCheckpointTs{0};
+    std::string      m_checkpointPath{"data/results/snapshot.json"};
 };

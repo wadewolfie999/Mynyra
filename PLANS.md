@@ -226,8 +226,8 @@ older plan must first map to WP-0 through WP-8 and receive new exact authority.
 # Plan: Repository Cohesion Remediation Program
 
 - Plan ID: `PLAN-20260813-repository-cohesion-remediation`
-- Status: In Progress — foundational governance approved; WP-0 approved as the
-  current package; WP-1 approved and queued behind accepted WP-0 evidence;
+- Status: In Progress — foundational governance approved; WP-0 merged and
+  accepted; WP-1 approved as the current package;
   WP-2 through WP-8 Planned / NO-GO
 - Owner: Wade
 - Implementer: separately assigned per package
@@ -433,8 +433,8 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
   available locally. Acceptance was pending at that candidate epoch.
 - 2026-08-14: Wade clarified that the intended objective is strengthening the
   infrastructure foundation, not creating a preliminary gate, and approved the
-  foundational governance plus the WP-0 and WP-1 handoff boundaries. WP-0 is
-  current; WP-1 remains dependency-queued behind accepted WP-0 evidence.
+  foundational governance plus the WP-0 and WP-1 handoff boundaries. This was
+  the authority state before WP-0 execution and is retained as history.
 - 2026-08-14: Wade authorized the complete stage, commit, push, PR, and merge
   sequence for WP-0 and then WP-1. External/provider actions remain excluded.
 - 2026-08-14: WP-0 implementation started on
@@ -460,6 +460,25 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
   `wp0_*` tests in the default-off build plus all nine sequential tests in an
   isolated `TRADEBOT_ENABLE_LIVE_RUNTIME=ON` build. The enabled executable was
   not invoked with its runtime unlock and performed no provider activity.
+- 2026-08-14: WP-0 PR #35 passed all local and GitHub review/check gates and
+  merged at `eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 dependency entry
+  was therefore satisfied and implementation began on
+  `codex/wp1-persistence-containment`.
+- 2026-08-14: The WP-1 working-tree candidate replaced indirect/incomplete
+  state reconstruction with explicit portfolio/risk snapshots, a canonical
+  checksummed version-12 BACKTEST envelope, validate-before-mutate loading,
+  atomic checkpoint replacement, actionable checkpoint failure, fail-closed
+  PAPER/LIVE resume, exact generated-directory ignores, fixture visibility,
+  and focused persistence/startup/policy tests.
+- 2026-08-14: The final WP-1 working-tree candidate passed all 12 sequential
+  CTest cases in the default-off RelWithDebInfo path through
+  `./scripts/ci_validate.sh build/wp1-candidate-final` and all 12 cases under
+  ASan/UBSan through
+  `./scripts/ci_deep_validate.sh build/wp1-candidate-deep-final`. Both wrappers
+  also validated 23 skills and four offline workflows. The builds retained the
+  two known unused-variable warnings in `AsyncNetworkClient.cpp` and
+  `RiskEngine.cpp`; no provider, credential, order, workflow-dispatch, release,
+  or deployment action occurred.
 
 ## Deviations
 
@@ -469,17 +488,16 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
 
 - Foundational governance verification and Wade acceptance: complete in merged
   PR #34 at commit `edf2a443d209cfc40e7d7269af43af2e72b3a617`.
-- WP-0: working-tree implementation and verification complete; exact-commit,
-  PR, merge, and acceptance evidence pending.
-- WP-1: approved but inactive until WP-0 acceptance; implementation evidence
+- WP-0: complete and accepted through merged PR #35 at
+  `eef91ed4abf35bd09462deb1a55a0c72d95edea7`.
+- WP-1: implementation active; exact-commit, PR, merge, and acceptance evidence
   pending.
 - WP-2 through WP-8: implementation evidence pending and not authorized.
 
 ## Final Outcome
 
-Open. The focus lock and foundational governance are approved. WP-0 is the
-current authorized package. WP-1 is authorized but must not activate until
-WP-0, its WP-7 evidence, and its WP-8 synchronization are accepted. WP-2
+Open. The focus lock and foundational governance are approved. WP-0 is merged
+and accepted. WP-1 is the current authorized package. WP-2
 through WP-8 remain Planned / NO-GO.
 
 # Plan: Complete Gate 5 OAuth Correlation Controls

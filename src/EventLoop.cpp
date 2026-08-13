@@ -3,6 +3,8 @@
 #include "StateSerializer.hpp"
 #include <iostream>
 #include <iomanip>
+#include <stdexcept>
+#include <utility>
 
 // ── Constructors ──────────────────────────────────────────────────────────────
 
@@ -34,10 +36,12 @@ void EventLoop::setAnalyticsEngine(AnalyticsEngine* analytics) noexcept
 }
 
 void EventLoop::setStateSerializer(StateSerializer* serializer,
-                                    uint64_t checkpointIntervalSecs) noexcept
+                                    uint64_t checkpointIntervalSecs,
+                                    std::string checkpointPath) noexcept
 {
     m_serializer            = serializer;
     m_checkpointIntervalSec = checkpointIntervalSecs;
+    m_checkpointPath        = std::move(checkpointPath);
 }
 
 void EventLoop::setRegimeDetector(RegimeDetector* rd) noexcept
@@ -154,13 +158,20 @@ void EventLoop::processCandle(const MarketCandle& candle)
             m_lastCheckpointTs = candle.epochTimestamp;
         } else if (candle.epochTimestamp - m_lastCheckpointTs
                    >= m_checkpointIntervalSec) {
+            bool saved = false;
             if (m_regimeDetector != nullptr && m_allocator != nullptr) {
-                m_serializer->saveSnapshot(m_portfolio, m_riskEngine,
-                                           *m_regimeDetector, *m_allocator,
-                                           candle.epochTimestamp);
+                saved = m_serializer->saveSnapshot(m_portfolio, m_riskEngine,
+                                                   *m_regimeDetector, *m_allocator,
+                                                   candle.epochTimestamp,
+                                                   m_checkpointPath);
             } else {
-                m_serializer->saveSnapshot(m_portfolio, m_riskEngine,
-                                           candle.epochTimestamp);
+                saved = m_serializer->saveSnapshot(m_portfolio, m_riskEngine,
+                                                   candle.epochTimestamp,
+                                                   m_checkpointPath);
+            }
+            if (!saved) {
+                throw std::runtime_error("checkpoint failed: " +
+                                         m_serializer->lastError());
             }
             m_lastCheckpointTs = candle.epochTimestamp;
         }

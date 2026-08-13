@@ -19,7 +19,7 @@ feature work, research, optimization, documentation-platform selection, and
 deployment work while the approved infrastructure-foundation packages are
 executed.
 
-WP-0 is approved and current; WP-1 is approved and queued behind WP-0; WP-2
+WP-0 is merged and accepted; WP-1 is approved and current; WP-2
 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices integrated
 into WP-0 and WP-1. Any workstream proposal must map to one of those packages
 or stop for Wade's explicit scope revision.

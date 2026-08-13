@@ -5,8 +5,8 @@
 - Purpose: define the sole current remediation focus, its nine work packages,
   their dependencies, entry and exit gates, evidence requirements, and safety
   boundaries.
-- Status: focus lock and foundational governance approved; WP-0 approved as
-  the current package; WP-1 approved and queued behind accepted WP-0 evidence;
+- Status: focus lock and foundational governance approved; WP-0 merged and
+  accepted; WP-1 approved as the current package;
   WP-2 through WP-8 Planned / NO-GO.
 - Owner and review authority: Wade.
 - Program plan: `PLAN-20260813-repository-cohesion-remediation` in
@@ -92,8 +92,8 @@ The approved foundation establishes:
 
 | Package | Name | Baseline severity | Status | Primary dependencies |
 | --- | --- | --- | --- | --- |
-| WP-0 | Live containment | Critical | Approved — current | Approved program foundation |
-| WP-1 | Persistence and generated-state containment | Critical | Approved — queued | Accepted WP-0 evidence |
+| WP-0 | Live containment | Critical | Complete — merged and accepted | Approved program foundation |
+| WP-1 | Persistence and generated-state containment | Critical | Approved — current | Accepted WP-0 evidence |
 | WP-2 | Accounting and quantity correctness | High | Planned / NO-GO | WP-1 |
 | WP-3 | Risk-state repair | High | Planned / NO-GO | WP-2 |
 | WP-4 | Unified order lifecycle | High | Planned / NO-GO | WP-0 through WP-3 |
