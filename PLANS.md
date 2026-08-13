@@ -2412,6 +2412,10 @@ validation, and exact-artifact manifests produced by GitHub Actions.
   concurrency control, deterministic build settings, logs, and job summaries.
 - Add scheduled sanitizer validation and a manual, test-gated evidence-delivery
   workflow with SHA-256 provenance but no executable payload.
+- Integrate Wade-requested PR #29 with a tracked offline policy checker,
+  required GCC plus supplemental Clang validation, per-PR sanitizers, CodeQL,
+  and review-only monthly Dependabot proposals while preserving immutable
+  action pins and the non-executable delivery boundary.
 - Synchronize documentation and validate skills, workflows, scripts, and the
   default C++ build/test path.
 
@@ -2458,9 +2462,13 @@ Actions CI/CD definitions, local edits, and offline verification. On
 stage only this plan's 25-path allowlist, commit, push the scoped branch, open
 and update its PR, dispatch and rerun these task-specific workflows as needed,
 make bounded corrections supported by new CI evidence, and merge after all
-required checks pass. This does not authorize executable release, deployment,
-provider execution, credential use, later gates, orders, financial changes, or
-live use. Stop after the merged `main` state and workflow evidence are verified.
+required checks pass. Wade then explicitly added PR #29 to the merge scope and
+authorized the remaining finalization limitations. Corrections to #29 may
+preserve its offline policy, compiler, sanitizer, CodeQL, and Dependabot value,
+but may not distribute the live-capable executable. This does not authorize
+executable release, deployment, provider execution, credential use, later
+gates, orders, financial changes, or live use. Stop after the merged `main`
+state and workflow evidence are verified.
 
 ## Files Expected to Change
 
@@ -2470,6 +2478,9 @@ live use. Stop after the merged `main` state and workflow evidence are verified.
 - `.github/workflows/validation.yml`
 - `.github/workflows/deep-validation.yml`
 - `.github/workflows/offline-artifact-delivery.yml`
+- `.github/workflows/codeql.yml`
+- `.github/dependabot.yml`
+- `scripts/ci_policy_checks.sh`
 - `scripts/`, `docs/`, `CONTRIBUTING.md`, and this plan.
 
 ## Implementation Steps
@@ -2483,6 +2494,9 @@ live use. Stop after the merged `main` state and workflow evidence are verified.
    index documentation.
 5. Validate skills and YAML, run shell syntax checks, execute the helpers, run
    the default build/full CTest suite, and review diff/hygiene evidence.
+6. Reconcile and merge PR #29 after #30, retaining its additional offline
+   assurance while removing mutable action tags and executable artifact
+   delivery.
 
 ## Verification
 
@@ -2558,6 +2572,12 @@ live state exists to unwind.
   repository's required legacy `validate` status context. The job key and
   visible name were restored to `validate`; governance remains a separate
   required-by-workflow job and no check, permission, or assertion was removed.
+- 2026-08-13: PR #30 merged as `1a965a877c626ae7387eacde23585abe98841b50`.
+  Wade added PR #29 to the completion scope. Its CodeQL, GCC/Clang, sanitizer,
+  Dependabot, and offline-policy additions were retained; mutable action tags
+  were replaced with reviewed full SHAs, the required `validate` context was
+  preserved, and its executable release-candidate workflow was removed in
+  favor of #30's non-executable exact-commit evidence delivery.
 
 ## Deviations
 

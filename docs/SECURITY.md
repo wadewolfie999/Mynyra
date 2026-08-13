@@ -180,6 +180,23 @@ New dependencies must be reviewed for:
 
 See `DEPENDENCY_POLICY.md`.
 
+## GitHub Actions
+
+- CI uses least-privilege workflow permissions and read-only checkout
+  credentials.
+- Pull-request workflows do not read repository secrets.
+- The tracked policy checker rejects credential-like tracked paths,
+  private-key material, provider-capable workflow steps, enabled Gate 6/Gate 7
+  proof targets, and a non-`BACKTEST` default.
+- Normal CI and evidence packaging must remain provider-free: no
+  OAuth, browser flow, Keychain access, account access, market-data request,
+  reconnect, order, or live endpoint operation.
+- CodeQL may write security-analysis results only; it has no repository-content
+  write permission.
+- Workflow evidence must exclude hidden files and contain only the declared
+  CTest log, license, manifest, and checksum list; the live-capable executable
+  must not be uploaded.
+
 ## Shell-Script Safety
 
 - Tracked validation, sanitizer, and offline candidate-packaging shell scripts

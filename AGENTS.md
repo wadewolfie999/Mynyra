@@ -134,11 +134,13 @@ Codex and other repository-side agents must not:
 - Python runtime components: none. A standard-library-only automation validator
   is tracked under `scripts/`.
 - Julia components: none tracked at the time this contract was created.
-- Scripts/tooling: tracked local wrappers, offline CI/sanitizer helpers,
-  skill/workflow guardrails, and non-executable exact-build evidence packaging exist under
-  `scripts/`, with `.githooks/pre-push` and three read-only GitHub Actions
-  workflows under `.github/workflows/`; CMake remains the underlying build and
-  test entrypoint.
+- Scripts/tooling: tracked local wrappers, offline CI/sanitizer helpers, an
+  offline policy checker, skill/workflow guardrails, and non-executable
+  exact-build evidence packaging exist under `scripts/`, with
+  `.githooks/pre-push` and four GitHub Actions workflows under
+  `.github/workflows/`. Validation and evidence delivery retain read-only
+  repository permissions; CodeQL adds only `security-events: write`. CMake
+  remains the underlying build and test entrypoint.
 
 ## Verified Commands
 
@@ -182,6 +184,12 @@ Validation wrapper test:
 
 ```sh
 ./scripts/test.sh
+```
+
+Offline CI policy:
+
+```sh
+./scripts/ci_policy_checks.sh
 ```
 
 Validate repository skills and workflow safety guardrails:

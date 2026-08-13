@@ -70,6 +70,12 @@ Full test suite:
 ctest --test-dir build --output-on-failure
 ```
 
+Offline policy check:
+
+```sh
+./scripts/ci_policy_checks.sh
+```
+
 Targeted test:
 
 ```sh
@@ -83,6 +89,25 @@ build/apply_bbo_microbench 10000
 ```
 
 `throughput_bench` and `phase18_burnin` write generated CSVs under `data/results/`.
+
+## Automated Validation
+
+Pull requests and pushes to `main` run:
+
+- repository and workflow boundary checks;
+- the default-disabled C++ build and full CTest suite with GCC and Clang;
+- the default core under ASan and UBSan;
+- CodeQL C++ security analysis.
+
+The workflows use non-persisted checkout credentials and least-privilege
+permissions; only CodeQL can write security-analysis results. They do not
+enable Gate 6 or Gate 7 proof targets, access repository secrets, contact
+provider endpoints, perform OAuth, or execute orders.
+
+`Offline Artifact Delivery` is manually dispatched and uploads only a CTest
+log, license, manifest, and checksums. It deliberately excludes the
+live-capable executable and does not create a release, deploy software, enable
+a runtime mode, or authorize external/provider execution.
 
 ## Formatting And Linting
 

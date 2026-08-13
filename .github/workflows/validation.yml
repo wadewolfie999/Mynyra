@@ -2,6 +2,8 @@ name: TradeBot Validation
 
 on:
   push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
@@ -9,13 +11,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: validation-${{ github.event.pull_request.number || github.ref }}
+  group: validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   governance:
-    name: Automation governance
-    runs-on: ubuntu-latest
+    name: Automation and offline-policy governance
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Check out exact revision
@@ -29,11 +31,16 @@ jobs:
       - name: Validate shell syntax
         run: bash -n scripts/*.sh .githooks/pre-push
 
+      - name: Enforce offline policy
+        run: ./scripts/ci_policy_checks.sh
+
   validate:
     name: validate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      CC: gcc
+      CXX: g++
       TRADEBOT_BUILD_JOBS: "2"
     steps:
       - name: Check out exact revision
@@ -41,7 +48,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Configure, build, and test
+      - name: Configure, build, and test with GCC
         run: ./scripts/ci_validate.sh build/ci-validation
 
       - name: Upload failure diagnostics
@@ -59,9 +66,41 @@ jobs:
         if: always()
         run: |
           {
-            echo "### TradeBot default validation"
+            echo "### TradeBot required GCC validation"
             echo "- Provider proof targets: disabled"
             echo "- Credentials and repository secrets: unused"
             echo "- CTest execution: sequential"
             echo "- This result does not authorize release, deployment, orders, or live trading."
           } >> "$GITHUB_STEP_SUMMARY"
+
+  clang:
+    name: C++20 clang
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CC: clang
+      CXX: clang++
+      TRADEBOT_BUILD_JOBS: "2"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Configure, build, and test with Clang
+        run: ./scripts/ci_validate.sh build/ci-clang
+
+  sanitizers:
+    name: ASan and UBSan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      TRADEBOT_BUILD_JOBS: "2"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Configure, build, and test with sanitizers
+        run: ./scripts/ci_deep_validate.sh build/ci-sanitizers

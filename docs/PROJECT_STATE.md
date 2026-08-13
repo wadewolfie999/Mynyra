@@ -85,12 +85,14 @@ This document represents current state only. Historical execution belongs in Git
 - Repository governance and Codex skill-system maintenance.
 - Bounded offline repository automation under
   `PLAN-20260813-autonomous-skills-ci-delivery`: three new repo-local skills,
-  hardened ordinary CI, scheduled deep sanitizer validation, and manual
-  checksum-bearing non-executable validation-evidence delivery. Local
-  verification is complete and Wade authorized the scoped Git/GitHub
-  publication, workflow-validation, correction, and merge sequence on
-  2026-08-13. Executable publication, release, deployment, provider traffic,
-  credentials, orders, risk changes, and live use remain unauthorized.
+  hardened GCC/Clang CI, per-change and scheduled deep sanitizer validation,
+  offline-policy enforcement, CodeQL, review-only Dependabot proposals, and
+  manual checksum-bearing non-executable validation-evidence delivery. Local
+  verification completed for PR #30, which merged as `1a965a8`; Wade added PR
+  #29 to the authorized Git/GitHub publication, workflow-validation,
+  correction, and merge sequence on 2026-08-13. Executable publication,
+  release, deployment, provider traffic, credentials, orders, risk changes,
+  and live use remain unauthorized.
 - Gate 7 residual diagnostics and first-single-complete-BBO correction under
   `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`. The prior OAuth
   diagnostic plan is complete and is not an active implementation authority.
