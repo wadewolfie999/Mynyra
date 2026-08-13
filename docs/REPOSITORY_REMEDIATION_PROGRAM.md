@@ -158,6 +158,8 @@ credentials, network access, or order construction.
   credential lookup and network startup; it does not downgrade to simulation.
 - A disconnected or unready gateway cannot create a local fill that appears
   externally executed.
+- A protective trigger rejected by an unavailable gateway remains active for
+  reevaluation; it is removed only after execution accepts the triggered exit.
 - BACKTEST and simulated PAPER behavior remain explicit and regression-tested.
 - Full default CTest, targeted mode/gateway tests, sanitizer coverage, CI policy
   checks, and a no-provider side-effect review pass.

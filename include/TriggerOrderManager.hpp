@@ -51,6 +51,9 @@ public:
     bool cancel(uint64_t orderId) noexcept;
     bool hasOrder(uint64_t orderId) const noexcept;
 
+    // Emits triggered events without removing their orders. The caller must
+    // cancel an order only after execution accepts it, so a temporary routing
+    // failure leaves the protective trigger available for reevaluation.
     std::size_t evaluate(const std::string& symbol,
                          const L2OrderBook::BestQuote& bbo,
                          uint64_t timestamp,

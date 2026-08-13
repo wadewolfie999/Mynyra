@@ -30,11 +30,8 @@ void testModeParsingIsExplicit()
             "invalid mode silently downgraded instead of failing");
 }
 
-void testDefaultBuildAndRuntimeRemainContained()
+void testBuildAndRuntimeGatesCompose()
 {
-    require(!liveRuntimeBuildEnabled(),
-            "default WP-0 test configuration unexpectedly enables LIVE runtime");
-
     SystemConfig config;
     config.mode = SystemMode::LIVE;
     config.liveRuntimeUnlocked = false;
@@ -49,6 +46,13 @@ void testDefaultBuildAndRuntimeRemainContained()
 
     require(!config.canEnterLiveRuntime(),
             "LIVE runtime entered without both containment gates");
+
+    if (liveRuntimeBuildEnabled()) {
+        config.liveRuntimeUnlocked = true;
+        require(config.canEnterLiveRuntime(),
+                "opt-in build did not honor the separate runtime gate");
+        config.liveRuntimeUnlocked = false;
+    }
     require(!adapter.isConnected(),
             "LIVE adapter connected without runtime authorization");
     require(!integrity,
@@ -126,7 +130,7 @@ void testBacktestAndPaperRemainExplicit()
 int main()
 {
     testModeParsingIsExplicit();
-    testDefaultBuildAndRuntimeRemainContained();
+    testBuildAndRuntimeGatesCompose();
     testBoundUnavailableGatewayCannotCreateLocalFill();
     testLiveCannotApprovePaperAdapter();
     testBacktestAndPaperRemainExplicit();

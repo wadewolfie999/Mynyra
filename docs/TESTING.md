@@ -207,7 +207,8 @@ Every package in `REPOSITORY_REMEDIATION_PROGRAM.md` must have named tests that
 trace its acceptance criteria. Minimum package emphasis:
 
 - WP-0: mode/startup rejection, no credential/network side effect, unready
-  gateway fail-closed behavior, and explicit BACKTEST/PAPER regression.
+  gateway fail-closed behavior, protective-trigger retention, opt-in build gate
+  composition, and explicit BACKTEST/PAPER regression.
 - WP-1: zero/one/many-position round-trip, risk/lifecycle/dedup state,
   version/migration, corrupt/partial/atomic-write failure, and exact generated-
   path containment.

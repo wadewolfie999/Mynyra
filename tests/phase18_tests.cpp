@@ -1,8 +1,10 @@
+#include "BrokerGateway.hpp"
 #include "ExecutionEngine.hpp"
 #include "L2OrderBook.hpp"
 #include "LocalDataReplayAdapter.hpp"
 #include "PortfolioManager.hpp"
 #include "RiskEngine.hpp"
+#include "SystemConfig.hpp"
 #include "TriggerOrderManager.hpp"
 
 #include <filesystem>
@@ -115,6 +117,41 @@ void test_stoploss_and_oco_trigger_execution_path()
     require(!portfolio.hasPosition("BTCUSDT"), "position should be closed after stop-loss trigger");
 }
 
+void test_trigger_retained_when_bound_gateway_is_unavailable()
+{
+    SystemConfig config;
+    config.mode = SystemMode::LIVE;
+
+    PortfolioManager portfolio;
+    RiskEngine riskEngine(portfolio, 1, 0.0);
+    riskEngine.setSystemConfig(&config);
+    ExecutionEngine execution(portfolio, riskEngine, "BTCUSDT", 0.001, 5.0, 0.01);
+
+    require(execution.execute(Signal::BUY, 100.0, 1, "PHASE18_RETAIN"),
+            "failed to open local setup position");
+
+    TriggerOrderManager triggers(8);
+    execution.bindTriggerOrderManager(&triggers);
+    const uint64_t stopId = execution.placeStopLossTrigger(99.0, 0.0, "STOP_RETAIN");
+    require(stopId != 0, "failed to place retained stop-loss trigger");
+
+    BrokerGateway unavailableGateway(config, portfolio);
+    unavailableGateway.connect();
+    execution.bindBrokerGateway(&unavailableGateway);
+
+    L2OrderBook book(0.01, 128);
+    require(book.applyBbo(98.9, 1.0, 99.0, 1.0),
+            "failed to apply trigger BBO");
+    require(execution.processTriggerOrders(book, 2) == 0,
+            "unavailable gateway unexpectedly executed protective exit");
+    require(portfolio.hasPosition("BTCUSDT"),
+            "unavailable gateway mutated the open position");
+    require(triggers.hasOrder(stopId),
+            "failed protective exit was removed instead of retained");
+    require(triggers.activeOrderCount() == 1,
+            "retained protective trigger count changed unexpectedly");
+}
+
 } // namespace
 
 int main()
@@ -122,5 +159,6 @@ int main()
     test_local_replay_csv_and_binary_roundtrip();
     test_l2_orderbook_o1_bbo_updates();
     test_stoploss_and_oco_trigger_execution_path();
+    test_trigger_retained_when_bound_gateway_is_unavailable();
     return 0;
 }

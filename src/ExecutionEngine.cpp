@@ -500,6 +500,7 @@ int ExecutionEngine::processTriggerOrders(const L2OrderBook& orderBook,
         const Signal signal = ev.isBuy ? Signal::BUY : Signal::SELL;
         const std::string sid = ev.strategyId.empty() ? "TRIGGER" : ev.strategyId;
         if (execute(signal, ev.executionPrice, ev.timestamp, sid)) {
+            (void)m_triggerOrders->cancel(ev.orderId);
             ++executed;
         }
     }

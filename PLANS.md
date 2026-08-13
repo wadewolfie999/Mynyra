@@ -451,6 +451,15 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
   flow in `LiveDataAdapter`. WP-0 removed credential ownership and provider-
   specific REST requests from that data adapter instead of suppressing the finding;
   CI policy now preserves the boundary. Exact-commit evidence must be rerun.
+- 2026-08-14: PR #35 review also identified protective-trigger loss on an
+  unavailable gateway and an unconditional default-build assertion. The
+  candidate now retains a triggered order until execution accepts it and lets
+  the containment suite validate both default-off and explicitly enabled build
+  configurations without performing provider activity.
+- 2026-08-14: The review-fix candidate passed targeted `phase18_tests` and
+  `wp0_*` tests in the default-off build plus all nine sequential tests in an
+  isolated `TRADEBOT_ENABLE_LIVE_RUNTIME=ON` build. The enabled executable was
+  not invoked with its runtime unlock and performed no provider activity.
 
 ## Deviations
 
