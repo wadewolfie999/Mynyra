@@ -153,6 +153,22 @@ ports, local certificate authorities, temporary paths, processes, and other
 shared resources are proven isolated. Preserve and report any initial
 contention failure before the passing sequential rerun.
 
+## Repository Automation
+
+- Run `python3 scripts/validate_automation.py` after changing any repository
+  skill or GitHub Actions workflow.
+- Run `./scripts/ci_validate.sh build/ci-validation` to reproduce the ordinary
+  GitHub Actions path locally. It forces Gate 6 and Gate 7 OFF and executes the
+  full default CTest suite sequentially.
+- Use `./scripts/ci_deep_validate.sh build/ci-deep-validation` for the default
+  ASan/UBSan path used by the scheduled deep workflow.
+- Treat workflow dispatch, rerun, artifact upload, release, deployment, and
+  live use as separate operator-approved actions.
+- The manual artifact-delivery workflow uploads a short-lived candidate with
+  an exact-commit manifest, CTest log, and checksums. It deliberately excludes
+  the live-capable executable; it does not create a release, deploy, connect to
+  a provider, or authorize orders or live trading.
+
 ## Security-Sensitive Changes
 
 Security-sensitive changes include credentials, `.env` handling, network clients, TLS, API signing, shell commands, logging, dependency changes, and remote services.

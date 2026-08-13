@@ -21,6 +21,11 @@
   their license at pinned upstream revision
   `3fd8bddfbe0cfc2ecfda079623dc4e498af11e66`; configure-time SHA-256 checks
   fail closed before binding generation.
+- GitHub-hosted workflows use official `actions/checkout` v6.0.2 and
+  `actions/upload-artifact` v7.0.1 pinned to full release commit SHAs. They run
+  with read-only repository permission and no persisted checkout credentials.
+  Action upgrades require the same source, runtime, permission, and rollback
+  review as other tooling dependencies.
 
 ## Addition Rules
 
