@@ -9,12 +9,25 @@
 
 This architecture defines domains and coordination boundaries. It does not authorize source implementation, broker selection, broker connection, external broker calls, credential handling, sandbox orders, live-account setup or action, risk-limit changes, or live trading. Workstream activation never overrides phase gates, plans, ADRs, risk policy, or explicit operator approval requirements.
 
+## Current Cross-Workstream Focus
+
+The nine-package Repository Remediation Program in
+`REPOSITORY_REMEDIATION_PROGRAM.md` is the sole current implementation overlay
+across Workstreams I-VII. It does not replace this domain map or rewrite
+historical workstream status. It pauses provider continuation, new phase work,
+feature work, research, optimization, documentation-platform selection, and
+deployment work until the Landing Spot Gate and the relevant package gates are
+accepted.
+
+WP-0 through WP-8 remain Planned / NO-GO. Any workstream proposal must map to
+one of those packages or stop for Wade's explicit scope revision.
+
 ## Current Workstream Map
 
 | Workstream | Domain | Current position |
 | --- | --- | --- |
 | Workstream I — Broker-Neutral Execution Foundation | Deterministic broker-neutral contracts, lifecycle, execution/risk alignment, replay, persistence, and local simulation foundation. | Complete — Accepted through Phase 22. |
-| Workstream II — Broker Integration Program | FIBO/cTrader demo target, official Open API integration gates, failure semantics, and future broker-hosted validation/readiness paths. | Phase 23 selection complete; Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted by Wade on 2026-08-07; Gate 5.1 merged and accepted; PR #25 merged; Gate 6 execution accepted; Gate 7 incomplete at the latest `gate7_subscription_failed` transition after full XAUUSD metadata validation. Residual work is authorized offline; provider execution, Gate 8–9, and later remain blocked. |
+| Workstream II — Broker Integration Program | FIBO/cTrader demo target, official Open API integration gates, failure semantics, and future broker-hosted validation/readiness paths. | Historical Phase 23/Gate 1–7 evidence is preserved. Gate 7 remains incomplete at `gate7_subscription_failed`; continuation is paused by the remediation focus lock and must map to WP-6. Provider execution, Gate 8–9, and later remain blocked. |
 | Workstream III — Documentation & Knowledge Architecture | Documentation platform, information architecture, canonical knowledge, and maintenance workflows. | Parallel/future domain unless separately activated. |
 | Workstream IV — ML Optimization & Strategy Research | Reproducible offline optimization, ML-assisted research, and strategy evidence. | Parallel/future domain unless separately activated. |
 | Workstream V — Core Platform Enhancement | Broker-neutral core capability, reliability, maintainability, and performance improvements. | Parallel/future domain unless separately activated. |
@@ -69,6 +82,8 @@ Strategy 3 gate labels may be added later as a governance overlay. A full Kanban
 
 ## Professional Halting Point
 
-Stop after the Gate 7 residual offline implementation, verification, and
-incomplete handoff. Provider execution requires separate exact Wade approval;
-Gate 8–9, orders, and live actions remain outside current authorization.
+Stop after the verified Landing Spot Gate governance candidate and present it
+to Wade. After acceptance, the next allowed action is preparation/review of an
+exact WP-0 plan slice. Provider execution, package implementation, Gate 8–9,
+orders, risk-limit changes, deployment, and live actions remain outside current
+authorization.

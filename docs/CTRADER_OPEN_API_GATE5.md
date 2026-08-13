@@ -8,9 +8,11 @@
   separately authorized on 2026-08-10. Gate 7 implementation/offline
   validation passed. Historical processes stopped at Keychain, generic OAuth,
   and fixed callback-timeout boundaries. The latest authorized process reached
-  `gate7_subscription_failed` after full XAUUSD metadata validation. Residual
-  work is authorized offline; provider execution, Gate 8–9, and all trading
-  messages remain unauthorized.
+  `gate7_subscription_failed` after full XAUUSD metadata validation. That
+  residual authorization is now historical under the Repository Remediation
+  Program focus lock. Any continuation must map to WP-6 after predecessor
+  acceptance and receive new exact authorization; provider execution, Gate
+  8–9, and all trading messages remain unauthorized.
 - Plans: accepted design `PLAN-20260806-ctrader-open-api-gate5`; offline
   implementation `PLAN-20260809-gate5-oauth-correlation-controls`
 - Decision: ADR 0004
@@ -537,5 +539,6 @@ stopped at Keychain access; later processes stopped at generic OAuth failure and
 a fixed callback timeout. The latest process passed full canonical XAUUSD
 metadata validation and stopped at `gate7_subscription_failed`. No accepted
 subscription, quote, or timestamp evidence was produced. Residual diagnostics
-are authorized offline, while provider execution, Gates 8–9, order messages,
-and live trading remain unauthorized.
+were authorized for the completed historical slice. They are not current
+execution authority under the Repository Remediation Program. Provider
+execution, Gates 8–9, order messages, and live trading remain unauthorized.

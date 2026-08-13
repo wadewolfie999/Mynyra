@@ -5,11 +5,12 @@
 - Purpose: authoritative current-state summary for TradeBot.
 - Authority level: current-state evidence below active approved plans and above the roadmap; the project workstream map is defined in `WORKSTREAM_ARCHITECTURE.md`, and phase definitions and statuses are delegated to `ROADMAP.md`.
 - Audience: operator, maintainers, Codex, contributors, reviewers, and handoff recipients.
-- Last documentation/state audit: 2026-08-13 against authoritative merged
-  `main` through PR #29; the automation implementation merge commit is
-  `6325a8b2e8356464b661de3f32c8d4816149ea9a`.
-- Last CMake/CTest verification evidence: 2026-08-13 on final automation
-  implementation commit `6325a8b2e8356464b661de3f32c8d4816149ea9a`.
+- Last repository-wide diagnosis: 2026-08-13 against merged `main` commit
+  `7f89c597d3874e5c8782a49a31d42335c8bf1e17`; the diagnosis is the baseline
+  for the Repository Remediation Program, not proof of the current candidate
+  tree after later edits.
+- Last CMake/CTest verification evidence: 2026-08-13 diagnosis baseline at
+  commit `7f89c597d3874e5c8782a49a31d42335c8bf1e17`.
 - Codex execution/evidence governance is centralized in
   `CODEX_EXECUTION_EVIDENCE.md`; skills carry durable domain procedure and must
   resolve volatile branch, phase, gate, provider, and approval state at use
@@ -22,11 +23,40 @@ This document represents current state only. Historical execution belongs in Git
 - Repository root: `/Users/vaheedgorgeen/TradeBot`.
 - Branch, HEAD, and worktree values are runtime metadata. Inspect Git directly; historical snapshots are not current-state authority.
 - The merged tree contains Phase 19 revalidation history, infrastructure validation, approved Workstream I artifacts, accepted ADR 0003, and the TradeBot skill-system expansion.
-- Ignored artifacts observed: `build/`, `data/`, and `src/.DS_Store`.
+- Relevant ignored artifacts observed at the diagnostic baseline included
+  `.DS_Store`, `.env.example2` (not opened), `build/`, `data/`, `handoffs/`,
+  `output/`, `src/.DS_Store`, and `tmp/`. Ignore status alone is not evidence
+  that every generated filename is contained.
+
+## Current Repository Remediation Program
+
+Wade has locked current implementation focus to the nine work packages in
+`REPOSITORY_REMEDIATION_PROGRAM.md`, governed by
+`PLAN-20260813-repository-cohesion-remediation`:
+
+- WP-0 Live containment.
+- WP-1 Persistence and generated-state containment.
+- WP-2 Accounting and quantity correctness.
+- WP-3 Risk-state repair.
+- WP-4 Unified order lifecycle.
+- WP-5 Runtime-mode and data contracts.
+- WP-6 Transport and provider integration.
+- WP-7 CI and observability.
+- WP-8 Authority synchronization.
+
+Current status: focus lock active; Landing Spot Gate governance candidate
+locally verified and awaiting Wade acceptance; every package implementation
+remains Planned / NO-GO. No older
+phase, workstream, plan, ADR, or provider-gate action is the current next action.
+Landing Spot acceptance authorizes only preparation/review of WP-0's exact
+slice; WP-0 implementation still requires a separate Wade GO.
 
 ## Current Roadmap State
 
-`WORKSTREAM_ARCHITECTURE.md` defines the current Workstreams I-VII project map; `ROADMAP.md` is the deterministic phase authority. Current summary:
+`WORKSTREAM_ARCHITECTURE.md` defines the Workstreams I-VII project map and
+`ROADMAP.md` remains the deterministic historical phase authority. The
+Repository Remediation Program is the current cross-cutting execution overlay.
+Historical summary:
 
 - Workstream I — Broker-Neutral Execution Foundation: Complete — Accepted through Phase 22.
 - Workstream II — Broker Integration Program: FIBO Group through cTrader is the
@@ -85,18 +115,16 @@ This document represents current state only. Historical execution belongs in Git
   Dependabot proposals, and manual checksum-bearing non-executable evidence
   delivery. Final-main ordinary validation, CodeQL, deep validation, and
   evidence delivery passed on commit `6325a8b2e8356464b661de3f32c8d4816149ea9a`.
-  Dependabot opened PR #32 for review without auto-merging it.
+  Dependabot later opened PR #32 without auto-merge; PR #32 was merged into the
+  diagnosis baseline commit
+  `7f89c597d3874e5c8782a49a31d42335c8bf1e17`.
 
 ## In-Progress Work
 
-- Repository governance and Codex skill-system maintenance.
-- Gate 7 residual diagnostics and first-single-complete-BBO correction under
-  `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`. The prior OAuth
-  diagnostic plan is complete and is not an active implementation authority.
-  The target remains default-disabled, macOS-only, and detached from production
-  runtime modes and order/risk paths. Offline implementation, final review, one
-  local commit, and exact-commit rebuild are authorized; provider execution
-  remains a separate exact Wade approval.
+- Governance-only Landing Spot Gate synchronization under
+  `PLAN-20260813-repository-cohesion-remediation`.
+- No source work package is in progress. WP-0 through WP-8 remain Planned /
+  NO-GO pending Landing Spot acceptance and package-specific authorization.
 
 ## Blocked Or Constrained Work
 
@@ -112,6 +140,9 @@ This document represents current state only. Historical execution belongs in Git
   Accepted subscription response, XAUUSD quote/timestamp proof, reconnect proof,
   every order operation, live accounts, and live trading remain Blocked /
   NO-GO.
+- Prior Gate 7 residual plans and execution authority are historical and do not
+  remain in the current action queue. Any future provider integration must map
+  to WP-6, satisfy predecessor packages, and receive new exact authorization.
 - Gates 1-3 now control protocol fit, numeric mapping, and pre-implementation
   baseline integrity. Homebrew Protobuf 35.1 is installed locally; the Gate 6
   opt-in build generates bindings only inside the build tree from SHA-256-
@@ -130,6 +161,15 @@ This document represents current state only. Historical execution belongs in Git
 
 ## Known Defects And Warnings
 
+- The repository-wide diagnosis classified the repository as operationally
+  unsafe for live use and identified the nine package problem areas now
+  controlled by `REPOSITORY_REMEDIATION_PROGRAM.md`.
+- `throughput_bench 100000` consumed 100,000 ticks but reported 260 fills; a
+  261-tick run also reported 260 fills. This is a correctness finding for WP-2,
+  not a performance claim.
+- Generated-state exclusions are extension-based for CSV/binary files rather
+  than complete directory containment; a generated JSON snapshot can be
+  unignored. WP-1 owns correction.
 - Previous full compile output emitted existing warnings:
   - `src/AsyncNetworkClient.cpp`: unused `SSL_ERROR_NONE`.
   - `src/RiskEngine.cpp`: `totalPositioned` set but not used.
@@ -180,6 +220,14 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
 
 Results:
 
+- The unstaged Landing Spot Gate documentation candidate on
+  `codex/repository-remediation-lock` passed Git diff hygiene, automation
+  validation for 23 skills/four offline workflows, CI policy, exact nine-
+  package and no-out-of-range-package checks, current-action drift review,
+  placeholder/reference checks, and governance-only changed-path review.
+  Markdown link/lint tools were unavailable locally. No CMake build or CTest
+  rerun was required because the candidate changes documentation only.
+
 - Configure succeeded.
 - Build succeeded.
 - Full CTest suite passed: 7 tests, 0 failed.
@@ -225,16 +273,14 @@ Results:
 
 ## Next Safe Action
 
-Resolve the remaining Gate 7 provider preconditions without accessing
-credential values: make presence-only preflight pass, prove bounded clock skew,
-and recheck immediate port/process state. Do not start provider traffic until
-those results and the exact commit/binary pair are reviewed and Wade separately
-approves exactly one process.
+Complete local verification of the Landing Spot Gate candidate, present the
+governance diff and residual limitations to Wade, and stop. After Wade accepts
+the gate, prepare WP-0's exact plan slice; do not implement WP-0 without a
+separate exact GO.
 
 ## Next Professional Halting Point
 
-The offline residual patch, verification matrix, local commit, exact-commit
-rebuild, and updated incomplete handoff are the current stopping point.
-Provider execution requires a separate exact Wade approval after every failed
-precondition is resolved; reconnect testing, orders, Gates 8–9, and live use
-remain prohibited.
+The verified, uncommitted governance candidate is the current stopping point.
+Staging, commit, push, WP implementation, workflow dispatch, credential access,
+provider execution, reconnect, orders, risk-limit changes, deployment, later
+gates, and live use remain prohibited without separate exact authorization.

@@ -8,6 +8,10 @@
 
 This directory contains permanent ADR-style decisions. Execution history belongs in Git commits, pull requests, issues, and handoffs. The old MOP/MOR/SS workflow is deprecated by ADR 0001 and is not part of the active TradeBot workflow.
 
+The current Repository Remediation Program is an execution overlay, not an ADR
+status change. Accepted ADRs constrain WP-0 through WP-8 but do not authorize
+any package or historical provider continuation.
+
 ## When To Create An ADR
 
 Create an ADR for decisions that should remain stable across sessions or actors, including:

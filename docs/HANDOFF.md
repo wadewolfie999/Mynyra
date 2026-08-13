@@ -16,6 +16,7 @@ Use a handoff whenever work stops before completion, another actor will resume i
 - Worktree status.
 - Active plan.
 - Active phase.
+- Active remediation package and package status.
 - Objective.
 - Completed work.
 - Changed files.
@@ -59,6 +60,7 @@ Use a handoff whenever work stops before completion, another actor will resume i
 - Worktree status:
 - Active plan:
 - Active phase:
+- Active remediation package/status:
 - Date:
 - Actor:
 - Authorization boundary:

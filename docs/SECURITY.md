@@ -161,11 +161,15 @@ payloads/descriptions, balances, positions, or orders.
 - `*.key`
 - `*.crt`
 - `build/`
-- `data/results/`
-- `data/archive/`
+- `*.csv`
+- `*.bin`
 - `config/local/`
 
-Certificate files are ignored by default. If test certificates need to be versioned in the future, operator approval and clear test-only labeling are required.
+`data/results/` and `data/archive/` are not currently excluded as whole
+directories, so unmatched generated filenames such as JSON require explicit
+review. WP-1 owns correction. Certificate files are ignored by default. If
+test certificates need to be versioned in the future, operator approval and
+clear test-only labeling are required.
 
 ## Dependency Review
 

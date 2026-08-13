@@ -21,6 +21,9 @@ Actors are not automatically trusted merely because they have repository access.
   exact-commit build, or external process.
 - Follow `CODEX_EXECUTION_EVIDENCE.md` for retries, shared resources, sensitive
   memory, exact artifacts, and handoffs.
+- While the focus lock is active, map implementation work to exactly one of
+  WP-0 through WP-8 in `REPOSITORY_REMEDIATION_PROGRAM.md`; no actor may infer
+  an additional package or bypass package-specific authorization.
 
 ## Operator
 

@@ -16,6 +16,19 @@ TradeBot is a C++20 trading-system research and engineering repository with a de
 
 The workstream map is a planning/governance artifact only. It does not authorize source implementation, broker connection, external calls, credentials, account actions, sandbox orders, live deployment, or live trading.
 
+## Current Remediation Boundary
+
+`REPOSITORY_REMEDIATION_PROGRAM.md` defines the sole current cross-cutting
+implementation focus. It does not alter the intended component map below; it
+records that the observed implementation does not yet uphold all of these
+boundaries coherently. WP-0 through WP-8 remain Planned / NO-GO.
+
+The repository must not advance provider, feature, phase, research,
+optimization, or deployment work until package-specific evidence repairs the
+containment, persistence, accounting, risk, lifecycle, runtime/data,
+transport, CI/observability, and authority gaps. Historical architecture and
+ADR decisions remain constraints, not proof that implementation is complete.
+
 ## Architectural Principles
 
 - Default to deterministic `BACKTEST` behavior.
@@ -285,6 +298,11 @@ codes are memory-only. See `CTRADER_OPEN_API_GATE5.md`.
 
 ## Current Architectural Debt
 
+- The live-capable startup/network/broker surface does not establish a
+  fail-closed runtime boundary; owned by WP-0.
+- Persistence, generated-state containment, accounting/quantity units, risk
+  state, order lifecycle, runtime/data contracts, transport/provider mapping,
+  CI/observability, and authority synchronization require WP-1 through WP-8.
 - Source comments reference deprecated MOP/workstream labels; ADR 0001 makes those labels historical only.
 - `docs/ARCHITECTURE.md` previously referenced `data/historical/` before that path existed in the tracked tree; it is now described as code-referenced, not tracked.
 - Build currently emits two warnings.

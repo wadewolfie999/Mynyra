@@ -12,6 +12,15 @@ Offline verification, preflight, a commit, an exact binary hash, demo-provider
 evidence, or a prior bounded process does not authorize live use, orders,
 retry, reconnect, autonomous restart, or a later gate.
 
+## Current Program Block
+
+The nine-package Repository Remediation Program is the current prerequisite
+overlay. The Landing Spot Gate is not yet accepted and WP-0 through WP-8
+implementation remains NO-GO. Live readiness cannot be evaluated as satisfied
+until every package is accepted and the final WP-8 closeout explicitly
+reassesses this checklist. Even then, live trading requires a new exact
+operator authorization; program completion is not an unlock.
+
 ## Required Approval
 
 Operator approval must name:

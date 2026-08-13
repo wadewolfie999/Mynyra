@@ -11,10 +11,12 @@ application authentication, fresh demo-account selection/authentication,
 canonical XAUUSD resolution, and full metadata validation, then emitted
 `gate7_subscription_failed`. Gate 7 did not pass; the subscription subcause is
 unclassified and no accepted subscription, quote, or timestamp evidence exists.
-Bounded residual diagnostics and first-single-complete-BBO work are authorized
-offline under `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`.
-Provider execution remains separately blocked. Gates 8–9, orders, and live
-trading remain unauthorized.
+Bounded residual diagnostics and first-single-complete-BBO work were completed
+under `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`. That plan is
+historical rather than current execution authority. Any continuation must map
+to WP-6 in `REPOSITORY_REMEDIATION_PROGRAM.md` after predecessor acceptance and
+receive new exact authorization. Provider execution remains blocked. Gates
+8–9, orders, and live trading remain unauthorized.
 
 ## Boundary
 
@@ -118,8 +120,8 @@ or raw payload belongs in repository evidence.
 The residual offline patch, full verification matrix, final review, and
 sanitized persistent evidence template are complete. Wade authorized one local
 commit and exact-commit rebuild; their identities are recorded in the ignored
-handoff and do not authorize provider traffic. The provider checkpoint is still
-NO-GO because local `--preflight` stops at `gate7_client_id_missing`, bounded
-clock skew has not been established, immediate port/process state must be
-rechecked, and separate exact Wade approval is still required. Stop on the
-first fixed terminal result or complete success; do not retry or begin Gate 8.
+handoff and do not authorize provider traffic. The old provider checkpoint is
+not the current next action. Under the remediation focus lock, stop after the
+Landing Spot Gate candidate; future provider integration is WP-6 work and
+requires accepted predecessors plus new exact approval. Do not retry or begin
+Gate 8.

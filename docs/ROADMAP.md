@@ -35,9 +35,38 @@ The roadmap is reconstructed from verified repository evidence, not from unverif
 - MT5/prop-account readiness is a downstream compatibility target for Phase 22 broker-neutral contracts. It does not select a broker or prop firm and does not authorize MT5 connectivity, account access, credentials, or broker-dependent implementation.
 - Live trading remains disabled and unauthorized unless the operator grants exact approval under `RISK_POLICY.md` and `LIVE_TRADING_READINESS.md`.
 
+## Current Repository Remediation Overlay
+
+Wade has locked current implementation focus to the nine work packages in
+`REPOSITORY_REMEDIATION_PROGRAM.md` under
+`PLAN-20260813-repository-cohesion-remediation`. This is a cross-cutting
+correctness and safety overlay, not a new numbered phase and not a revision of
+historical phase or ADR status.
+
+The Landing Spot Gate is being strengthened. WP-0 through WP-8 remain Planned /
+NO-GO until the gate is accepted and Wade separately authorizes the exact
+package action. During this lock, the phase table below is historical and
+structural authority only: no provider continuation, later phase, workstream,
+feature, strategy, optimization, deployment, or platform-selection action may
+pre-empt the remediation queue.
+
+| Package | Current status |
+| --- | --- |
+| WP-0 Live containment | Planned / NO-GO |
+| WP-1 Persistence and generated-state containment | Planned / NO-GO |
+| WP-2 Accounting and quantity correctness | Planned / NO-GO |
+| WP-3 Risk-state repair | Planned / NO-GO |
+| WP-4 Unified order lifecycle | Planned / NO-GO |
+| WP-5 Runtime-mode and data contracts | Planned / NO-GO |
+| WP-6 Transport and provider integration | Planned / NO-GO |
+| WP-7 CI and observability | Planned / NO-GO |
+| WP-8 Authority synchronization | Planned / NO-GO |
+
 ## Current Workstream Architecture
 
-`TradeBot Workstream Architecture v1.0` in `WORKSTREAM_ARCHITECTURE.md` is the current project-level map:
+`TradeBot Workstream Architecture v1.0` in `WORKSTREAM_ARCHITECTURE.md` remains
+the project-level domain map. Its positions below are historical/structural;
+the remediation overlay controls the current execution queue:
 
 - Workstream I — Broker-Neutral Execution Foundation: Complete — Accepted through Phase 22.
 - Workstream II — Broker Integration Program: FIBO Group/cTrader selected;
@@ -80,7 +109,7 @@ This table is the canonical phase state for Workstreams I-III. `PROJECT_STATE.md
 | I — Broker-Neutral Execution Foundation | Phase 21: Infrastructure Alignment | Complete — Approved | Internal TradeBot integration architecture and boundary alignment. ADR 0003 is Accepted; Phase 21 planning artifacts are approved. |
 | I — Broker-Neutral Execution Foundation | Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness | Complete — Accepted | `PLAN-20260624-workstream-i-broker-neutral-completion` closed the provider-neutral contracts, deterministic simulation, execution/risk alignment, persistence, replay, tests, and documentation boundary. No broker or prop firm selection, connection method, connectivity, credentials, account access, real or sandbox orders, broker-dependent implementation, or live trading is authorized. |
 | II — Broker Integration Program | Phase 23: Broker Selection | Complete — Selected | Wade selected FIBO Group through cTrader for demo-only XAUUSD. OANDA is permanently cancelled. Selection does not authorize OAuth, connectivity, credentials, account access, market data, orders, or live trading. |
-| II — Broker Integration Program | Phase 24: Connection Protocol | Gate 1/Gate 3 revalidated; Gate 2/Gate 5 accepted; Gate 5.1 merged and accepted; PR #25 merged; Gate 6 execution complete and accepted; Gate 7 incomplete at the latest `gate7_subscription_failed` transition | Official Open API is sole. Gate 7 is a separate default-disabled macOS proof with a fixed demo endpoint and non-trading allowlist. Residual subscription/spot diagnostics and first-single-complete-BBO handling are authorized offline under `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`; provider execution remains separately blocked. No quote evidence, reconnect proof, order proof, Gate 8–9 work, or live use is authorized. |
+| II — Broker Integration Program | Phase 24: Connection Protocol | Historical gate evidence preserved; Gate 7 incomplete at the latest `gate7_subscription_failed` transition; current continuation paused by the remediation focus lock | Official Open API remains the accepted sole path. Any further offline integration must map to WP-6 after predecessor acceptance and receive new exact authorization. Provider execution, quote evidence, reconnect proof, order proof, Gate 8–9 work, and live use remain blocked. |
 | III — Documentation & Knowledge Architecture | Phase 25: Documentation Platform Evaluation & Selection | Not Started | Evaluate and select the documentation platform. No platform is selected. |
 | III — Documentation & Knowledge Architecture | Phase 26: Core Documentation Architecture & Drafting | Blocked | Build the core documentation structure and draft canonical documentation only after Phase 25 selection and operator approval of the documentation architecture. |
 

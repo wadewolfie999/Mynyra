@@ -7,6 +7,19 @@
 - Audience: contributors, maintainers, Codex, reviewers, testers, and research agents.
 - Related documents: `AGENTS.md`, `PLANS.md`, `docs/WORKFLOW.md`, `docs/TESTING.md`, `docs/RISK_POLICY.md`, and `docs/SECURITY.md`.
 
+## Current Contribution Focus
+
+Current implementation work is locked to WP-0 through WP-8 in
+`docs/REPOSITORY_REMEDIATION_PROGRAM.md`. A contribution must identify exactly
+one controlling package, satisfy its predecessor and entry gates, and have an
+approved package slice before source mutation. Feature work, provider
+continuation, new strategies, optimization, deployment, later phases, and work
+that would create an implicit tenth package are not in the current queue.
+
+Package acceptance is non-transitive: it does not authorize the next package,
+commit, push, provider process, credential access, orders, risk-limit changes,
+release, deployment, or live trading.
+
 ## Development Environments
 
 Verified local environment:
@@ -39,7 +52,10 @@ Do not edit secrets, `.env` files, generated outputs, or build artifacts as part
 ## Branches And Worktrees
 
 - Use focused branches named by phase or topic, such as `phase/workstream-i-alignment` or `docs/governance-system`.
-- Keep source/build separation: generated files belong under ignored paths such as `build/` or `data/results/`.
+- Keep source/build separation: generated files belong under verified ignored
+  paths. `build/` is directory-ignored; current `data/results/` and
+  `data/archive/` protection is extension-based and is tracked for correction
+  in WP-1.
 - Use additional worktrees only when the operator or maintainer wants parallel branches. Record the worktree path in handoffs.
 
 ## Dependencies
@@ -151,8 +167,9 @@ Use ADRs for decisions expected to remain stable across future work. Do not crea
 ## Generated Files And Data
 
 - `build/` is generated and ignored.
-- `data/results/` is generated and ignored.
-- `data/archive/` is ignored.
+- `data/results/` is generated; current ignore coverage is file-extension
+  based and does not cover every possible filename.
+- `data/archive/` has the same extension-based limitation.
 - `data/samples/` exists but was empty when this guide was created.
 - `data/historical/` is referenced by benchmark code but was not present as a tracked directory at creation time.
 - Large files require operator review before Git tracking.
