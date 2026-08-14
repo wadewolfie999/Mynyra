@@ -108,6 +108,9 @@ std::size_t RiskEngine::getMaxConcurrentPositions() const noexcept
 RiskEngine::Snapshot RiskEngine::snapshotState() const
 {
     Snapshot snapshot;
+    snapshot.configuredMaxPositions = m_maxConcurrentPositions;
+    snapshot.configuredVarLimit = m_varLimitFraction;
+    snapshot.configuredVarWindow = m_varWindow;
     snapshot.totalDrawdown = m_totalDrawdown;
     snapshot.dailyDrawdown = m_dailyDrawdown;
     snapshot.prevEquity = m_prevEquity;
@@ -130,6 +133,23 @@ RiskEngine::Snapshot RiskEngine::snapshotState() const
     snapshot.effectiveVarLimit = m_effectiveVarLimit;
     snapshot.volatilityScaled = m_volatilityScaled;
     return snapshot;
+}
+
+bool RiskEngine::canRestoreSnapshot(const Snapshot& snapshot,
+                                    std::string& error) const noexcept
+{
+    if (snapshot.configuredMaxPositions != m_maxConcurrentPositions
+        || snapshot.configuredVarLimit != m_varLimitFraction
+        || snapshot.configuredVarWindow != m_varWindow) {
+        error = "snapshot risk configuration does not match runtime";
+        return false;
+    }
+    if (snapshot.effectiveMaxPositions > m_maxConcurrentPositions
+        || snapshot.effectiveVarLimit > m_varLimitFraction) {
+        error = "snapshot would widen an effective risk limit";
+        return false;
+    }
+    return true;
 }
 
 void RiskEngine::restoreState(const Snapshot& snapshot)

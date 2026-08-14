@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -121,6 +122,9 @@ void testRoundTrips(const std::filesystem::path& root) {
         requirePortfolioEqual(source.snapshotState(), restored.snapshotState());
         const auto riskA = sourceRisk.snapshotState(), riskB = restoredRisk.snapshotState();
         require(riskA.totalDrawdown == riskB.totalDrawdown && riskA.dailyDrawdown == riskB.dailyDrawdown
+                && riskA.configuredMaxPositions == riskB.configuredMaxPositions
+                && riskA.configuredVarLimit == riskB.configuredVarLimit
+                && riskA.configuredVarWindow == riskB.configuredVarWindow
                 && riskA.prevEquity == riskB.prevEquity
                 && riskA.prevEquityValid == riskB.prevEquityValid
                 && riskA.returnWindow == riskB.returnWindow && riskA.currentVaR95 == riskB.currentVaR95
@@ -194,6 +198,21 @@ void testRejectsWithoutMutation(const std::filesystem::path& root) {
             "failed checkpoint reported success");
     require(!serializer.lastError().empty(), "failed checkpoint was not actionable");
     require(readFile(valid) == original, "failed write damaged last valid snapshot");
+
+    sourceRisk.setTotalDrawdown(std::numeric_limits<double>::quiet_NaN());
+    require(!serializer.saveSnapshot(source, sourceRisk, 45, valid.string()),
+            "non-finite state replaced the last valid checkpoint");
+    require(readFile(valid) == original, "non-finite state damaged last valid snapshot");
+
+    PortfolioManager mismatchPortfolio;
+    mismatchPortfolio.openLong("SENTINEL", 10.0, 1, 0, 100.0, 1.0, "KEEP");
+    RiskEngine mismatchRisk(mismatchPortfolio, 1);
+    const auto mismatchBefore = mismatchPortfolio.snapshotState();
+    std::uint64_t mismatchTs = 999;
+    require(!serializer.loadSnapshot(mismatchPortfolio, mismatchRisk, mismatchTs, valid.string()),
+            "snapshot widened a stricter runtime risk configuration");
+    requirePortfolioEqual(mismatchBefore, mismatchPortfolio.snapshotState());
+    require(mismatchTs == 999, "risk configuration rejection mutated checkpoint time");
 
     PortfolioManager transientPortfolio;
     RiskEngine transientRisk(transientPortfolio);

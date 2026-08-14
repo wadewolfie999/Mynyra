@@ -172,6 +172,9 @@ public:
     };
 
     struct Snapshot {
+        std::size_t configuredMaxPositions{0};
+        double configuredVarLimit{0.0};
+        std::size_t configuredVarWindow{0};
         double totalDrawdown{0.0};
         double dailyDrawdown{0.0};
         double prevEquity{0.0};
@@ -193,6 +196,8 @@ public:
     };
 
     Snapshot snapshotState() const;
+    bool canRestoreSnapshot(const Snapshot& snapshot,
+                            std::string& error) const noexcept;
     void restoreState(const Snapshot& snapshot);
 
 private:

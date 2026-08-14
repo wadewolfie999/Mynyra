@@ -219,6 +219,8 @@ template <typename Map> auto sortedKeys(const Map& values) {
 }
 
 void writeRisk(Writer& w, const RiskEngine::Snapshot& s) {
+    w.u64(s.configuredMaxPositions); w.number(s.configuredVarLimit);
+    w.u64(s.configuredVarWindow);
     w.number(s.totalDrawdown); w.number(s.dailyDrawdown); w.number(s.prevEquity);
     w.boolean(s.prevEquityValid); writeDoubles(w, s.returnWindow);
     w.number(s.currentVaR95); w.number(s.returnStdDev);
@@ -241,10 +243,16 @@ void writeRisk(Writer& w, const RiskEngine::Snapshot& s) {
 }
 
 bool readRisk(Reader& r, RiskEngine::Snapshot& s) {
-    if (!r.number(s.totalDrawdown) || !r.number(s.dailyDrawdown)
+    std::uint64_t configuredMax = 0, configuredWindow = 0;
+    if (!r.u64(configuredMax) || configuredMax > std::numeric_limits<std::size_t>::max()
+        || !r.number(s.configuredVarLimit) || !r.u64(configuredWindow)
+        || configuredWindow > std::numeric_limits<std::size_t>::max()
+        || !r.number(s.totalDrawdown) || !r.number(s.dailyDrawdown)
         || !r.number(s.prevEquity) || !r.boolean(s.prevEquityValid)
         || !readDoubles(r, s.returnWindow) || !r.number(s.currentVaR95)
         || !r.number(s.returnStdDev)) { return false; }
+    s.configuredMaxPositions = static_cast<std::size_t>(configuredMax);
+    s.configuredVarWindow = static_cast<std::size_t>(configuredWindow);
     std::size_t count = 0;
     if (!r.count(count)) { return false; }
     for (std::size_t i = 0; i < count; ++i) {
@@ -366,14 +374,23 @@ bool jsonVersion(const std::string& json, std::uint64_t& version) {
 
 bool validate(const PortfolioManager::Snapshot& p, const RiskEngine::Snapshot& r,
               std::string& error) {
+    const auto finite = [](double value) { return std::isfinite(value); };
+    const auto finiteRange = [&](const auto& values) {
+        return std::all_of(values.begin(), values.end(), finite);
+    };
     if (p.cash < 0 || p.totalEquity < 0 || p.maxEquity < 0 || p.totalFeesPaid < 0
-        || p.tradeCount < 0 || p.roundTripCount < 0 || p.nextOrderId == 0) {
+        || p.tradeCount < 0 || p.roundTripCount < 0 || p.nextOrderId == 0
+        || !finite(p.cash) || !finite(p.unrealizedPnL) || !finite(p.totalEquity)
+        || !finite(p.maxEquity) || !finite(p.currentDrawdown)
+        || !finite(p.maxDrawdown) || !finite(p.totalFeesPaid)) {
         error = "invalid portfolio accounting state"; return false;
     }
     std::set<std::string> symbols;
     for (const auto& position : p.positions) {
         if (position.position.symbol.empty() || position.position.quantity <= 0
             || position.position.entryPrice <= 0 || !position.position.isLong
+            || !finite(position.position.quantity) || !finite(position.position.entryPrice)
+            || !finite(position.entryFee)
             || !symbols.insert(position.position.symbol).second) {
             error = "invalid or duplicate open position"; return false;
         }
@@ -382,12 +399,40 @@ bool validate(const PortfolioManager::Snapshot& p, const RiskEngine::Snapshot& r
     std::set<std::uint64_t> orderIds;
     for (const auto& order : p.pendingOrders) {
         if (order.symbol.empty() || order.orderId == 0
+            || !finite(order.limitPrice) || !finite(order.trailOffset)
+            || !finite(order.trailBest) || !finite(order.quantity)
+            || !finite(order.capitalToCommit)
             || !orderIds.insert(order.orderId).second) {
             error = "invalid or duplicate pending order"; return false;
         }
         maxOrderId = std::max(maxOrderId, order.orderId);
     }
     if (p.nextOrderId <= maxOrderId) { error = "pending-order identity would be reused"; return false; }
+    for (const auto& trade : p.tradeLog) {
+        if (trade.symbol.empty() || !finite(trade.entryPrice) || !finite(trade.exitPrice)
+            || !finite(trade.quantity) || !finite(trade.totalFees)
+            || !finite(trade.realizedPnL) || !finite(trade.grossPnL)) {
+            error = "invalid trade-log state"; return false;
+        }
+    }
+    if (!finite(r.configuredVarLimit) || !finite(r.totalDrawdown)
+        || !finite(r.dailyDrawdown) || !finite(r.prevEquity)
+        || !finiteRange(r.returnWindow) || !finite(r.currentVaR95)
+        || !finite(r.returnStdDev) || !finiteRange(r.covarianceMatrix)
+        || !finite(r.effectiveVarLimit)) {
+        error = "invalid risk state"; return false;
+    }
+    for (const auto& [symbol, asset] : r.assetStates) {
+        if (symbol.empty() || !finiteRange(asset.returnWindow)
+            || !finite(asset.prevPrice) || !finite(asset.positionValue)) {
+            error = "invalid asset-risk state"; return false;
+        }
+    }
+    for (const auto& [symbol, quantity] : r.syncedPositions) {
+        if (symbol.empty() || !finite(quantity)) {
+            error = "invalid synchronized position"; return false;
+        }
+    }
     const auto n = r.assetOrder.size();
     if (!r.covarianceMatrix.empty() && r.covarianceMatrix.size() != n * n) {
         error = "invalid covariance dimensions"; return false;
@@ -395,6 +440,26 @@ bool validate(const PortfolioManager::Snapshot& p, const RiskEngine::Snapshot& r
     for (const auto& symbol : r.assetOrder) {
         if (r.assetStates.find(symbol) == r.assetStates.end()) {
             error = "covariance symbol lacks return state"; return false;
+        }
+    }
+    return true;
+}
+
+bool validateExtended(const RegimeDetector::State& regime,
+                      const std::unordered_map<std::string, PortfolioAllocator::PhiState>& phi,
+                      std::string& error) {
+    const auto finite = [](double value) { return std::isfinite(value); };
+    if (!finite(regime.smoothTR) || !finite(regime.smoothDMPlus)
+        || !finite(regime.smoothDMMinus) || !finite(regime.adx)
+        || !finite(regime.prevClose) || !finite(regime.variance)
+        || !finite(regime.prevHigh) || !finite(regime.prevLow)
+        || !std::all_of(regime.returnWindow.begin(), regime.returnWindow.end(), finite)) {
+        error = "invalid regime state"; return false;
+    }
+    for (const auto& [key, state] : phi) {
+        if (key.empty() || !finite(state.phi)
+            || !std::all_of(state.pnlWindow.begin(), state.pnlWindow.end(), finite)) {
+            error = "invalid allocator state"; return false;
         }
     }
     return true;
@@ -433,10 +498,20 @@ bool saveImpl(const PortfolioManager& portfolio, const RiskEngine& risk,
         error = "transient API-error window is not restart-compatible";
         return false;
     }
+    const auto portfolioState = portfolio.snapshotState();
+    const auto riskState = risk.snapshotState();
+    if (!validate(portfolioState, riskState, error)) { return false; }
+    RegimeDetector::State regimeState;
+    std::unordered_map<std::string, PortfolioAllocator::PhiState> phiStates;
+    if (regime && allocator) {
+        regimeState = regime->getState();
+        phiStates = allocator->getPhiStates();
+        if (!validateExtended(regimeState, phiStates, error)) { return false; }
+    }
     Writer writer;
     writer.string("TradeBotState"); writer.boolean(regime && allocator); writer.u64(checkpointTs);
-    writePortfolio(writer, portfolio.snapshotState()); writeRisk(writer, risk.snapshotState());
-    if (regime && allocator) { writeRegime(writer, regime->getState()); writePhi(writer, allocator->getPhiStates()); }
+    writePortfolio(writer, portfolioState); writeRisk(writer, riskState);
+    if (regime && allocator) { writeRegime(writer, regimeState); writePhi(writer, phiStates); }
     const auto& payload = writer.bytes();
     std::ostringstream json;
     json << "{\n  \"schema\": \"tradebot.backtest-state\",\n"
@@ -492,7 +567,9 @@ bool loadImpl(PortfolioManager& portfolio, RiskEngine& risk,
     if ((regime != nullptr || allocator != nullptr) && (!regime || !allocator || !hasExtended)) {
         error = "snapshot lacks required regime/allocation state"; return false;
     }
-    if (!validate(portfolioState, riskState, error)) { return false; }
+    if (!validate(portfolioState, riskState, error)
+        || !risk.canRestoreSnapshot(riskState, error)) { return false; }
+    if (hasExtended && !validateExtended(regimeState, phiStates, error)) { return false; }
 
     // Commit only after every field and cross-field invariant has validated.
     portfolio.restoreState(portfolioState); risk.restoreState(riskState);
