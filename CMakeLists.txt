@@ -295,6 +295,22 @@ if (BUILD_TESTING)
             -DTRADEBOT_EXECUTABLE=$<TARGET_FILE:tradebot_core>
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/wp0_live_startup_rejected.cmake)
 
+    add_executable(wp1_persistence_tests tests/wp1_persistence_tests.cpp)
+    target_link_libraries(wp1_persistence_tests PRIVATE tradebot_core_lib)
+    add_test(NAME wp1_persistence_tests COMMAND wp1_persistence_tests)
+
+    add_test(
+        NAME wp1_nonbacktest_resume_rejected
+        COMMAND ${CMAKE_COMMAND}
+            -DTRADEBOT_EXECUTABLE=$<TARGET_FILE:tradebot_core>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/wp1_nonbacktest_resume_rejected.cmake)
+
+    add_test(
+        NAME wp1_generated_paths
+        COMMAND ${CMAKE_COMMAND}
+            -DTRADEBOT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/wp1_generated_paths.cmake)
+
     add_executable(ctrader_gate5_1_tests tests/ctrader_gate5_1_tests.cpp)
     target_link_libraries(ctrader_gate5_1_tests PRIVATE tradebot_core_lib)
     add_test(NAME ctrader_gate5_1_tests COMMAND ctrader_gate5_1_tests)

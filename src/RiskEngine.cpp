@@ -105,6 +105,62 @@ std::size_t RiskEngine::getMaxConcurrentPositions() const noexcept
     return m_maxConcurrentPositions;
 }
 
+RiskEngine::Snapshot RiskEngine::snapshotState() const
+{
+    Snapshot snapshot;
+    snapshot.totalDrawdown = m_totalDrawdown;
+    snapshot.dailyDrawdown = m_dailyDrawdown;
+    snapshot.prevEquity = m_prevEquity;
+    snapshot.prevEquityValid = m_prevEquityValid;
+    snapshot.returnWindow = m_returnWindow;
+    snapshot.currentVaR95 = m_currentVaR95;
+    snapshot.returnStdDev = m_returnStdDev;
+    snapshot.assetStates = m_assetStates;
+    snapshot.covarianceMatrix = m_covMatrix;
+    snapshot.assetOrder = m_assetOrder;
+    snapshot.multiAssetMode = m_multiAssetMode;
+    snapshot.closeOnly = m_closeOnly.load();
+    snapshot.lastLatencyMs = m_lastLatencyMs.load();
+    snapshot.halted = m_halted.load();
+    {
+        std::lock_guard<std::mutex> lock(m_positionMutex);
+        snapshot.syncedPositions = m_syncedPositions;
+    }
+    snapshot.effectiveMaxPositions = m_effectiveMaxPositions;
+    snapshot.effectiveVarLimit = m_effectiveVarLimit;
+    snapshot.volatilityScaled = m_volatilityScaled;
+    return snapshot;
+}
+
+void RiskEngine::restoreState(const Snapshot& snapshot)
+{
+    m_totalDrawdown = snapshot.totalDrawdown;
+    m_dailyDrawdown = snapshot.dailyDrawdown;
+    m_prevEquity = snapshot.prevEquity;
+    m_prevEquityValid = snapshot.prevEquityValid;
+    m_returnWindow = snapshot.returnWindow;
+    m_currentVaR95 = snapshot.currentVaR95;
+    m_returnStdDev = snapshot.returnStdDev;
+    m_assetStates = snapshot.assetStates;
+    m_covMatrix = snapshot.covarianceMatrix;
+    m_assetOrder = snapshot.assetOrder;
+    m_multiAssetMode = snapshot.multiAssetMode;
+    m_closeOnly.store(snapshot.closeOnly);
+    m_lastLatencyMs.store(snapshot.lastLatencyMs);
+    m_halted.store(snapshot.halted);
+    {
+        std::lock_guard<std::mutex> lock(m_positionMutex);
+        m_syncedPositions = snapshot.syncedPositions;
+    }
+    m_effectiveMaxPositions = snapshot.effectiveMaxPositions;
+    m_effectiveVarLimit = snapshot.effectiveVarLimit;
+    m_volatilityScaled = snapshot.volatilityScaled;
+    // Steady-clock error timestamps cannot survive a process boundary. A
+    // persisted halt remains active; the transient counting window restarts.
+    std::lock_guard<std::mutex> lock(m_errorMutex);
+    m_errorTimestamps.clear();
+}
+
 // ── Multi-asset correlation helpers ──────────────────────────────────────────
 
 void RiskEngine::pushAssetReturn(const std::string& symbol,
@@ -222,37 +278,6 @@ void RiskEngine::updateDiversifiedVaR(double totalEquity) noexcept
     }
     m_returnStdDev = (varP > 0.0) ? std::sqrt(varP) : 0.0;
     m_currentVaR95 = Z_95 * m_returnStdDev * totalEquity;
-}
-
-const std::unordered_map<std::string, RiskEngine::AssetReturnState>&
-RiskEngine::getAssetReturnStates() const noexcept
-{
-    return m_assetStates;
-}
-
-void RiskEngine::restoreAssetReturnState(
-    const std::unordered_map<std::string, AssetReturnState>& states) noexcept
-{
-    m_assetStates    = states;
-    m_multiAssetMode = !states.empty();
-    rebuildCovMatrix();
-}
-
-const std::vector<double>& RiskEngine::getCovarianceMatrix() const noexcept
-{
-    return m_covMatrix;
-}
-
-const std::vector<std::string>& RiskEngine::getAssetOrder() const noexcept
-{
-    return m_assetOrder;
-}
-
-void RiskEngine::restoreCovarianceMatrix(const std::vector<std::string>& order,
-                                         const std::vector<double>& cov) noexcept
-{
-    m_assetOrder = order;
-    m_covMatrix  = cov;
 }
 
 // ── Phase 12: Circuit breakers & adaptive risk ────────────────────────────────

@@ -67,6 +67,27 @@ if grep -RIlE \
     report_failure "workflow crosses the offline CI boundary"
 fi
 
+for generated_path in \
+    data/results/snapshot.json \
+    data/results/run.csv \
+    data/archive/state.json \
+    data/historical/replay.bin \
+    output/report.json \
+    handoff/session.md \
+    handoffs/session.md \
+    artifacts/evidence.json
+do
+    if ! git check-ignore -q -- "$generated_path"; then
+        report_failure "generated path is not ignored: $generated_path"
+    fi
+done
+
+for fixture_path in data/samples/replay.csv tests/fixtures/replay.bin; do
+    if git check-ignore -q -- "$fixture_path"; then
+        report_failure "intentional fixture path is hidden: $fixture_path"
+    fi
+done
+
 if (( failures > 0 )); then
     printf 'TradeBot CI policy checks failed: %d finding(s).\n' "$failures" >&2
     exit 1

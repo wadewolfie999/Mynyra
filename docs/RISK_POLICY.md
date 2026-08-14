@@ -14,16 +14,16 @@ TradeBot defaults to `BACKTEST`, dry-run, simulation, or paper behavior. Live tr
 
 The Repository Remediation Program in
 `REPOSITORY_REMEDIATION_PROGRAM.md` is the sole current implementation queue.
-Its foundational governance is approved. WP-0 is the current approved package;
-WP-1 is approved and dependency-queued; WP-2 through WP-8 remain Planned /
+Its foundational governance is approved. WP-0 is merged and accepted; WP-1 is
+the current approved package; WP-2 through WP-8 remain Planned /
 NO-GO except for integrated WP-7/WP-8 closure slices. Existing source is
 classified as operationally unsafe for live use until accepted package evidence
 supports a narrower conclusion.
 
 - No historical phase, ADR, cTrader gate, passing test, credential presence,
   branch, or build artifact authorizes provider continuation or runtime use.
-- WP-0 must establish runtime containment before later packages can rely on a
-  safe execution boundary.
+- WP-0 established the default-off runtime containment boundary accepted in
+  PR #35. This does not establish live readiness.
 - WP-2 and WP-3 may correct existing accounting/risk intent only under exact
   approval; changing financial-limit values is a separate action.
 - WP-4 must establish a single confirmed order lifecycle before provider work.

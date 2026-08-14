@@ -46,18 +46,22 @@ Wade has locked current implementation focus to the nine work packages in
 
 Current status: focus lock and foundational governance approved by Wade on
 2026-08-14. The objective is infrastructure-foundation strengthening, with no
-separate preliminary gate. WP-0 is approved as the current package. WP-1 is
-approved and queued behind accepted WP-0 evidence. WP-2 through WP-8 remain
+separate preliminary gate. WP-0 is merged and accepted at
+`eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 is the current approved
+package. WP-2 through WP-8 remain
 Planned / NO-GO, except for WP-7 evidence and WP-8 synchronization included
 inside the approved WP-0 and WP-1 scopes. No older phase, workstream, plan,
 ADR, or provider-gate action is the current next action.
 
-WP-0 implementation is in progress on `codex/wp0-live-containment`. Its
-candidate boundary adds default-off compile/runtime containment, pre-startup
-LIVE rejection, explicit invalid-mode rejection, unavailable-gateway execution
-blocking, removal of credential/provider-specific REST ownership from the legacy data
-adapter, PAPER regression coverage, and default-off CI enforcement. It is not
-accepted until the branch evidence is reviewed and merged.
+WP-0 merged through PR #35. Its accepted boundary adds default-off
+compile/runtime containment, pre-startup LIVE rejection, explicit invalid-mode
+rejection, unavailable-gateway execution blocking, removal of credential and
+provider-specific REST ownership from the legacy data adapter, protective-
+trigger retention, PAPER regression coverage, and default-off CI enforcement.
+WP-1 implementation is active on `codex/wp1-persistence-containment`.
+Its working-tree candidate has passed the complete 12-test default-off and
+ASan/UBSan suites, including focused state, startup-side-effect, and generated-
+path policy coverage. Exact-commit and GitHub PR evidence remain pending.
 
 ## Current Roadmap State
 
@@ -129,11 +133,11 @@ Historical summary:
 
 ## In-Progress Work
 
-- WP-0 is the current approved package under
+- WP-0 is merged and accepted through PR #35 at
+  `eef91ed4abf35bd09462deb1a55a0c72d95edea7`.
+- WP-1 is the current approved package under
   `PLAN-20260813-repository-cohesion-remediation`; implementation is active on
-  `codex/wp0-live-containment`.
-- WP-1 is approved but inactive until WP-0 implementation, WP-7 evidence, WP-8
-  synchronization, and operator acceptance are complete.
+  `codex/wp1-persistence-containment`.
 - WP-2 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices required
   to close the approved WP-0 and WP-1 work.
 
@@ -178,9 +182,8 @@ Historical summary:
 - `throughput_bench 100000` consumed 100,000 ticks but reported 260 fills; a
   261-tick run also reported 260 fills. This is a correctness finding for WP-2,
   not a performance claim.
-- Generated-state exclusions are extension-based for CSV/binary files rather
-  than complete directory containment; a generated JSON snapshot can be
-  unignored. WP-1 owns correction.
+- WP-1 replaces extension-wide generated-state rules with exact directory
+  containment and explicit fixture-visibility checks.
 - Previous full compile output emitted existing warnings:
   - `src/AsyncNetworkClient.cpp`: unused `SSL_ERROR_NONE`.
   - `src/RiskEngine.cpp`: `totalPositioned` set but not used.
@@ -284,16 +287,16 @@ Results:
 
 ## Next Safe Action
 
-Complete WP-0 source/test/documentation verification, review its exact diff,
+Complete WP-1 source/test/documentation verification, review its exact diff,
 then use the separately authorized stage, commit, push, PR, and merge sequence.
 Provider activity, credentials, orders, financial-limit changes, deployment,
 and live use remain prohibited.
 
 ## Next Professional Halting Point
 
-Merged, accepted WP-0 evidence plus its WP-7/WP-8 closeout is the next
+Merged, accepted WP-1 evidence plus its WP-7/WP-8 closeout is the next
 professional transition point. Staging, commit, push, PR, and merge are
-authorized for WP-0 and dependency-gated WP-1 only. Workflow dispatch,
+authorized for WP-1. Workflow dispatch,
 credential access, provider execution, reconnect, orders, risk-limit changes,
-deployment, later packages, and live use remain prohibited. WP-1 must remain
-inactive until WP-0 is accepted.
+deployment, later packages, and live use remain prohibited. WP-2 remains
+Planned / NO-GO after WP-1 acceptance until separately authorized.

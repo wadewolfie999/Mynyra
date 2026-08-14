@@ -53,9 +53,9 @@ Do not edit secrets, `.env` files, generated outputs, or build artifacts as part
 
 - Use focused branches named by phase or topic, such as `phase/workstream-i-alignment` or `docs/governance-system`.
 - Keep source/build separation: generated files belong under verified ignored
-  paths. `build/` is directory-ignored; current `data/results/` and
-  `data/archive/` protection is extension-based and is tracked for correction
-  in WP-1.
+  paths. WP-1 directory-ignores build, result, archive, historical-cache,
+  report, artifact, and handoff paths while leaving intentional fixtures
+  visible.
 - Use additional worktrees only when the operator or maintainer wants parallel branches. Record the worktree path in handoffs.
 
 ## Dependencies
@@ -167,9 +167,10 @@ Use ADRs for decisions expected to remain stable across future work. Do not crea
 ## Generated Files And Data
 
 - `build/` is generated and ignored.
-- `data/results/` is generated; current ignore coverage is file-extension
-  based and does not cover every possible filename.
-- `data/archive/` has the same extension-based limitation.
+- `data/results/`, `data/archive/`, `data/historical/`, `output/`, `artifacts/`,
+  `handoff/`, and `handoffs/` are generated/evidence directories and are
+  ignored exactly. Global CSV/binary ignores are intentionally absent so test
+  fixtures remain visible.
 - `data/samples/` exists but was empty when this guide was created.
 - `data/historical/` is referenced by benchmark code but was not present as a tracked directory at creation time.
 - Large files require operator review before Git tracking.

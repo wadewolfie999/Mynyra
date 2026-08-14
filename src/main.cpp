@@ -133,7 +133,15 @@ int main(int argc, char* argv[])
                     std::cerr << "[Error] --resume requires a snapshot file argument.\n";
                     return EXIT_FAILURE;
                 }
-                resumeFile = argv[i + 1];
+                const std::string requestedResume = argv[i + 1];
+                if (requestedResume != "data/results/snapshot.json") {
+                    std::cerr << "[Error] --resume path must be "
+                                 "data/results/snapshot.json.\n";
+                    return EXIT_FAILURE;
+                }
+                // Assign the governed path, not the command-line buffer, so
+                // file access never inherits an unrestricted path expression.
+                resumeFile = "data/results/snapshot.json";
                 doResume   = true;
                 ++i;
             } else if (std::strcmp(argv[i], "--mode") == 0) {
@@ -171,6 +179,11 @@ int main(int argc, char* argv[])
     // Fail before file opening, engine construction, credential lookup, or
     // network startup. Build enablement and this runtime flag are technical
     // containment gates; they do not constitute live-trading authorization.
+    if (doResume && !sysCfg.isBacktest()) {
+        std::cerr << "[Error] --resume is BACKTEST-only: PAPER/LIVE broker "
+                     "lifecycle and reconciliation state is not restart-safe.\n";
+        return EXIT_FAILURE;
+    }
     if (sysCfg.liveRuntimeUnlocked && !sysCfg.isLiveMode()) {
         std::cerr << "[Error] --unlock-live-runtime is valid only with --mode live.\n";
         return EXIT_FAILURE;
@@ -305,8 +318,10 @@ int main(int argc, char* argv[])
         // Wire ATR-based sizing from the SMA strategy (primary indicator).
         se.execution->setStrategy(se.stratSma.get());
         se.loop->setAnalyticsEngine(&analytics);
-        // Phase 9: wire daily checkpointing (86400 s = 24 h).
-        se.loop->setStateSerializer(&serializer, 86400);
+        // Version-12 restart state is complete only for BACKTEST.
+        if (sysCfg.isBacktest()) {
+            se.loop->setStateSerializer(&serializer, 86400);
+        }
         // Phase 11: drive regime updates through the shared RegimeDetector.
         se.loop->setRegimeDetector(&regimeDetector);
 

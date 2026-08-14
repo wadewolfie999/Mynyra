@@ -45,7 +45,7 @@ historical phase or ADR status.
 
 The foundational governance is approved. The objective is infrastructure-
 foundation strengthening; there is no separate preliminary roadmap gate. WP-0
-is the current approved package; WP-1 is approved and dependency-queued; WP-2
+is merged and accepted; WP-1 is the current approved package; WP-2
 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices integrated
 into the approved work. During this lock, the phase table below is historical
 and structural authority only: no provider continuation, later phase,
@@ -54,8 +54,8 @@ action may pre-empt the remediation queue.
 
 | Package | Current status |
 | --- | --- |
-| WP-0 Live containment | Approved — current |
-| WP-1 Persistence and generated-state containment | Approved — queued after WP-0 acceptance |
+| WP-0 Live containment | Complete — merged and accepted at `eef91ed4abf35bd09462deb1a55a0c72d95edea7` |
+| WP-1 Persistence and generated-state containment | Approved — current |
 | WP-2 Accounting and quantity correctness | Planned / NO-GO |
 | WP-3 Risk-state repair | Planned / NO-GO |
 | WP-4 Unified order lifecycle | Planned / NO-GO |

@@ -161,15 +161,23 @@ payloads/descriptions, balances, positions, or orders.
 - `*.key`
 - `*.crt`
 - `build/`
-- `*.csv`
-- `*.bin`
+- `data/results/`
+- `data/archive/`
+- `data/historical/`
+- `output/`
+- `artifacts/`
+- `handoff/` and `handoffs/`
 - `config/local/`
 
-`data/results/` and `data/archive/` are not currently excluded as whole
-directories, so unmatched generated filenames such as JSON require explicit
-review. WP-1 owns correction. Certificate files are ignored by default. If
-test certificates need to be versioned in the future, operator approval and
+Global CSV and binary ignores are intentionally absent so reviewable fixtures
+cannot disappear from Git status. CI asserts both generated-directory
+containment and fixture visibility. Certificate files are ignored by default.
+If test certificates need to be versioned in the future, operator approval and
 clear test-only labeling are required.
+
+The runtime `--resume` path is fixed to `data/results/snapshot.json`; arbitrary
+command-line paths are rejected before file opening or runtime setup. Tests may
+call `StateSerializer` directly with isolated temporary paths.
 
 ## Dependency Review
 

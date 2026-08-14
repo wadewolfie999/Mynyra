@@ -20,8 +20,8 @@ retry, reconnect, autonomous restart, or a later gate.
 ## Current Program Block
 
 The nine-package Repository Remediation Program is the current prerequisite
-overlay. Its foundational governance is approved; WP-0 is current and WP-1 is
-dependency-queued. Live readiness cannot be evaluated as satisfied until every
+overlay. Its foundational governance is approved; WP-0 is merged and accepted
+and WP-1 is current. Live readiness cannot be evaluated as satisfied until every
 package is accepted and the final WP-8 closeout explicitly reassesses this
 checklist. Even then, live trading requires a new exact operator authorization;
 program completion is not an unlock.

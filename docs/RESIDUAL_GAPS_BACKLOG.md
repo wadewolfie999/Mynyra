@@ -15,8 +15,8 @@
 Historical Workstream I, Phase 22, and cTrader gate evidence remains preserved.
 It is not the current execution queue. Wade has locked current focus to WP-0
 through WP-8 in `REPOSITORY_REMEDIATION_PROGRAM.md`. The foundational
-governance is approved; WP-0 is current, WP-1 is approved and queued behind
-WP-0, and WP-2 through WP-8 remain Blocked / NO-GO except for integrated
+governance is approved; WP-0 is merged and accepted, WP-1 is approved and
+current, and WP-2 through WP-8 remain Blocked / NO-GO except for integrated
 WP-7/WP-8 closure slices. Provider continuation, Gates 8–9, and live trading
 remain Blocked / NO-GO.
 

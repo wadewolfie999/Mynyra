@@ -9,11 +9,11 @@
 ## Verified Data Paths
 
 - `data/samples/`: exists and is currently empty.
-- `data/results/`: generated outputs; current Git rules ignore `*.csv` and
-  `*.bin`, not the directory or every possible output filename.
-- `data/archive/`: intended generated archive path with the same extension-
-  based limitation.
-- `data/historical/`: referenced by `phase18_burnin`, not present as a tracked directory at verification.
+- `data/results/`: directory-ignored generated analytics, reports, and restart
+  snapshots.
+- `data/archive/`: directory-ignored generated archive path.
+- `data/historical/`: directory-ignored historical/replay-data cache referenced
+  by `phase18_burnin`; not a tracked fixture location.
 - `build/phase19_revalidation/`: ignored generated Phase 19 logs/replay artifacts observed locally.
 - `/tmp`: used by tests for temporary fixtures.
 
@@ -31,18 +31,19 @@ Not tracked by policy:
 - `build/`.
 - `data/results/`.
 - `data/archive/`.
+- `data/historical/`.
+- `output/`, `artifacts/`, `handoff/`, and `handoffs/`.
 - Large historical data.
 - Generated replay files.
 - Local logs.
 - Credentials and `.env` files.
 
-Current enforcement caveat: `.gitignore` fully excludes `build/` and local
-secret patterns, but generated containment under `data/results/` and
-`data/archive/` is extension-based. A JSON snapshot or another unmatched
-filename can remain unignored. WP-1 owns the exact directory/path containment
-and fixture-exception design. Until then, verify every generated path with
-`git check-ignore -v` and `git status --short` rather than assuming policy is
-enforced.
+WP-1 replaced global `*.csv` and `*.bin` rules with exact generated-directory
+rules. This keeps intentional fixtures such as `data/samples/*.csv` and
+`tests/fixtures/*.bin` visible to Git. CI policy and CTest both assert the
+generated paths and fixture exceptions. Verify new output locations with
+`git check-ignore -v` before use; add a narrow rule and policy assertion rather
+than restoring a global extension ignore.
 
 Large files require operator review. Git LFS was not configured or verified in this repository, so do not assume LFS is available.
 
@@ -75,6 +76,11 @@ Rules:
 - Store default generated outputs under ignored paths such as `data/results/` or `build/`.
 - Do not treat generated outputs as authoritative input data without provenance review.
 - Do not commit result files containing secrets, account identifiers, live balances, or venue order IDs.
+- Version-12 snapshots are generated BACKTEST restart state. They use a
+  checksummed canonical envelope and are not external reconciliation truth.
+- Snapshot versions before 12 have no implicit migration path and must be
+  rejected. Preserve or convert old files only through a separately reviewed
+  migration tool.
 
 ## Temporary Data
 

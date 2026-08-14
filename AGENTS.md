@@ -50,8 +50,9 @@ governed by `PLAN-20260813-repository-cohesion-remediation` in `PLANS.md`:
 The focus lock is active and its foundational governance structure is
 approved. The objective is to strengthen the infrastructure being built; no
 separate preliminary gate, phase, package, artifact, or approval checkpoint
-exists. WP-0 is approved as the current package. WP-1 is approved and queued
-behind accepted WP-0 evidence. WP-2 through WP-8 remain Planned / NO-GO until
+exists. WP-0 is merged and accepted at
+`eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 is the current approved
+package. WP-2 through WP-8 remain Planned / NO-GO until
 separately authorized. New findings must map to an existing package or stop
 for an explicit scope decision.
 Historical phase, workstream, ADR, and provider-gate records remain evidence
@@ -157,12 +158,13 @@ Codex and other repository-side agents must not:
 - ADRs: `docs/decisions/`.
 - Sample data directory: `data/samples/` exists and is currently empty.
 - Historical data path referenced by benchmark code: `data/historical/`.
-- Generated result path: `data/results/`; current `.gitignore` ignores CSV and
-  binary artifacts by extension but does not ignore every file in the
-  directory. Exact containment is owned by WP-1.
-- Generated archive path: `data/archive/`; current `.gitignore` ignores CSV and
-  binary artifacts by extension but does not ignore every file in the
-  directory. Exact containment is owned by WP-1.
+- Generated result path: `data/results/`; directory-ignored by WP-1.
+- Generated archive path: `data/archive/`; directory-ignored by WP-1.
+- Historical/replay cache: `data/historical/`; directory-ignored by WP-1.
+- Generated reports/evidence: `output/`, `artifacts/`, `handoff/`, and
+  `handoffs/`; directory-ignored by WP-1.
+- Intentional CSV/binary fixtures remain visible outside those generated
+  directories; CI policy and CTest assert both sides of this boundary.
 - Build directory: `build/`, ignored by Git.
 - Phase 19 generated logs/replay artifacts observed under `build/phase19_revalidation/`.
 - Codex skills: `.agents/skills/`.

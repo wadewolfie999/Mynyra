@@ -273,6 +273,14 @@ and Wade acceptance are also required, and the next package remains NO-GO.
 - Tests may create temporary CSV/binary fixtures under `/tmp`.
 - Historical data under `data/historical/` is referenced by benchmark code but not tracked in the verified tree.
 - Fixture provenance must be documented before committing new data.
+- `wp1_persistence_tests` covers zero/one/many open-position round trips,
+  accounting, risk halt/close-only state, pending-order identity, regime and
+  allocator state, corrupt/malformed/legacy rejection without mutation,
+  atomic-write failure, transient API-error incompatibility, and event-loop
+  checkpoint failure.
+- `wp1_nonbacktest_resume_rejected` proves PAPER/LIVE resume and uncontrolled
+  resume paths fail before startup side effects. `wp1_generated_paths` proves exact generated-path
+  ignores without hiding intentional CSV/binary fixtures.
 
 ## Time And Timezone Tests
 

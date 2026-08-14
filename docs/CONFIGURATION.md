@@ -27,7 +27,7 @@ and `live`. Any other value is rejected; it is never silently downgraded to
 ```sh
 build/tradebot_core --mode backtest <csv-files>
 build/tradebot_core --mode paper <csv-files>
-build/tradebot_core --resume <snapshot-file> <csv-files>
+build/tradebot_core --resume data/results/snapshot.json <csv-files>
 ```
 
 The normal/default build rejects `--mode live` before opening input files,
@@ -148,6 +148,11 @@ Financial limit changes require operator approval.
 - Phase 18 default replay path: `data/historical/BTCUSDT-L2-1M.bin`.
 
 Generated outputs are ignored by Git unless intentionally versioned.
+`--resume data/results/snapshot.json` accepts only the governed default path and
+a canonical version-12 BACKTEST snapshot. Other paths are rejected before file
+or runtime setup. PAPER and LIVE resume are rejected because external order
+lifecycle and reconciliation state is not yet restart-safe. Snapshot version
+migration is explicit; versions 9 and 11 are not loaded automatically.
 
 ## Configuration Change Rules
 

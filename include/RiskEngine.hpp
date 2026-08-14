@@ -171,24 +171,29 @@ public:
         double                 positionValue{0.0}; // latest w_i numerator
     };
 
-    // Read-only access to the per-asset return state (for serialisation).
-    const std::unordered_map<std::string, AssetReturnState>&
-        getAssetReturnStates() const noexcept;
+    struct Snapshot {
+        double totalDrawdown{0.0};
+        double dailyDrawdown{0.0};
+        double prevEquity{0.0};
+        bool prevEquityValid{false};
+        std::deque<double> returnWindow;
+        double currentVaR95{0.0};
+        double returnStdDev{0.0};
+        std::unordered_map<std::string, AssetReturnState> assetStates;
+        std::vector<double> covarianceMatrix;
+        std::vector<std::string> assetOrder;
+        bool multiAssetMode{false};
+        bool closeOnly{false};
+        uint32_t lastLatencyMs{0};
+        bool halted{false};
+        std::unordered_map<std::string, double> syncedPositions;
+        std::size_t effectiveMaxPositions{0};
+        double effectiveVarLimit{0.0};
+        bool volatilityScaled{false};
+    };
 
-    // Restore per-asset return state from a snapshot (used by --resume path).
-    void restoreAssetReturnState(
-        const std::unordered_map<std::string, AssetReturnState>& states) noexcept;
-
-    // Read-only access to the covariance matrix (row-major, symbols ordered
-    // by m_assetOrder).  Exposed for diagnostics and serialisation.
-    const std::vector<double>& getCovarianceMatrix() const noexcept;
-
-    // Symbols in the order used by the covariance matrix rows/columns.
-    const std::vector<std::string>& getAssetOrder() const noexcept;
-
-    // Restore covariance matrix and asset order from snapshot.
-    void restoreCovarianceMatrix(const std::vector<std::string>& order,
-                                 const std::vector<double>& cov) noexcept;
+    Snapshot snapshotState() const;
+    void restoreState(const Snapshot& snapshot);
 
 private:
     // Hard limits (fractional): from RISK_MODEL_DRAFT.md.
