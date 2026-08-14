@@ -276,7 +276,8 @@ and Wade acceptance are also required, and the next package remains NO-GO.
 - `wp1_persistence_tests` covers zero/one/many open-position round trips,
   accounting, risk halt/close-only state, pending-order identity, regime and
   allocator state, corrupt/malformed/legacy rejection without mutation,
-  atomic-write failure, transient API-error incompatibility, and event-loop
+  atomic-write failure, non-finite pre-write rejection, risk-configuration
+  mismatch rejection, transient API-error incompatibility, and event-loop
   checkpoint failure.
 - `wp1_nonbacktest_resume_rejected` proves PAPER/LIVE resume and uncontrolled
   resume paths fail before startup side effects. `wp1_generated_paths` proves exact generated-path

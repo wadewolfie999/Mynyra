@@ -71,6 +71,10 @@ If branch, status, or commits differ from handoff:
 - Snapshot load validates the complete envelope, checksum, schema, version,
   payload, and cross-field invariants before mutating portfolio, risk, regime,
   allocator, or checkpoint time.
+- Snapshot save validates detached portfolio, risk, regime, and allocator state
+  before replacing the prior checkpoint. Non-finite values fail the checkpoint.
+- The persisted immutable risk configuration must equal the runtime
+  configuration, and restored effective limits may never exceed that baseline.
 - Unsupported older versions fail with a migration-required diagnostic; no
   implicit migration is attempted.
 - A nonempty steady-clock API-error window is not portable across restart and
