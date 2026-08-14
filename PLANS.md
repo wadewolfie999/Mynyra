@@ -327,17 +327,14 @@ provider continuation.
 ## Authorization Boundary
 
 Wade's 2026-08-13 direction authorized the foundational governance structure.
-On 2026-08-14 Wade approved that structure and both WP-0 and WP-1 handoff
-boundaries. This authorizes offline planning and implementation within the
-canonical WP-0 scope, followed—only after accepted WP-0 evidence—by offline
-planning and implementation within the canonical WP-1 scope.
-
-Wade's 2026-08-14 follow-up explicitly authorizes staging, commit, push, PR,
-and merge for WP-0 and, after WP-0 is merged and accepted, the same sequence
-for WP-1. This approval does not authorize credential-value access, provider
-traffic, external retries, demo or real orders, risk-limit changes, release,
-deployment, live use, or workflow dispatch. External process/attempt budget is
-zero for WP-0 and WP-1.
+On 2026-08-14 Wade approved that structure, both WP-0/WP-1 handoff boundaries,
+offline planning/implementation, and the bounded stage/commit/push/PR/merge
+sequences later completed through PRs #35–#38. Those grants are fully consumed
+historical evidence. They do not authorize another WP-0/WP-1 correction,
+implementation, commit, publication, or merge sequence, and never authorized
+credential-value access, provider traffic, external retries, demo or real
+orders, risk-limit changes, release, deployment, live use, or workflow
+dispatch. No current external process/attempt budget exists.
 
 ## Files Expected to Change
 

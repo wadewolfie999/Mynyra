@@ -17,12 +17,12 @@
   plan. It overlays but does not rewrite historical phase or ADR records.
 
 This program converts the repository-wide cohesion diagnosis into an exact
-execution queue. Wade's 2026-08-14 approval authorizes offline WP-0 work and
-conditional offline WP-1 work within their canonical scopes. It does not
-authorize credential access, provider traffic, order activity, financial-limit
-changes, workflow dispatch, release, deployment, or live trading. Wade's
-follow-up separately authorizes staging, commit, push, PR, and merge for WP-0
-and then dependency-gated WP-1.
+execution queue. Wade's 2026-08-14 approvals for offline WP-0/WP-1 work and
+their stage/commit/push/PR/merge sequences were fully consumed by merged PRs
+#35 through #38. They are historical completion evidence and grant no further
+implementation, correction, publication, or merge authority. They never
+authorized credential access, provider traffic, order activity, financial-
+limit changes, workflow dispatch, release, deployment, or live trading.
 
 ## Focus Lock
 
@@ -37,8 +37,8 @@ Until Wade explicitly changes this lock:
 4. Historical phase and provider-gate records remain evidence, not current
    execution authority.
 5. A package title alone does not authorize implementation. WP-0 and WP-1 have
-   exact operator approval recorded here; WP-2 through WP-8 require separate
-   operator GO after their entry conditions are reviewed.
+   consumed historical approvals recorded here; WP-2 through WP-8 require a
+   separate operator GO after their entry conditions are reviewed.
 6. Live trading, real or demo orders, provider execution, credential-value
    access, risk-limit changes, release, and deployment remain separate NO-GO
    actions even after all nine packages are complete.
