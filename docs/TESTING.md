@@ -278,8 +278,8 @@ and Wade acceptance are also required, and the next package remains NO-GO.
   allocator state, corrupt/malformed/legacy rejection without mutation,
   atomic-write failure, transient API-error incompatibility, and event-loop
   checkpoint failure.
-- `wp1_nonbacktest_resume_rejected` proves PAPER/LIVE resume fails before
-  startup side effects. `wp1_generated_paths` proves exact generated-path
+- `wp1_nonbacktest_resume_rejected` proves PAPER/LIVE resume and uncontrolled
+  resume paths fail before startup side effects. `wp1_generated_paths` proves exact generated-path
   ignores without hiding intentional CSV/binary fixtures.
 
 ## Time And Timezone Tests

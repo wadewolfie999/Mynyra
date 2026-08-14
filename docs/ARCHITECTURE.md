@@ -253,8 +253,10 @@ snapshots. `StateSerializer` owns a complete BACKTEST restart contract for
 portfolio/accounting, pending-order identity, risk, regime, and allocation
 state. It validates into detached state before a single commit to the runtime
 objects. PAPER/LIVE resume remains fail-closed until WP-4 supplies a unified,
-reconcilable broker lifecycle. Generated outputs belong under exact ignored
-directories unless intentionally versioned.
+reconcilable broker lifecycle. The runtime CLI opens only the governed
+`data/results/snapshot.json` restart path; direct serializer callers remain
+responsible for supplying trusted paths. Generated outputs belong under exact
+ignored directories unless intentionally versioned.
 
 ## Testing Architecture
 
@@ -285,7 +287,7 @@ Benchmark outputs can write generated CSVs under `data/results/` or logs under `
 Configuration currently lives in `SystemConfig` and CLI parsing in `src/main.cpp`. Verified CLI flags:
 
 - `--mode backtest|paper|live`
-- `--resume <snapshot-file>`
+- `--resume data/results/snapshot.json`
 
 Unrecognized mode strings parse to `BACKTEST`. Credential env fallbacks are `AIIO_API_KEY` and `AIIO_API_SECRET`.
 

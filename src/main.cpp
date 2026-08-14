@@ -133,7 +133,15 @@ int main(int argc, char* argv[])
                     std::cerr << "[Error] --resume requires a snapshot file argument.\n";
                     return EXIT_FAILURE;
                 }
-                resumeFile = argv[i + 1];
+                const std::string requestedResume = argv[i + 1];
+                if (requestedResume != "data/results/snapshot.json") {
+                    std::cerr << "[Error] --resume path must be "
+                                 "data/results/snapshot.json.\n";
+                    return EXIT_FAILURE;
+                }
+                // Assign the governed path, not the command-line buffer, so
+                // file access never inherits an unrestricted path expression.
+                resumeFile = "data/results/snapshot.json";
                 doResume   = true;
                 ++i;
             } else if (std::strcmp(argv[i], "--mode") == 0) {

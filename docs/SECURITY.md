@@ -175,6 +175,10 @@ containment and fixture visibility. Certificate files are ignored by default.
 If test certificates need to be versioned in the future, operator approval and
 clear test-only labeling are required.
 
+The runtime `--resume` path is fixed to `data/results/snapshot.json`; arbitrary
+command-line paths are rejected before file opening or runtime setup. Tests may
+call `StateSerializer` directly with isolated temporary paths.
+
 ## Dependency Review
 
 New dependencies must be reviewed for:
