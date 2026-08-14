@@ -21,8 +21,8 @@ The workstream map is a planning/governance artifact only. It does not authorize
 `REPOSITORY_REMEDIATION_PROGRAM.md` defines the sole current cross-cutting
 implementation focus. It does not alter the intended component map below; it
 records that the observed implementation does not yet uphold all of these
-boundaries coherently. WP-0 is merged and accepted; WP-1 is approved and
-current; WP-2 through WP-8 remain Planned / NO-GO except for
+boundaries coherently. WP-0 and WP-1 are merged and accepted; WP-2 through
+WP-8 remain Planned / NO-GO except for
 WP-7/WP-8 closure slices integrated into WP-0 and WP-1.
 
 The repository must not advance provider, feature, phase, research,

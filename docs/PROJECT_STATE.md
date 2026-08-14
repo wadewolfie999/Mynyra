@@ -47,8 +47,10 @@ Wade has locked current implementation focus to the nine work packages in
 Current status: focus lock and foundational governance approved by Wade on
 2026-08-14. The objective is infrastructure-foundation strengthening, with no
 separate preliminary gate. WP-0 is merged and accepted at
-`eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 is the current approved
-package. WP-2 through WP-8 remain
+`eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 is merged and accepted
+through PRs #36 and #37 at
+`c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`. No package is currently
+authorized for implementation. WP-2 through WP-8 remain
 Planned / NO-GO, except for WP-7 evidence and WP-8 synchronization included
 inside the approved WP-0 and WP-1 scopes. No older phase, workstream, plan,
 ADR, or provider-gate action is the current next action.
@@ -58,10 +60,12 @@ compile/runtime containment, pre-startup LIVE rejection, explicit invalid-mode
 rejection, unavailable-gateway execution blocking, removal of credential and
 provider-specific REST ownership from the legacy data adapter, protective-
 trigger retention, PAPER regression coverage, and default-off CI enforcement.
-WP-1 implementation is active on `codex/wp1-persistence-containment`.
-Its working-tree candidate has passed the complete 12-test default-off and
-ASan/UBSan suites, including focused state, startup-side-effect, and generated-
-path policy coverage. Exact-commit and GitHub PR evidence remain pending.
+WP-1 merged through PR #36 with its two late review corrections merged through
+follow-up PR #37. The accepted boundary provides complete version-12 BACKTEST
+state, validation before mutation or checkpoint replacement, atomic writes,
+risk-configuration compatibility, fail-closed PAPER/LIVE restart, governed
+runtime snapshot paths, actionable checkpoint failure, exact generated-path
+containment, and focused state/startup/source-control tests.
 
 ## Current Roadmap State
 
@@ -135,9 +139,8 @@ Historical summary:
 
 - WP-0 is merged and accepted through PR #35 at
   `eef91ed4abf35bd09462deb1a55a0c72d95edea7`.
-- WP-1 is the current approved package under
-  `PLAN-20260813-repository-cohesion-remediation`; implementation is active on
-  `codex/wp1-persistence-containment`.
+- WP-1 is complete and accepted through PRs #36 and #37 at
+  `c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`.
 - WP-2 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices required
   to close the approved WP-0 and WP-1 work.
 
@@ -287,16 +290,16 @@ Results:
 
 ## Next Safe Action
 
-Complete WP-1 source/test/documentation verification, review its exact diff,
-then use the separately authorized stage, commit, push, PR, and merge sequence.
-Provider activity, credentials, orders, financial-limit changes, deployment,
-and live use remain prohibited.
+Stop at the WP-1 boundary. WP-2 is the next dependency-eligible package but
+remains Planned / NO-GO until Wade separately authorizes its exact action.
+Provider activity, credentials, orders, financial-limit changes, workflow
+dispatch, deployment, release, and live use remain prohibited.
 
 ## Next Professional Halting Point
 
-Merged, accepted WP-1 evidence plus its WP-7/WP-8 closeout is the next
-professional transition point. Staging, commit, push, PR, and merge are
-authorized for WP-1. Workflow dispatch,
-credential access, provider execution, reconnect, orders, risk-limit changes,
-deployment, later packages, and live use remain prohibited. WP-2 remains
-Planned / NO-GO after WP-1 acceptance until separately authorized.
+Merged, accepted WP-1 evidence plus this WP-8 authority closeout is the current
+professional transition point. No further implementation package is
+authorized. Workflow dispatch, credential access, provider execution,
+reconnect, orders, risk-limit changes, deployment, release, later packages,
+and live use remain prohibited. WP-2 remains Planned / NO-GO until separately
+authorized.
