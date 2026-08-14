@@ -226,9 +226,8 @@ older plan must first map to WP-0 through WP-8 and receive new exact authority.
 # Plan: Repository Cohesion Remediation Program
 
 - Plan ID: `PLAN-20260813-repository-cohesion-remediation`
-- Status: In Progress — foundational governance approved; WP-0 merged and
-  accepted; WP-1 approved as the current package;
-  WP-2 through WP-8 Planned / NO-GO
+- Status: In Progress — foundational governance approved; WP-0 and WP-1 merged
+  and accepted; WP-2 through WP-8 Planned / NO-GO
 - Owner: Wade
 - Implementer: separately assigned per package
 - Review authority: Wade
@@ -328,17 +327,14 @@ provider continuation.
 ## Authorization Boundary
 
 Wade's 2026-08-13 direction authorized the foundational governance structure.
-On 2026-08-14 Wade approved that structure and both WP-0 and WP-1 handoff
-boundaries. This authorizes offline planning and implementation within the
-canonical WP-0 scope, followed—only after accepted WP-0 evidence—by offline
-planning and implementation within the canonical WP-1 scope.
-
-Wade's 2026-08-14 follow-up explicitly authorizes staging, commit, push, PR,
-and merge for WP-0 and, after WP-0 is merged and accepted, the same sequence
-for WP-1. This approval does not authorize credential-value access, provider
-traffic, external retries, demo or real orders, risk-limit changes, release,
-deployment, live use, or workflow dispatch. External process/attempt budget is
-zero for WP-0 and WP-1.
+On 2026-08-14 Wade approved that structure, both WP-0/WP-1 handoff boundaries,
+offline planning/implementation, and the bounded stage/commit/push/PR/merge
+sequences later completed through PRs #35–#38. Those grants are fully consumed
+historical evidence. They do not authorize another WP-0/WP-1 correction,
+implementation, commit, publication, or merge sequence, and never authorized
+credential-value access, provider traffic, external retries, demo or real
+orders, risk-limit changes, release, deployment, live use, or workflow
+dispatch. No current external process/attempt budget exists.
 
 ## Files Expected to Change
 
@@ -479,6 +475,13 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
   two known unused-variable warnings in `AsyncNetworkClient.cpp` and
   `RiskEngine.cpp`; no provider, credential, order, workflow-dispatch, release,
   or deployment action occurred.
+- 2026-08-14: WP-1 PR #36 merged at
+  `91393822f91cdc2b10938fb3629e198841f7c39b`. CodeQL's unrestricted resume-
+  path finding was corrected before that merge. Two later review findings
+  required validation before checkpoint replacement and immutable risk-
+  configuration compatibility; the preserved correction passed both 12-test
+  local suites and all GitHub gates, then merged through PR #37 at
+  `c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`.
 
 ## Deviations
 
@@ -490,14 +493,14 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
   PR #34 at commit `edf2a443d209cfc40e7d7269af43af2e72b3a617`.
 - WP-0: complete and accepted through merged PR #35 at
   `eef91ed4abf35bd09462deb1a55a0c72d95edea7`.
-- WP-1: implementation active; exact-commit, PR, merge, and acceptance evidence
-  pending.
+- WP-1: complete and accepted through merged PRs #36 and #37 at
+  `c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`.
 - WP-2 through WP-8: implementation evidence pending and not authorized.
 
 ## Final Outcome
 
-Open. The focus lock and foundational governance are approved. WP-0 is merged
-and accepted. WP-1 is the current authorized package. WP-2
+Open. The focus lock and foundational governance are approved. WP-0 and WP-1
+are merged and accepted. No implementation package is currently authorized. WP-2
 through WP-8 remain Planned / NO-GO.
 
 # Plan: Complete Gate 5 OAuth Correlation Controls

@@ -51,8 +51,10 @@ The focus lock is active and its foundational governance structure is
 approved. The objective is to strengthen the infrastructure being built; no
 separate preliminary gate, phase, package, artifact, or approval checkpoint
 exists. WP-0 is merged and accepted at
-`eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 is the current approved
-package. WP-2 through WP-8 remain Planned / NO-GO until
+`eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 is merged and accepted
+through PRs #36 and #37 at
+`c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`. No package is currently
+authorized for implementation. WP-2 through WP-8 remain Planned / NO-GO until
 separately authorized. New findings must map to an existing package or stop
 for an explicit scope decision.
 Historical phase, workstream, ADR, and provider-gate records remain evidence

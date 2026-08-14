@@ -14,8 +14,8 @@ TradeBot defaults to `BACKTEST`, dry-run, simulation, or paper behavior. Live tr
 
 The Repository Remediation Program in
 `REPOSITORY_REMEDIATION_PROGRAM.md` is the sole current implementation queue.
-Its foundational governance is approved. WP-0 is merged and accepted; WP-1 is
-the current approved package; WP-2 through WP-8 remain Planned /
+Its foundational governance is approved. WP-0 and WP-1 are merged and
+accepted; WP-2 through WP-8 remain Planned /
 NO-GO except for integrated WP-7/WP-8 closure slices. Existing source is
 classified as operationally unsafe for live use until accepted package evidence
 supports a narrower conclusion.
