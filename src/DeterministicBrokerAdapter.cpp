@@ -4,20 +4,24 @@
 #include <cmath>
 #include <utility>
 
-namespace {
+DeterministicBrokerAdapter::DeterministicBrokerAdapter() = default;
 
-Decimal64 multiplyDecimal(Decimal64 lhs, Decimal64 rhs) noexcept
+bool DeterministicBrokerAdapter::setSimulationCosts(double feeRate,
+                                                     double slippageBps) noexcept
 {
-    const long double value = static_cast<long double>(lhs.toDouble())
-                            * static_cast<long double>(rhs.toDouble());
-    const std::uint8_t scale = std::min<std::uint8_t>(
-        Decimal64::MAX_SCALE,
-        static_cast<std::uint8_t>(lhs.scale + rhs.scale));
-    return Decimal64::fromDouble(static_cast<double>(value), scale)
-        .value_or(Decimal64{});
+    const auto fee = Financial::fraction(feeRate);
+    const auto slippage = Financial::fraction(slippageBps / 10'000.0);
+    if (!fee.has_value() || fee->isNegative()
+        || fee->units >= Financial::SCALE_FACTOR
+        || !slippage.has_value() || slippage->isNegative()
+        || slippage->units >= Financial::SCALE_FACTOR) {
+        return false;
+    }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_feeRate = *fee;
+    m_slippageRate = *slippage;
+    return true;
 }
-
-} // namespace
 
 void DeterministicBrokerAdapter::setAcknowledgementCallback(
     AcknowledgementCallback callback)
@@ -193,30 +197,40 @@ bool DeterministicBrokerAdapter::submit(const NormalizedOrder& order)
             execution.fillPrice = order.normalizedLimitPrice.value_or(
                 order.normalizedStopPrice.value_or(
                     order.normalizedReferencePrice.value_or(Decimal64{})));
-            if (order.request.type == BrokerOrderType::Market
-                && execution.fillPrice.isPositive()) {
-                const double slippage = order.request.side == OrderSide::Buy
-                    ? 1.0005 : 0.9995;
-                execution.fillPrice = Decimal64::fromDouble(
-                    execution.fillPrice.toDouble() * slippage,
-                    execution.fillPrice.scale,
-                    DecimalRounding::NearestTiesAwayFromZero)
-                    .value_or(Decimal64{});
-            }
-            execution.fee = multiplyDecimal(execution.fillPrice, filled);
-            if (!execution.fee.isZero()) {
-                execution.fee = Decimal64::fromDouble(
-                    execution.fee.toDouble() * 0.001,
-                    execution.fee.scale,
-                    DecimalRounding::NearestTiesAwayFromZero).value_or(Decimal64{});
-            }
             execution.timestampNs = order.request.timestampNs;
             execution.sequence = order.request.sequence + 4;
             execution.eventKey = "fill-" + std::to_string(order.request.localOrderId)
                                + "-1";
-            executionCallback = m_executionCallback;
-            if (!remaining.isZero()) {
-                m_pendingOrders[order.request.localOrderId] = order;
+
+            const auto normalizedPrice = Financial::price(
+                execution.fillPrice.toDouble(), Financial::Rounding::RejectUnaligned);
+            const auto normalizedQuantity = Financial::quantity(
+                filled.toDouble(), Financial::Rounding::RejectUnaligned);
+            const auto slippedPrice = normalizedPrice.has_value()
+                ? Financial::applySlippage(*normalizedPrice, m_slippageRate,
+                                           order.request.side == OrderSide::Buy)
+                : std::nullopt;
+            const auto fillNotional = (slippedPrice.has_value()
+                                       && normalizedQuantity.has_value())
+                ? Financial::notional(*slippedPrice, *normalizedQuantity)
+                : std::nullopt;
+            const auto fillFee = fillNotional.has_value()
+                ? Financial::fee(*fillNotional, m_feeRate) : std::nullopt;
+            if (!slippedPrice.has_value() || !normalizedQuantity.has_value()
+                || !normalizedQuantity->isPositive() || !fillNotional.has_value()
+                || !fillFee.has_value()) {
+                acknowledgement.accepted = false;
+                acknowledgement.externalOrderId.clear();
+                acknowledgement.failure = FailureCategory::Validation;
+                acknowledgement.reason = "paper fill arithmetic is not representable";
+            } else {
+                execution.fillPrice = Decimal64{
+                    slippedPrice->units, Financial::SCALE};
+                execution.fee = Decimal64{fillFee->units, Financial::SCALE};
+                executionCallback = m_executionCallback;
+                if (!remaining.isZero()) {
+                    m_pendingOrders[order.request.localOrderId] = order;
+                }
             }
         }
     }

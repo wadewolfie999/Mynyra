@@ -8,23 +8,13 @@
 
 // ── Constructors ──────────────────────────────────────────────────────────────
 
-EventLoop::EventLoop(IStrategy&        strategy,
-                     RiskEngine&        riskEngine,
-                     ExecutionEngine&   executionEngine,
-                     PortfolioManager&  portfolio)
-    : m_singleStrategy(&strategy)
-    , m_riskEngine(riskEngine)
-    , m_executionEngine(executionEngine)
-    , m_portfolio(portfolio)
-{}
-
 EventLoop::EventLoop(std::vector<IStrategy*> strategies,
                      PortfolioAllocator&     allocator,
                      RiskEngine&             riskEngine,
                      ExecutionEngine&        executionEngine,
                      PortfolioManager&       portfolio)
     : m_strategies(std::move(strategies))
-    , m_allocator(&allocator)
+    , m_allocator(allocator)
     , m_riskEngine(riskEngine)
     , m_executionEngine(executionEngine)
     , m_portfolio(portfolio)
@@ -56,21 +46,7 @@ void EventLoop::dispatchSignal(Signal signal, double price, uint64_t timestamp,
 {
     if (signal != Signal::NONE) { ++m_totalSignals; }
 
-    if (m_riskEngine.canTrade()) {
-        m_executionEngine.execute(signal, price, timestamp, strategyId);
-    } else {
-        if (signal == Signal::SELL) {
-            m_executionEngine.execute(signal, price, timestamp, strategyId);
-        } else if (signal == Signal::BUY) {
-            ++m_riskBlockedBuys;
-            std::cout << "[RISK]  BUY blocked by RiskEngine"
-                      << " | Price: "  << std::fixed << std::setprecision(2) << price
-                      << " | Equity: " << m_portfolio.getTotalEquity()
-                      << " | DD: "     << std::setprecision(4)
-                      << (m_portfolio.getCurrentDrawdown() * 100.0) << "%"
-                      << "\n";
-        }
-    }
+    m_executionEngine.execute(signal, price, timestamp, strategyId);
 }
 
 // ── Core candle processing ────────────────────────────────────────────────────
@@ -95,41 +71,18 @@ void EventLoop::processCandle(const MarketCandle& candle)
     }
 
     // ── Signal generation ─────────────────────────────────────────────────
-    if (m_allocator != nullptr && !m_strategies.empty()) {
+    if (!m_strategies.empty()) {
         std::vector<AlphaSignal> alphaSignals;
         alphaSignals.reserve(m_strategies.size());
-
-        for (IStrategy* strat : m_strategies) {
-            AlphaSignal alpha = strat->generateSignal(candle);
-            alphaSignals.push_back(alpha);
+        for (IStrategy* strategy : m_strategies) {
+            alphaSignals.push_back(strategy->generateSignal(candle));
         }
 
-        const AllocationResult allocation = m_allocator->ensemble(alphaSignals);
-
-        const std::string attrId = !allocation.dominantStrategyId.empty()
-                                   ? allocation.dominantStrategyId
-                                   : "ENSEMBLE";
-
-        dispatchSignal(allocation.action, candle.close, candle.epochTimestamp, attrId);
-    } else if (m_singleStrategy != nullptr) {
-        Signal signal = m_singleStrategy->onCandle(candle);
-        if (signal != Signal::NONE) { ++m_totalSignals; }
-
-        if (m_riskEngine.canTrade()) {
-            m_executionEngine.execute(signal, candle.close, candle.epochTimestamp);
-        } else {
-            if (signal == Signal::SELL) {
-                m_executionEngine.execute(signal, candle.close, candle.epochTimestamp);
-            } else if (signal == Signal::BUY) {
-                ++m_riskBlockedBuys;
-                std::cout << "[RISK]  BUY blocked by RiskEngine"
-                          << " | Price: "  << std::fixed << std::setprecision(2) << candle.close
-                          << " | Equity: " << m_portfolio.getTotalEquity()
-                          << " | DD: "     << std::setprecision(4)
-                          << (m_portfolio.getCurrentDrawdown() * 100.0) << "%"
-                          << "\n";
-            }
-        }
+        const AllocationResult allocation = m_allocator.ensemble(alphaSignals);
+        const std::string attribution = !allocation.dominantStrategyId.empty()
+            ? allocation.dominantStrategyId : "ENSEMBLE";
+        dispatchSignal(allocation.action, candle.close, candle.epochTimestamp,
+                       attribution);
     }
 
     // ── Post-candle portfolio & risk updates ──────────────────────────────
@@ -159,9 +112,9 @@ void EventLoop::processCandle(const MarketCandle& candle)
         } else if (candle.epochTimestamp - m_lastCheckpointTs
                    >= m_checkpointIntervalSec) {
             bool saved = false;
-            if (m_regimeDetector != nullptr && m_allocator != nullptr) {
+            if (m_regimeDetector != nullptr) {
                 saved = m_serializer->saveSnapshot(m_portfolio, m_riskEngine,
-                                                   *m_regimeDetector, *m_allocator,
+                                                   *m_regimeDetector, m_allocator,
                                                    candle.epochTimestamp,
                                                    m_checkpointPath);
             } else {
@@ -179,4 +132,3 @@ void EventLoop::processCandle(const MarketCandle& candle)
 }
 
 int EventLoop::getTotalSignals()    const noexcept { return m_totalSignals; }
-int EventLoop::getRiskBlockedBuys() const noexcept { return m_riskBlockedBuys; }

@@ -130,13 +130,28 @@ void test_broker_fault_injector_determinism()
 
     uint32_t failures = 0;
     for (uint64_t i = 0; i < 12; ++i) {
-        const BrokerFill fill = broker.submitOrder("BTCUSDT",
-                                                   (i % 2) == 0,
-                                                   0.5,
-                                                   100.0 + static_cast<double>(i) * 0.1,
-                                                   1'000 + i,
-                                                   "FAULT_TEST");
-        if (!fill.success) {
+        OrderRequest request;
+        request.localOrderId = i + 1;
+        request.canonicalSymbol = "BTCUSDT";
+        request.side = (i % 2) == 0 ? OrderSide::Buy : OrderSide::Sell;
+        request.type = BrokerOrderType::Market;
+        request.quantity = Decimal64::fromDouble(0.5, 8).value();
+        request.referencePrice = Decimal64::fromDouble(
+            100.0 + static_cast<double>(i) * 0.1, 8).value();
+        request.sourceId = "FAULT_TEST";
+        request.timestampNs = 1'000 + i;
+        request.sequence = 1;
+        request.idempotencyKey = "fault-" + std::to_string(i + 1);
+        const auto normalized = broker.normalizeOrder(request);
+        require(normalized.has_value(), "fault test normalization failed");
+        RiskDecision riskDecision;
+        riskDecision.allowed = true;
+        riskDecision.riskIncreasing = request.side == OrderSide::Buy;
+        broker.dispatchOrder(*normalized, riskDecision);
+        const auto lifecycle = broker.orderLifecycle(request.localOrderId);
+        require(lifecycle.has_value(), "fault test lifecycle missing");
+        if (lifecycle->state == OrderLifecycleState::Rejected
+            || lifecycle->state == OrderLifecycleState::Unknown) {
             ++failures;
         }
     }

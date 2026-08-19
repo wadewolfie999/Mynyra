@@ -40,9 +40,6 @@ public:
     // Phase 10: primary AlphaSignal interface.
     AlphaSignal generateSignal(const MarketCandle& candle) override;
 
-    // Legacy shim (delegates to generateSignal).
-    Signal onCandle(const MarketCandle& candle) override;
-
     // True once enough bars have been seen to produce valid indicators.
     bool isReady() const noexcept;
 

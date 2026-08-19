@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
+#include <string_view>
 #include <vector>
 
 namespace {
@@ -37,12 +38,21 @@ std::size_t parseTickCount(int argc, char* argv[]) noexcept
     return static_cast<std::size_t>(parsed);
 }
 
+bool correctnessOnly(int argc, char* argv[]) noexcept
+{
+    return argc >= 3 && std::string_view(argv[2]) == "--correctness-only";
+}
+
 } // namespace
 
 int main(int argc, char* argv[])
 {
     const std::size_t tickCount = parseTickCount(argc, argv);
+    const bool correctness = correctnessOnly(argc, argv);
     std::cout << "[throughput_bench] Starting with tickCount=" << tickCount << "\n";
+    std::cout << "[throughput_bench] workload="
+              << (correctness ? "correctness-only" : "measurement")
+              << " costs=zero\n";
 
     SystemConfig cfg;
     cfg.mode = SystemMode::PAPER;
@@ -56,7 +66,10 @@ int main(int argc, char* argv[])
     AnalyticsEngine  analytics;
     LiveDataAdapter  liveAdapter(cfg);
     BrokerGateway    brokerGateway(cfg, portfolio);
-    ExecutionEngine  executionEngine(portfolio, riskEngine, "BENCH", 0.001, 5.0, 0.01);
+    // Pipeline throughput must not stop because accumulated synthetic fees and
+    // slippage trigger the financial drawdown gate. Accounting costs have their
+    // own WP-2 golden tests; this workload deliberately uses zero costs.
+    ExecutionEngine  executionEngine(portfolio, riskEngine, "BENCH", 0.0, 0.0, 0.01);
     executionEngine.setAnalyticsEngine(&analytics);
     executionEngine.bindBrokerGateway(&brokerGateway);
 
@@ -68,11 +81,10 @@ int main(int argc, char* argv[])
     MetricsAggregator aggregator(tickCount);
     std::size_t fillCount = 0;
 
-    brokerGateway.addFillCallback([&](const BrokerFill& fill) {
-        if (!fill.success) { return; }
-        if (fill.fillTimestamp == 0 || fill.fillTimestamp > tickCount) { return; }
+    brokerGateway.addExecutionCallback([&](const ExecutionEvent& execution) {
+        if (execution.timestampNs == 0 || execution.timestampNs > tickCount) { return; }
 
-        const auto idx = static_cast<std::size_t>(fill.fillTimestamp);
+        const auto idx = static_cast<std::size_t>(execution.timestampNs);
         const uint64_t t0 = ingestNs[idx];
         if (t0 == 0) { return; }
 
@@ -116,8 +128,9 @@ int main(int argc, char* argv[])
             continue;
         }
         const Signal s = longOpen ? Signal::SELL : Signal::BUY;
-        longOpen = !longOpen;
-        executionEngine.execute(s, next->close, next->epochTimestamp, "BENCH");
+        if (executionEngine.execute(s, next->close, next->epochTimestamp, "BENCH")) {
+            longOpen = !longOpen;
+        }
         ++consumed;
     }
 
@@ -131,8 +144,9 @@ int main(int argc, char* argv[])
         : 0.0;
 
     const auto summary = aggregator.summarize();
-    const bool csvOk = aggregator.exportCsv("data/results/latency_report.csv",
-                                            summary, durationMs, throughput);
+    const bool csvOk = correctness
+        || aggregator.exportCsv("data/results/latency_report.csv",
+                                summary, durationMs, throughput);
 
     const double p99Ms = summary.p99Us / 1000.0;
 
@@ -145,15 +159,19 @@ int main(int argc, char* argv[])
               << " p95_us=" << summary.p95Us
               << " p99_us=" << summary.p99Us
               << " max_us=" << summary.maxUs << "\n";
-    std::cout << "[throughput_bench] latency_report.csv=" << (csvOk ? "OK" : "FAILED") << "\n";
+    std::cout << "[throughput_bench] latency_report.csv="
+              << (correctness ? "SKIPPED" : (csvOk ? "OK" : "FAILED")) << "\n";
 
     if (!csvOk) {
         std::cerr << "[throughput_bench] ERROR: failed to export latency report.\n";
         return EXIT_FAILURE;
     }
-    if (produced < tickCount || consumed < tickCount || fillCount < consumed) {
+    if (produced != tickCount || consumed != tickCount || fillCount != consumed) {
         std::cerr << "[throughput_bench] ERROR: did not process all ticks.\n";
         return EXIT_FAILURE;
+    }
+    if (correctness) {
+        return EXIT_SUCCESS;
     }
     if (throughput < 10'000.0) {
         std::cerr << "[throughput_bench] ERROR: throughput below 10,000 msg/s (" << throughput << ").\n";

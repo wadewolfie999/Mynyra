@@ -109,7 +109,7 @@ struct StreamEntry {
     }
 };
 
-// ─── main ────────────────────────────────────────────────────────────────────
+// ─── main ────────────────────────────────────────────────────────────────
 
 int main(int argc, char* argv[])
 {
@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
     // Phase 12: inject SystemConfig so circuit-breaker thresholds are configurable.
     riskEngine.setSystemConfig(&sysCfg);
 
-    // ── Phase 12: Live data adapter + broker gateway ───────────────────────
+    // ── Phase 12: Live data adapter + broker gateway ──────────────────────
     // Both are constructed regardless of mode; in BACKTEST they are no-ops.
     LiveDataAdapter liveAdapter(sysCfg);
     BrokerGateway   brokerGateway(sysCfg, portfolio);
@@ -232,9 +232,8 @@ int main(int argc, char* argv[])
     if (!sysCfg.isBacktest()) {
         liveAdapter.connect();
         brokerGateway.connect();
-        // Wire fill callback: BrokerGateway notifies RiskEngine of API errors.
-        brokerGateway.setFillCallback([&](const BrokerFill& fill) {
-            if (!fill.success) { riskEngine.reportApiError(); }
+        brokerGateway.setAcknowledgementCallback([&](const OrderAcknowledgement& ack) {
+            if (!ack.accepted) { riskEngine.reportApiError(); }
         });
     }
 
@@ -280,7 +279,7 @@ int main(int argc, char* argv[])
     std::cout << "[Allocator] Static seed weights: SMA_01=" << allocator.getWeight("SMA_01")
               << "  MR_01=" << allocator.getWeight("MR_01") << " (fallback when Phi=0)\n";
 
-    // ── Per-symbol containers ─────────────────────────────────────────────
+    // ── Per-symbol containers ────────────────────────────────────────────
     struct SymbolEngines {
         std::unique_ptr<SmaCrossStrategy>      stratSma;
         std::unique_ptr<MeanReversionStrategy> stratMr;
@@ -337,7 +336,7 @@ int main(int argc, char* argv[])
     std::cout << "[Phase 11]    Strategies: SMA_01 + MR_01 via regime-aware PortfolioAllocator"
               << " (RegimeDetector: ADX-14, VarWindow-20)\n";
 
-    // ── Phase 9: --resume state injection ─────────────────────────────────
+    // ── Phase 9: --resume state injection ────────────────────────────────
     uint64_t resumeCheckpointTs = 0;
     if (doResume) {
         std::cout << "[Resume] Loading snapshot: " << resumeFile << "\n";
@@ -365,7 +364,7 @@ int main(int argc, char* argv[])
         }
     }
 
-    // ── Chronological dispatch loop ───────────────────────────────────────
+    // ── Chronological dispatch loop ──────────────────────────────────────
     std::cout << "[Multiplexer] Active streams : " << readers.size() << "\n";
 
     while (!heap.empty()) {
@@ -443,8 +442,7 @@ int main(int argc, char* argv[])
     uint64_t routeLatencyBreaches = 0;
     for (const auto& [sym, se] : engines) {
         signalCount  += se.loop->getTotalSignals();
-        blockedCount += se.loop->getRiskBlockedBuys()
-                     +  se.execution->getBlockedCount();
+        blockedCount += se.execution->getBlockedCount();
         maxRouteLatencyMs = std::max(maxRouteLatencyMs, se.execution->getMaxRouteLatencyMs());
         routeLatencyBreaches += se.execution->getLatencyBreachCount();
     }

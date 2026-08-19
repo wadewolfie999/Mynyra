@@ -15,13 +15,6 @@ class StateSerializer;
 
 class EventLoop {
 public:
-    // Single-strategy constructor (backward-compatible).
-    EventLoop(IStrategy&        strategy,
-              RiskEngine&        riskEngine,
-              ExecutionEngine&   executionEngine,
-              PortfolioManager&  portfolio);
-
-    // Phase 10 / 11: multi-strategy constructor using a PortfolioAllocator.
     EventLoop(std::vector<IStrategy*> strategies,
               PortfolioAllocator&     allocator,
               RiskEngine&             riskEngine,
@@ -42,15 +35,13 @@ public:
     void processCandle(const MarketCandle& candle);
 
     int getTotalSignals()    const noexcept;
-    int getRiskBlockedBuys() const noexcept;
 
 private:
     void dispatchSignal(Signal signal, double price, uint64_t timestamp,
                         const std::string& strategyId);
 
-    IStrategy*              m_singleStrategy{nullptr};
     std::vector<IStrategy*> m_strategies;
-    PortfolioAllocator*     m_allocator{nullptr};
+    PortfolioAllocator&     m_allocator;
     RegimeDetector*         m_regimeDetector{nullptr};
 
     RiskEngine&        m_riskEngine;
@@ -59,7 +50,6 @@ private:
     AnalyticsEngine*   m_analytics{nullptr};
 
     int m_totalSignals{0};
-    int m_riskBlockedBuys{0};
 
     StateSerializer* m_serializer{nullptr};
     uint64_t         m_checkpointIntervalSec{0};

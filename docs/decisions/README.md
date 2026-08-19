@@ -60,6 +60,9 @@ Use `0000-template.md`.
   path, abandoned/non-controlling Algo Bridge, demo-only endpoint, staged OAuth
   scopes, revalidated Gates 1-3 design evidence, and separately gated
   implementation.
+- `0005-canonical-financial-value-contract.md`: Proposed scale-8 internal
+  financial-value, checked-arithmetic, accounting, and snapshot-v13 contract;
+  WP-2 implementation authorization does not constitute ADR acceptance.
 
 ## Conflict Handling
 

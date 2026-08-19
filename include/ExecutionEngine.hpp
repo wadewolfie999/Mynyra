@@ -1,22 +1,20 @@
 #pragma once
+#include "FinancialMath.hpp"
 #include "IStrategy.hpp"
-#include "LockFreeRingBuffer.hpp"
 #include "PortfolioManager.hpp"
 #include "RiskEngine.hpp"
 #include "MarketCandle.hpp"
-#include <array>
 #include <atomic>
 #include <cstdint>
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 // Forward declaration — AnalyticsEngine is injected optionally.
 class AnalyticsEngine;
 class SmaCrossStrategy;
 class BrokerGateway;
-struct BrokerFill;
+struct ExecutionEvent;
 class TriggerOrderManager;
 class L2OrderBook;
 
@@ -94,43 +92,22 @@ public:
     double getLastRouteLatencyMs() const noexcept;
     double getMaxRouteLatencyMs() const noexcept;
     uint64_t getLatencyBreachCount() const noexcept;
-    uint64_t getDroppedBusEvents() const noexcept;
     uint64_t lastBrokerOrderId() const noexcept;
     double pendingBrokerQuantity(uint64_t orderId) const noexcept;
 
 private:
-    struct OrderBusEvent {
-        uint64_t orderLocalId{0};
-        std::array<char, 24> symbol{};
-        std::array<char, 24> strategyId{};
-        bool        isBuy{true};
-        double      quantity{0.0};
-        double      requestedPrice{0.0};
-        uint64_t    timestamp{0};
-        uint64_t    signalNs{0};
-    };
-
-    static constexpr std::size_t ORDER_POOL_SIZE = 2048;
-    static constexpr std::size_t BUS_CAPACITY = 4096;
-
-    struct OrderNode {
-        OrderBusEvent event;
-        bool          inUse{false};
-    };
-
-    OrderNode* acquireOrderNode() noexcept;
-    void releaseOrderNode(OrderNode* node) noexcept;
-    void queueOrderEvent(const OrderBusEvent& event) noexcept;
-    void drainOrderBus();
-    void onBrokerFill(const BrokerFill& fill);
-    static void copyToFixed(std::array<char, 24>& dst, const std::string& src) noexcept;
-    static std::string fromFixed(const std::array<char, 24>& src);
+    bool dispatchBrokerOrder(bool isBuy,
+                             Financial::Quantity quantity,
+                             Financial::Price requestedPrice,
+                             uint64_t timestamp,
+                             const std::string& strategyId);
+    void onBrokerExecution(const ExecutionEvent& execution);
 
     PortfolioManager& m_portfolio;
     RiskEngine&       m_riskEngine;
     std::string       m_symbol;
-    double            m_feeRate;
-    double            m_slippage;          // fractional (bps / 10000)
+    Financial::Fraction m_feeRate;
+    Financial::Fraction m_slippage;
     double            m_riskPct;           // fraction of equity risked per trade
     AnalyticsEngine*  m_analytics{nullptr};
     SmaCrossStrategy* m_strategy{nullptr};
@@ -141,13 +118,7 @@ private:
     int m_filledCount{0};
     int m_blockedCount{0};
 
-    // Lock-free broker routing bus + memory pool.
-    LockFreeRingBuffer<OrderNode*, BUS_CAPACITY> m_orderBus;
-    std::vector<OrderNode> m_orderPool;
-    std::vector<OrderNode*> m_freeOrderNodes;
-    std::mutex m_poolMutex;
     std::atomic<uint64_t> m_nextLocalOrderId{1};
-    std::atomic<uint64_t> m_droppedBusEvents{0};
 
     // Routing latency instrumentation.
     std::atomic<double> m_lastRouteLatencyMs{0.0};
@@ -155,8 +126,8 @@ private:
     std::atomic<uint64_t> m_latencyBreaches{0};
 
     // Partial-fill tracking.
-    std::unordered_map<uint64_t, double> m_pendingBrokerQty;
-    std::unordered_map<uint64_t, std::string> m_orderStrategyMap;
+    std::unordered_map<uint64_t, Financial::Quantity> m_pendingBrokerQty;
+    std::unordered_map<uint64_t, Financial::Quantity> m_appliedBrokerQty;
     mutable std::mutex m_fillMutex;
     std::atomic<uint64_t> m_lastBrokerOrderId{0};
 };
