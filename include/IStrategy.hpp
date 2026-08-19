@@ -42,8 +42,4 @@ public:
     // conviction == 0.0 means no view this bar.
     virtual AlphaSignal generateSignal(const MarketCandle& candle) = 0;
 
-    // Legacy shim: calls generateSignal and converts via alphaToSignal.
-    virtual Signal onCandle(const MarketCandle& candle) {
-        return alphaToSignal(generateSignal(candle));
-    }
 };

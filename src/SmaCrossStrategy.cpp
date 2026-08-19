@@ -98,10 +98,6 @@ AlphaSignal SmaCrossStrategy::generateSignal(const MarketCandle& candle)
     return {candle.symbol, m_strategyId, conviction};
 }
 
-Signal SmaCrossStrategy::onCandle(const MarketCandle& candle)
-{
-    return alphaToSignal(generateSignal(candle));
-}
 
 double SmaCrossStrategy::getATR() const noexcept
 {

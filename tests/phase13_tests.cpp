@@ -87,20 +87,20 @@ void test_partial_fill_resolution()
     const double firstQty = portfolio.getPositionQuantity("BTCUSDT");
     require(firstQty > 0.0, "No position was opened after partial buy fill");
 
-    BrokerFill secondFill;
-    secondFill.orderId = orderId;
-    secondFill.symbol = "BTCUSDT";
-    secondFill.isBuy = true;
-    secondFill.requestedPrice = 100.0;
-    secondFill.fillPrice = 100.05;
-    secondFill.quantity = firstRemaining;
-    secondFill.filledQuantity = firstRemaining;
-    secondFill.remainingQuantity = 0.0;
-    secondFill.partialFill = false;
-    secondFill.feePaid = secondFill.fillPrice * secondFill.filledQuantity * 0.001;
-    secondFill.fillTimestamp = 1'001;
-    secondFill.success = true;
-    broker.simulateFillConfirmation(secondFill);
+    const auto lifecycle = broker.orderLifecycle(orderId);
+    require(lifecycle.has_value(), "Partial lifecycle record is missing");
+    ExecutionEvent secondFill;
+    secondFill.localOrderId = orderId;
+    secondFill.externalOrderId = lifecycle->externalOrderId;
+    secondFill.cumulativeFilledQuantity = lifecycle->request.quantity;
+    secondFill.remainingQuantity = Decimal64{0, lifecycle->request.quantity.scale};
+    secondFill.fillPrice = Decimal64::fromDouble(100.05, 8).value();
+    secondFill.fee = Decimal64::fromDouble(
+        100.05 * firstRemaining * 0.001, 8).value();
+    secondFill.timestampNs = 1'001;
+    secondFill.sequence = lifecycle->lastSequence + 1;
+    secondFill.eventKey = "phase13-complete-" + std::to_string(orderId);
+    broker.simulateExecutionEvent(secondFill);
 
     const double secondQty = portfolio.getPositionQuantity("BTCUSDT");
     require(secondQty > firstQty, "Second fill did not increase position quantity");

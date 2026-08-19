@@ -25,6 +25,11 @@ public:
     void u8(std::uint8_t value) { m_bytes.push_back(value); }
     void u32(std::uint32_t value) { integer(value); }
     void u64(std::uint64_t value) { integer(value); }
+    void i64(std::int64_t value) {
+        std::uint64_t bits = 0;
+        std::memcpy(&bits, &value, sizeof(bits));
+        u64(bits);
+    }
     void i32(std::int32_t value) { integer(static_cast<std::uint32_t>(value)); }
     void boolean(bool value) { u8(value ? 1 : 0); }
     void number(double value) {
@@ -60,6 +65,12 @@ public:
     }
     bool u32(std::uint32_t& out) { return integer(out); }
     bool u64(std::uint64_t& out) { return integer(out); }
+    bool i64(std::int64_t& out) {
+        std::uint64_t bits = 0;
+        if (!u64(bits)) { return false; }
+        std::memcpy(&out, &bits, sizeof(out));
+        return true;
+    }
     bool i32(std::int32_t& out) {
         std::uint32_t value = 0;
         if (!u32(value)) { return false; }
@@ -146,27 +157,41 @@ bool readDoubles(Reader& reader, std::vector<double>& values) {
 }
 
 void writePortfolio(Writer& w, const PortfolioManager::Snapshot& s) {
-    w.number(s.cash); w.number(s.unrealizedPnL); w.number(s.totalEquity);
-    w.number(s.maxEquity); w.number(s.currentDrawdown); w.number(s.maxDrawdown);
-    w.i32(s.tradeCount); w.number(s.totalFeesPaid); w.i32(s.roundTripCount);
+    const auto moneyUnits = [](double value) {
+        return Financial::money(value, Financial::Rounding::RejectUnaligned)->units;
+    };
+    const auto priceUnits = [](double value) {
+        return Financial::price(value, Financial::Rounding::RejectUnaligned)->units;
+    };
+    const auto quantityUnits = [](double value) {
+        return Financial::quantity(value, Financial::Rounding::RejectUnaligned)->units;
+    };
+    w.i64(moneyUnits(s.cash)); w.i64(moneyUnits(s.unrealizedPnL));
+    w.i64(moneyUnits(s.totalEquity)); w.i64(moneyUnits(s.maxEquity));
+    w.number(s.currentDrawdown); w.number(s.maxDrawdown);
+    w.i32(s.tradeCount); w.i64(moneyUnits(s.totalFeesPaid)); w.i32(s.roundTripCount);
     w.u64(s.positions.size());
     for (const auto& p : s.positions) {
-        w.string(p.position.symbol); w.number(p.position.quantity);
-        w.number(p.position.entryPrice); w.boolean(p.position.isLong);
-        w.u64(p.entryTimestamp); w.number(p.entryFee); w.string(p.strategyId);
+        w.string(p.position.symbol); w.i64(quantityUnits(p.position.quantity));
+        w.i64(priceUnits(p.position.entryPrice)); w.boolean(p.position.isLong);
+        w.u64(p.entryTimestamp); w.i64(moneyUnits(p.entryFee));
+        w.i64(moneyUnits(p.costBasis)); w.i64(priceUnits(p.lastMarkPrice));
+        w.string(p.strategyId);
     }
     w.u64(s.tradeLog.size());
     for (const auto& t : s.tradeLog) {
         w.string(t.symbol); w.u64(t.openTimestamp); w.u64(t.closeTimestamp);
-        w.number(t.entryPrice); w.number(t.exitPrice); w.number(t.quantity);
-        w.number(t.totalFees); w.number(t.realizedPnL); w.number(t.grossPnL);
+        w.i64(priceUnits(t.entryPrice)); w.i64(priceUnits(t.exitPrice));
+        w.i64(quantityUnits(t.quantity)); w.i64(moneyUnits(t.totalFees));
+        w.i64(moneyUnits(t.realizedPnL)); w.i64(moneyUnits(t.grossPnL));
         w.string(t.strategy_id);
     }
     w.u64(s.pendingOrders.size());
     for (const auto& o : s.pendingOrders) {
         w.string(o.symbol); w.u8(static_cast<std::uint8_t>(o.orderType));
-        w.boolean(o.isBuy); w.number(o.limitPrice); w.number(o.trailOffset);
-        w.number(o.trailBest); w.number(o.quantity); w.number(o.capitalToCommit);
+        w.boolean(o.isBuy); w.i64(priceUnits(o.limitPrice));
+        w.i64(priceUnits(o.trailOffset)); w.i64(priceUnits(o.trailBest));
+        w.i64(quantityUnits(o.quantity)); w.i64(moneyUnits(o.capitalToCommit));
         w.u64(o.placedTimestamp); w.u64(o.orderId);
     }
     w.u64(s.nextOrderId);
@@ -174,37 +199,63 @@ void writePortfolio(Writer& w, const PortfolioManager::Snapshot& s) {
 
 bool readPortfolio(Reader& r, PortfolioManager::Snapshot& s) {
     std::int32_t tradeCount = 0, roundTripCount = 0;
-    if (!r.number(s.cash) || !r.number(s.unrealizedPnL) || !r.number(s.totalEquity)
-        || !r.number(s.maxEquity) || !r.number(s.currentDrawdown)
+    std::int64_t cash = 0, unrealized = 0, equity = 0, maxEquity = 0, fees = 0;
+    if (!r.i64(cash) || !r.i64(unrealized) || !r.i64(equity)
+        || !r.i64(maxEquity) || !r.number(s.currentDrawdown)
         || !r.number(s.maxDrawdown) || !r.i32(tradeCount)
-        || !r.number(s.totalFeesPaid) || !r.i32(roundTripCount)) { return false; }
+        || !r.i64(fees) || !r.i32(roundTripCount)) { return false; }
+    s.cash = Financial::Money{cash}.toDouble();
+    s.unrealizedPnL = Financial::Money{unrealized}.toDouble();
+    s.totalEquity = Financial::Money{equity}.toDouble();
+    s.maxEquity = Financial::Money{maxEquity}.toDouble();
+    s.totalFeesPaid = Financial::Money{fees}.toDouble();
     s.tradeCount = tradeCount; s.roundTripCount = roundTripCount;
     std::size_t count = 0;
     if (!r.count(count)) { return false; }
     s.positions.resize(count);
     for (auto& p : s.positions) {
-        if (!r.string(p.position.symbol) || !r.number(p.position.quantity)
-            || !r.number(p.position.entryPrice) || !r.boolean(p.position.isLong)
-            || !r.u64(p.entryTimestamp) || !r.number(p.entryFee)
+        std::int64_t quantity = 0, price = 0, entryFee = 0, costBasis = 0, mark = 0;
+        if (!r.string(p.position.symbol) || !r.i64(quantity) || !r.i64(price)
+            || !r.boolean(p.position.isLong) || !r.u64(p.entryTimestamp)
+            || !r.i64(entryFee) || !r.i64(costBasis) || !r.i64(mark)
             || !r.string(p.strategyId)) { return false; }
+        p.position.quantity = Financial::Quantity{quantity}.toDouble();
+        p.position.entryPrice = Financial::Price{price}.toDouble();
+        p.entryFee = Financial::Money{entryFee}.toDouble();
+        p.costBasis = Financial::Money{costBasis}.toDouble();
+        p.lastMarkPrice = Financial::Price{mark}.toDouble();
     }
     if (!r.count(count)) { return false; }
     s.tradeLog.resize(count);
     for (auto& t : s.tradeLog) {
+        std::int64_t entry = 0, exit = 0, quantity = 0;
+        std::int64_t totalFees = 0, realized = 0, gross = 0;
         if (!r.string(t.symbol) || !r.u64(t.openTimestamp) || !r.u64(t.closeTimestamp)
-            || !r.number(t.entryPrice) || !r.number(t.exitPrice) || !r.number(t.quantity)
-            || !r.number(t.totalFees) || !r.number(t.realizedPnL)
-            || !r.number(t.grossPnL) || !r.string(t.strategy_id)) { return false; }
+            || !r.i64(entry) || !r.i64(exit) || !r.i64(quantity)
+            || !r.i64(totalFees) || !r.i64(realized)
+            || !r.i64(gross) || !r.string(t.strategy_id)) { return false; }
+        t.entryPrice = Financial::Price{entry}.toDouble();
+        t.exitPrice = Financial::Price{exit}.toDouble();
+        t.quantity = Financial::Quantity{quantity}.toDouble();
+        t.totalFees = Financial::Money{totalFees}.toDouble();
+        t.realizedPnL = Financial::Money{realized}.toDouble();
+        t.grossPnL = Financial::Money{gross}.toDouble();
     }
     if (!r.count(count)) { return false; }
     for (std::size_t i = 0; i < count; ++i) {
         OrderRecord o; std::uint8_t type = 0;
+        std::int64_t limit = 0, offset = 0, best = 0, quantity = 0, capital = 0;
         if (!r.string(o.symbol) || !r.u8(type) || type > static_cast<std::uint8_t>(OrderType::TRAILING_STOP)
-            || !r.boolean(o.isBuy) || !r.number(o.limitPrice) || !r.number(o.trailOffset)
-            || !r.number(o.trailBest) || !r.number(o.quantity)
-            || !r.number(o.capitalToCommit) || !r.u64(o.placedTimestamp)
+            || !r.boolean(o.isBuy) || !r.i64(limit) || !r.i64(offset)
+            || !r.i64(best) || !r.i64(quantity) || !r.i64(capital)
+            || !r.u64(o.placedTimestamp)
             || !r.u64(o.orderId)) { return false; }
         o.orderType = static_cast<OrderType>(type);
+        o.limitPrice = Financial::Price{limit}.toDouble();
+        o.trailOffset = Financial::Price{offset}.toDouble();
+        o.trailBest = Financial::Price{best}.toDouble();
+        o.quantity = Financial::Quantity{quantity}.toDouble();
+        o.capitalToCommit = Financial::Money{capital}.toDouble();
         s.pendingOrders.push_back(std::move(o));
     }
     return r.u64(s.nextOrderId);
@@ -378,11 +429,23 @@ bool validate(const PortfolioManager::Snapshot& p, const RiskEngine::Snapshot& r
     const auto finiteRange = [&](const auto& values) {
         return std::all_of(values.begin(), values.end(), finite);
     };
+    const auto alignedMoney = [](double value) {
+        return Financial::money(value, Financial::Rounding::RejectUnaligned).has_value();
+    };
+    const auto alignedPrice = [](double value) {
+        return Financial::price(value, Financial::Rounding::RejectUnaligned).has_value();
+    };
+    const auto alignedQuantity = [](double value) {
+        return Financial::quantity(value, Financial::Rounding::RejectUnaligned).has_value();
+    };
     if (p.cash < 0 || p.totalEquity < 0 || p.maxEquity < 0 || p.totalFeesPaid < 0
         || p.tradeCount < 0 || p.roundTripCount < 0 || p.nextOrderId == 0
         || !finite(p.cash) || !finite(p.unrealizedPnL) || !finite(p.totalEquity)
         || !finite(p.maxEquity) || !finite(p.currentDrawdown)
-        || !finite(p.maxDrawdown) || !finite(p.totalFeesPaid)) {
+        || !finite(p.maxDrawdown) || !finite(p.totalFeesPaid)
+        || !alignedMoney(p.cash) || !alignedMoney(p.unrealizedPnL)
+        || !alignedMoney(p.totalEquity) || !alignedMoney(p.maxEquity)
+        || !alignedMoney(p.totalFeesPaid)) {
         error = "invalid portfolio accounting state"; return false;
     }
     std::set<std::string> symbols;
@@ -390,7 +453,14 @@ bool validate(const PortfolioManager::Snapshot& p, const RiskEngine::Snapshot& r
         if (position.position.symbol.empty() || position.position.quantity <= 0
             || position.position.entryPrice <= 0 || !position.position.isLong
             || !finite(position.position.quantity) || !finite(position.position.entryPrice)
-            || !finite(position.entryFee)
+            || !finite(position.entryFee) || position.entryFee < 0
+            || !finite(position.costBasis) || position.costBasis <= 0
+            || !finite(position.lastMarkPrice) || position.lastMarkPrice <= 0
+            || !alignedQuantity(position.position.quantity)
+            || !alignedPrice(position.position.entryPrice)
+            || !alignedMoney(position.entryFee)
+            || !alignedMoney(position.costBasis)
+            || !alignedPrice(position.lastMarkPrice)
             || !symbols.insert(position.position.symbol).second) {
             error = "invalid or duplicate open position"; return false;
         }
@@ -402,6 +472,9 @@ bool validate(const PortfolioManager::Snapshot& p, const RiskEngine::Snapshot& r
             || !finite(order.limitPrice) || !finite(order.trailOffset)
             || !finite(order.trailBest) || !finite(order.quantity)
             || !finite(order.capitalToCommit)
+            || !alignedPrice(order.limitPrice) || !alignedPrice(order.trailOffset)
+            || !alignedPrice(order.trailBest) || !alignedQuantity(order.quantity)
+            || !alignedMoney(order.capitalToCommit)
             || !orderIds.insert(order.orderId).second) {
             error = "invalid or duplicate pending order"; return false;
         }
@@ -411,9 +484,22 @@ bool validate(const PortfolioManager::Snapshot& p, const RiskEngine::Snapshot& r
     for (const auto& trade : p.tradeLog) {
         if (trade.symbol.empty() || !finite(trade.entryPrice) || !finite(trade.exitPrice)
             || !finite(trade.quantity) || !finite(trade.totalFees)
-            || !finite(trade.realizedPnL) || !finite(trade.grossPnL)) {
+            || !finite(trade.realizedPnL) || !finite(trade.grossPnL)
+            || trade.entryPrice <= 0 || trade.exitPrice <= 0
+            || trade.quantity <= 0 || trade.totalFees < 0
+            || !alignedPrice(trade.entryPrice) || !alignedPrice(trade.exitPrice)
+            || !alignedQuantity(trade.quantity) || !alignedMoney(trade.totalFees)
+            || !alignedMoney(trade.realizedPnL) || !alignedMoney(trade.grossPnL)) {
             error = "invalid trade-log state"; return false;
         }
+    }
+    try {
+        PortfolioManager detached;
+        detached.restoreState(p);
+    } catch (const std::exception& exception) {
+        error = std::string("inconsistent portfolio accounting state: ")
+              + exception.what();
+        return false;
     }
     if (!finite(r.configuredVarLimit) || !finite(r.totalDrawdown)
         || !finite(r.dailyDrawdown) || !finite(r.prevEquity)

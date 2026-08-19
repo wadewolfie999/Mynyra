@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <limits>
 #include <utility>
 
@@ -372,6 +371,15 @@ void BrokerGateway::setExecutionCallback(ExecutionCallback callback) noexcept
     m_executionCallback = std::move(callback);
 }
 
+void BrokerGateway::addExecutionCallback(ExecutionCallback callback) noexcept
+{
+    if (!callback) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_executionCallbacks.push_back(std::move(callback));
+}
+
 void BrokerGateway::setCancelCallback(CancelCallback callback) noexcept
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -384,176 +392,8 @@ void BrokerGateway::setHealthCallback(HealthCallback callback) noexcept
     m_healthCallback = std::move(callback);
 }
 
-BrokerFill BrokerGateway::submitOrder(const std::string& symbol,
-                                      bool isBuy,
-                                      double quantity,
-                                      double requestedPrice,
-                                      std::uint64_t timestamp,
-                                      const std::string& strategyId)
+void BrokerGateway::simulateExecutionEvent(const ExecutionEvent& execution)
 {
-    const std::uint64_t orderId = m_nextOrderId.fetch_add(1);
-    BrokerFill failure;
-    failure.orderId = orderId;
-    failure.symbol = symbol;
-    failure.isBuy = isBuy;
-    failure.quantity = quantity;
-    failure.requestedPrice = requestedPrice;
-    failure.fillTimestamp = timestamp;
-    failure.strategyId = strategyId;
-
-    const auto decimalQuantity = Decimal64::fromDouble(
-        quantity, 8, DecimalRounding::TowardZero);
-    const auto decimalPrice = Decimal64::fromDouble(
-        requestedPrice, 8, DecimalRounding::NearestTiesAwayFromZero);
-    if (!decimalQuantity.has_value() || !decimalQuantity->isPositive()
-        || !decimalPrice.has_value() || !decimalPrice->isPositive()) {
-        failure.errorMessage = "legacy order conversion failed";
-        ++m_totalApiErrors;
-        return failure;
-    }
-
-    OrderRequest request;
-    request.localOrderId = orderId;
-    request.canonicalSymbol = symbol;
-    request.side = isBuy ? OrderSide::Buy : OrderSide::Sell;
-    request.type = BrokerOrderType::Market;
-    request.quantity = *decimalQuantity;
-    request.referencePrice = *decimalPrice;
-    request.sourceId = strategyId;
-    request.timestampNs = timestamp;
-    request.sequence = 1;
-    request.idempotencyKey = "legacy-order-" + std::to_string(orderId);
-
-    std::string rejection;
-    auto normalized = normalizeOrder(request, &rejection);
-    if (!normalized.has_value()) {
-        failure.errorMessage = rejection;
-        ++m_totalApiErrors;
-        return failure;
-    }
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_legacyContexts[orderId] = LegacyOrderContext{
-            symbol, isBuy, requestedPrice, quantity, strategyId};
-    }
-    RiskDecision compatibilityRiskDecision;
-    compatibilityRiskDecision.allowed = true;
-    compatibilityRiskDecision.riskIncreasing = isBuy;
-    compatibilityRiskDecision.action = RuleBreachAction::Warn;
-    compatibilityRiskDecision.reason = "legacy caller completed existing risk gate";
-    const auto dispatch = dispatchOrder(*normalized, compatibilityRiskDecision);
-    std::lock_guard<std::mutex> lock(m_mutex);
-    const auto fillIt = m_lastLegacyFills.find(orderId);
-    if (fillIt != m_lastLegacyFills.end()) {
-        return fillIt->second;
-    }
-    failure.errorMessage = dispatch.reason.empty()
-        ? "no acknowledgement or execution event" : dispatch.reason;
-    return failure;
-}
-
-bool BrokerGateway::cancelOrder(std::uint64_t orderId)
-{
-    CancelRequest request;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        const auto* record = m_lifecycle.find(orderId);
-        if (!record) {
-            return false;
-        }
-        request.localOrderId = orderId;
-        request.externalOrderId = record->externalOrderId;
-        request.timestampNs = record->lastTimestampNs;
-        request.sequence = record->lastSequence + 1;
-        request.idempotencyKey = "legacy-cancel-" + std::to_string(orderId);
-    }
-    return requestCancel(request);
-}
-
-void BrokerGateway::reconcile(std::uint64_t nowTimestamp)
-{
-    const auto snapshot = reconciliationSnapshot(nowTimestamp);
-    std::cout << "[BrokerGateway] Reconciliation #"
-              << m_reconciliationCount.load()
-              << " ts=" << snapshot.timestampNs
-              << " status=" << static_cast<int>(snapshot.status) << '\n';
-}
-
-void BrokerGateway::injectBrokerSnapshot(const BrokerAccount& snapshot) noexcept
-{
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_lastBrokerSnapshot = snapshot;
-    }
-    if (auto* deterministic = deterministicAdapter()) {
-        AccountSnapshot account;
-        account.snapshotVersion = snapshot.snapshotTimestamp;
-        account.balance = Decimal64::fromDouble(snapshot.cashBalance, 2)
-            .value_or(Decimal64{});
-        account.equity = Decimal64::fromDouble(snapshot.totalEquity, 2)
-            .value_or(Decimal64{});
-        account.sourceTimestampNs = snapshot.snapshotTimestamp;
-        account.ingestionTimestampNs = snapshot.snapshotTimestamp;
-        account.complete = true;
-        deterministic->setAccountSnapshot(account);
-    }
-}
-
-BrokerAccount BrokerGateway::lastBrokerSnapshot() const noexcept
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    return m_lastBrokerSnapshot;
-}
-
-void BrokerGateway::setFillCallback(FillCallback callback) noexcept
-{
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_fillCallback = std::move(callback);
-}
-
-void BrokerGateway::addFillCallback(FillCallback callback) noexcept
-{
-    if (!callback) {
-        return;
-    }
-    std::lock_guard<std::mutex> lock(m_mutex);
-    m_fillCallbacks.push_back(std::move(callback));
-}
-
-void BrokerGateway::simulateFillConfirmation(const BrokerFill& fill)
-{
-    ExecutionEvent execution;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        const auto* record = m_lifecycle.find(fill.orderId);
-        if (!record) {
-            return;
-        }
-        const auto fillQuantity = Decimal64::fromDouble(
-            fill.filledQuantity > 0.0 ? fill.filledQuantity : fill.quantity,
-            record->request.quantity.scale,
-            DecimalRounding::TowardZero);
-        if (!fillQuantity.has_value()) {
-            return;
-        }
-        execution.localOrderId = fill.orderId;
-        execution.externalOrderId = record->externalOrderId;
-        execution.cumulativeFilledQuantity = Decimal64{
-            record->filledQuantity.units + fillQuantity->units,
-            record->request.quantity.scale};
-        execution.remainingQuantity = Decimal64{
-            record->request.quantity.units
-                - execution.cumulativeFilledQuantity.units,
-            record->request.quantity.scale};
-        execution.fillPrice = Decimal64::fromDouble(fill.fillPrice, 8)
-            .value_or(Decimal64{});
-        execution.fee = Decimal64::fromDouble(fill.feePaid, 8)
-            .value_or(Decimal64{});
-        execution.timestampNs = fill.fillTimestamp;
-        execution.sequence = record->lastSequence + 1;
-        execution.eventKey = "simulated-fill-" + std::to_string(fill.orderId)
-                           + "-" + std::to_string(execution.sequence);
-    }
     handleExecution(execution);
 }
 
@@ -569,6 +409,14 @@ void BrokerGateway::injectNextPartialFill(double fillRatio) noexcept
     if (auto* deterministic = deterministicAdapter()) {
         deterministic->injectNextPartialFill(fillRatio);
     }
+}
+
+bool BrokerGateway::setPaperSimulationCosts(double feeRate,
+                                            double slippageBps) noexcept
+{
+    auto* deterministic = deterministicAdapter();
+    return deterministic != nullptr
+        && deterministic->setSimulationCosts(feeRate, slippageBps);
 }
 
 void BrokerGateway::setFaultInjectorConfig(
@@ -680,7 +528,6 @@ void BrokerGateway::handleAcknowledgement(
     const OrderAcknowledgement& acknowledgement)
 {
     AcknowledgementCallback callback;
-    std::optional<BrokerFill> failureFill;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         const auto applied = m_lifecycle.applyAcknowledgement(acknowledgement);
@@ -688,47 +535,22 @@ void BrokerGateway::handleAcknowledgement(
             ++m_totalApiErrors;
             return;
         }
-        callback = m_acknowledgementCallback;
         if (!acknowledgement.accepted) {
             ++m_totalApiErrors;
-            const auto contextIt = m_legacyContexts.find(
-                acknowledgement.localOrderId);
-            if (contextIt != m_legacyContexts.end()) {
-                const auto& context = contextIt->second;
-                BrokerFill fill;
-                fill.orderId = acknowledgement.localOrderId;
-                fill.symbol = context.symbol;
-                fill.isBuy = context.isBuy;
-                fill.requestedPrice = context.requestedPrice;
-                fill.quantity = context.requestedQuantity;
-                fill.fillTimestamp = acknowledgement.timestampNs;
-                fill.strategyId = context.strategyId;
-                fill.errorMessage = acknowledgement.reason;
-                m_lastLegacyFills[fill.orderId] = fill;
-                failureFill = fill;
-            }
         }
+        callback = m_acknowledgementCallback;
     }
     if (callback) {
         callback(acknowledgement);
-    }
-    if (failureFill.has_value()) {
-        publishLegacyFill(*failureFill);
     }
 }
 
 void BrokerGateway::handleExecution(const ExecutionEvent& execution)
 {
     ExecutionCallback callback;
-    std::optional<BrokerFill> legacyFill;
+    std::vector<ExecutionCallback> callbacks;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        const auto* before = m_lifecycle.find(execution.localOrderId);
-        if (!before) {
-            ++m_totalApiErrors;
-            return;
-        }
-        const auto previousFilled = before->filledQuantity;
         const auto applied = m_lifecycle.applyExecution(execution);
         if (applied != LifecycleApplyResult::Applied) {
             if (applied != LifecycleApplyResult::Duplicate) {
@@ -738,34 +560,15 @@ void BrokerGateway::handleExecution(const ExecutionEvent& execution)
         }
         ++m_totalFillsReceived;
         callback = m_executionCallback;
-
-        const auto contextIt = m_legacyContexts.find(execution.localOrderId);
-        if (contextIt != m_legacyContexts.end()) {
-            const auto& context = contextIt->second;
-            BrokerFill fill;
-            fill.orderId = execution.localOrderId;
-            fill.symbol = context.symbol;
-            fill.isBuy = context.isBuy;
-            fill.requestedPrice = context.requestedPrice;
-            fill.fillPrice = execution.fillPrice.toDouble();
-            fill.quantity = context.requestedQuantity;
-            fill.filledQuantity = execution.cumulativeFilledQuantity.toDouble()
-                                - previousFilled.toDouble();
-            fill.remainingQuantity = execution.remainingQuantity.toDouble();
-            fill.partialFill = !execution.remainingQuantity.isZero();
-            fill.feePaid = execution.fee.toDouble();
-            fill.fillTimestamp = execution.timestampNs;
-            fill.strategyId = context.strategyId;
-            fill.success = true;
-            m_lastLegacyFills[fill.orderId] = fill;
-            legacyFill = fill;
-        }
+        callbacks = m_executionCallbacks;
     }
     if (callback) {
         callback(execution);
     }
-    if (legacyFill.has_value()) {
-        publishLegacyFill(*legacyFill);
+    for (const auto& observer : callbacks) {
+        if (observer) {
+            observer(execution);
+        }
     }
 }
 
@@ -796,24 +599,5 @@ void BrokerGateway::handleHealth(const AdapterHealthEvent& health)
     }
     if (callback) {
         callback(health);
-    }
-}
-
-void BrokerGateway::publishLegacyFill(const BrokerFill& fill)
-{
-    FillCallback primary;
-    std::vector<FillCallback> callbacks;
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        primary = m_fillCallback;
-        callbacks = m_fillCallbacks;
-    }
-    if (primary) {
-        primary(fill);
-    }
-    for (const auto& callback : callbacks) {
-        if (callback) {
-            callback(fill);
-        }
     }
 }

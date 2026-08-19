@@ -1,4 +1,5 @@
 #pragma once
+#include "FinancialMath.hpp"
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -77,6 +78,8 @@ public:
         Position position;
         uint64_t entryTimestamp{0};
         double entryFee{0.0};
+        double costBasis{0.0};
+        double lastMarkPrice{0.0};
         std::string strategyId;
     };
 
@@ -96,13 +99,12 @@ public:
         uint64_t nextOrderId{1};
     };
 
-    // Open a long position for `symbol` using all available cash at the net fill price.
-    // `capitalToCommit` specifies how much cash to allocate to this position.
-    // Pass 0.0 (default) to allocate ALL remaining cash (single-asset behaviour).
+    // Open a long position for `symbol` at the confirmed fill price.
+    // `capitalToCommit` is the maximum total debit (notional plus fee).
+    // Pass 0.0 (default) to use all remaining cash as that debit budget.
     // `explicitUnits` > 0.0 overrides unit calculation (ATR-based sizing path);
-    // when supplied the `capitalToCommit` value is still deducted from cash.
-    // `timestamp` is the candle epoch; `fee` is the transaction cost already
-    // deducted from cash by the caller (ExecutionEngine).
+    // the exact notional plus `fee` must still fit the debit budget.
+    // `timestamp` is the candle epoch; `fee` is deducted exactly once here.
     void openLong(const std::string& symbol, double netPrice,
                   uint64_t timestamp = 0, double fee = 0.0,
                   double capitalToCommit = 0.0,
@@ -116,9 +118,8 @@ public:
                    double capitalToCommit = 0.0,
                    const std::string& strategyId = "");
 
-    // Close the open position for `symbol` at the net fill price.
-    // `timestamp` is the candle epoch; `fee` is the transaction cost already
-    // deducted from sale proceeds by the caller.
+    // Close all or `explicitQuantity` of the open long at the confirmed fill
+    // price. `fee` is deducted exactly once from sale proceeds here.
     void closePosition(const std::string& symbol, double netPrice,
                        uint64_t timestamp = 0, double fee = 0.0,
                        const std::string& strategyId = "",
@@ -174,25 +175,40 @@ public:
 private:
     // Per-symbol open-position state (entry metadata lives alongside Position).
     struct PositionState {
-        Position m_position{};
-        bool     m_hasPosition{false};
+        Financial::Quantity m_quantity{};
+        Financial::Price m_averageEntryPrice{};
+        Financial::Money m_costBasis{};
+        Financial::Price m_lastMarkPrice{};
         uint64_t m_entryTimestamp{0};
-        double   m_entryFee{0.0};
+        Financial::Money m_entryFee{};
         std::string m_strategyId;
     };
 
-    double m_cash{STARTING_CASH};
+    struct Valuation {
+        Financial::Money unrealizedPnL{};
+        Financial::Money totalEquity{};
+        Financial::Money maxEquity{};
+        double currentDrawdown{0.0};
+        double maxDrawdown{0.0};
+    };
+
+    Valuation valueState(
+        Financial::Money cash,
+        const std::unordered_map<std::string, PositionState>& positions) const;
+    void commitValuation(const Valuation& valuation) noexcept;
+
+    Financial::Money m_cash{10'000'000'000'000LL};
 
     // Multi-asset position map: symbol -> PositionState.
     std::unordered_map<std::string, PositionState> m_positions;
 
-    double m_unrealizedPnL{0.0};
-    double m_totalEquity{STARTING_CASH};
-    double m_maxEquity{STARTING_CASH};
+    Financial::Money m_unrealizedPnL{};
+    Financial::Money m_totalEquity{10'000'000'000'000LL};
+    Financial::Money m_maxEquity{10'000'000'000'000LL};
     double m_currentDrawdown{0.0};
     double m_maxDrawdown{0.0};
     int    m_tradeCount{0};
-    double m_totalFeesPaid{0.0};
+    Financial::Money m_totalFeesPaid{};
 
     std::vector<TradeRecord> m_tradeLog;
     int m_roundTripCount{0};

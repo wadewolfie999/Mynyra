@@ -198,6 +198,7 @@ if (TRADEBOT_ENABLE_CTRADER_GATE7)
 endif()
 
 set(CORE_SOURCES
+    src/FinancialMath.cpp
     src/CsvReader.cpp
     src/AsyncNetworkClient.cpp
     src/AuthManager.cpp
@@ -310,6 +311,19 @@ if (BUILD_TESTING)
         COMMAND ${CMAKE_COMMAND}
             -DTRADEBOT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/wp1_generated_paths.cmake)
+
+    add_executable(wp2_accounting_tests tests/wp2_accounting_tests.cpp)
+    target_link_libraries(wp2_accounting_tests PRIVATE tradebot_core_lib)
+    add_test(NAME wp2_accounting_tests COMMAND wp2_accounting_tests)
+
+    add_executable(canonical_execution_path_tests
+        tests/canonical_execution_path_tests.cpp)
+    target_link_libraries(canonical_execution_path_tests PRIVATE tradebot_core_lib)
+    add_test(NAME canonical_execution_path_tests COMMAND canonical_execution_path_tests)
+
+    add_test(
+        NAME wp2_throughput_correctness
+        COMMAND throughput_bench 261 --correctness-only)
 
     add_executable(ctrader_gate5_1_tests tests/ctrader_gate5_1_tests.cpp)
     target_link_libraries(ctrader_gate5_1_tests PRIVATE tradebot_core_lib)

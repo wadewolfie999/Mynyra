@@ -129,10 +129,6 @@ AlphaSignal MeanReversionStrategy::generateSignal(const MarketCandle& candle)
     return {candle.symbol, m_strategyId, conviction};
 }
 
-Signal MeanReversionStrategy::onCandle(const MarketCandle& candle)
-{
-    return alphaToSignal(generateSignal(candle));
-}
 
 bool MeanReversionStrategy::isReady() const noexcept
 {

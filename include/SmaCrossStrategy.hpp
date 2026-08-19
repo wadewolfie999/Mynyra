@@ -16,9 +16,6 @@ public:
     // Returns conviction = +1.0 (golden cross), -1.0 (death cross), 0.0 (none).
     AlphaSignal generateSignal(const MarketCandle& candle) override;
 
-    // Legacy shim for backward compatibility (delegates to generateSignal).
-    Signal onCandle(const MarketCandle& candle) override;
-
     // Returns the most recent ATR(atrPeriod) value.
     // Returns 0.0 if fewer than atrPeriod+1 candles have been seen.
     double getATR() const noexcept;
