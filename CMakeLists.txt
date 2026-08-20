@@ -19,6 +19,13 @@ find_library(DL_LIB dl)
 option(TRADEBOT_ENABLE_LIVE_RUNTIME
     "Compile the legacy LIVE runtime path (still requires an explicit CLI unlock)" OFF)
 
+# Provider-owned offline support remains separate from the core library. This
+# target contains no transport or runtime activation; it is shared only by
+# synthetic proof targets and the opt-in proof runtimes below.
+add_library(tradebot_ctrader_oauth STATIC
+    src/providers/ctrader/CTraderOAuthCorrelation.cpp)
+target_include_directories(tradebot_ctrader_oauth PUBLIC include)
+
 # Gate 6 proof-only provider bindings. The exact compiler/runtime and pinned
 # schema hashes are part of the accepted Gate 1 provenance contract.
 option(TRADEBOT_ENABLE_CTRADER_GATE6
@@ -91,12 +98,12 @@ if (TRADEBOT_ENABLE_CTRADER_GATE6)
 
     add_library(ctrader_gate6_runtime STATIC
         src/CTraderGate6Runtime.mm
-        src/providers/ctrader/CTraderOAuthCorrelation.cpp
     )
     target_include_directories(ctrader_gate6_runtime PUBLIC include)
     target_link_libraries(ctrader_gate6_runtime PUBLIC
         ctrader_gate6_core
         ctrader_openapi_proto
+        tradebot_ctrader_oauth
         CURL::libcurl
         OpenSSL::SSL
         OpenSSL::Crypto
@@ -179,10 +186,10 @@ if (TRADEBOT_ENABLE_CTRADER_GATE7)
         src/CTraderGate7Proof.cpp
         src/CTraderGate7OAuthDiagnostics.cpp)
     target_include_directories(ctrader_gate7_core PUBLIC include)
+    target_link_libraries(ctrader_gate7_core PUBLIC tradebot_ctrader_oauth)
 
     add_library(ctrader_gate7_runtime STATIC
-        src/CTraderGate7Runtime.mm
-        src/providers/ctrader/CTraderOAuthCorrelation.cpp)
+        src/CTraderGate7Runtime.mm)
     target_include_directories(ctrader_gate7_runtime PUBLIC include)
     target_link_libraries(ctrader_gate7_runtime PUBLIC
         ctrader_gate7_core
@@ -221,8 +228,6 @@ set(CORE_SOURCES
     src/TriggerOrderManager.cpp
     src/OrderLifecycleStore.cpp
     src/DeterministicBrokerAdapter.cpp
-    src/providers/ctrader/CTraderOAuthCorrelation.cpp
-    src/providers/ctrader/CTraderProviderAdapter.cpp
 )
 
 add_library(tradebot_core_lib ${CORE_SOURCES})
@@ -233,6 +238,13 @@ target_compile_definitions(tradebot_core_lib PUBLIC
 if (DL_LIB)
     target_link_libraries(tradebot_core_lib PUBLIC ${DL_LIB})
 endif()
+
+# The provider seam depends on normalized core contracts, while core targets
+# remain unaware of cTrader implementation types.
+add_library(tradebot_ctrader_provider STATIC
+    src/providers/ctrader/CTraderProviderAdapter.cpp)
+target_include_directories(tradebot_ctrader_provider PUBLIC include)
+target_link_libraries(tradebot_ctrader_provider PUBLIC tradebot_core_lib)
 
 add_executable(tradebot_core src/main.cpp)
 target_link_libraries(tradebot_core PRIVATE tradebot_core_lib)
@@ -328,12 +340,14 @@ if (BUILD_TESTING)
         COMMAND throughput_bench 261 --correctness-only)
 
     add_executable(ctrader_gate5_1_tests tests/ctrader_gate5_1_tests.cpp)
-    target_link_libraries(ctrader_gate5_1_tests PRIVATE tradebot_core_lib)
+    target_link_libraries(ctrader_gate5_1_tests PRIVATE
+        tradebot_core_lib tradebot_ctrader_oauth)
     add_test(NAME ctrader_gate5_1_tests COMMAND ctrader_gate5_1_tests)
 
     add_executable(ctrader_provider_architecture_tests
         tests/ctrader_provider_architecture_tests.cpp)
-    target_link_libraries(ctrader_provider_architecture_tests PRIVATE tradebot_core_lib)
+    target_link_libraries(ctrader_provider_architecture_tests PRIVATE
+        tradebot_ctrader_provider)
     add_test(NAME ctrader_provider_architecture_tests
         COMMAND ctrader_provider_architecture_tests)
 
