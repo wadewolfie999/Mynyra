@@ -76,11 +76,12 @@ Rules:
 - Store default generated outputs under ignored paths such as `data/results/` or `build/`.
 - Do not treat generated outputs as authoritative input data without provenance review.
 - Do not commit result files containing secrets, account identifiers, live balances, or venue order IDs.
-- Version-12 snapshots are generated BACKTEST restart state. They use a
-  checksummed canonical envelope and are not external reconciliation truth.
-- Snapshot versions before 12 have no implicit migration path and must be
-  rejected. Preserve or convert old files only through a separately reviewed
-  migration tool.
+- Version-13 snapshots are generated BACKTEST restart state. They use a
+  checksummed canonical envelope, store accounting financial fields as signed
+  scale-8 integer units, and are not external reconciliation truth.
+- Snapshot versions before 13, including version 12, have no implicit migration
+  path and must be rejected. Preserve or convert old files only through a
+  separately reviewed migration tool.
 
 ## Temporary Data
 

@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <string>
@@ -64,6 +65,9 @@ struct Decimal64 {
             case DecimalRounding::NearestTiesAwayFromZero:
                 rounded = std::round(scaled);
                 break;
+        }
+        if (rounded < minValue || rounded > maxValue) {
+            return std::nullopt;
         }
         return Decimal64{static_cast<std::int64_t>(rounded), scale};
     }
@@ -286,6 +290,28 @@ struct AdapterHealthEvent {
     FailureCategory failure{FailureCategory::None};
     std::string reason;
     std::string eventKey;
+};
+
+// Provider-neutral top-of-book event. Provider-native symbol and account IDs,
+// wire timestamps, and payloads must be translated before publication.
+struct MarketDataEvent {
+    std::uint32_t schemaVersion{1};
+    std::string canonicalSymbol;
+    Decimal64 bid;
+    Decimal64 ask;
+    std::uint64_t sourceTimestampNs{0};
+    std::uint64_t sequence{0};
+    std::uint64_t instrumentVersion{0};
+    AdapterHealthState quality{AdapterHealthState::Unknown};
+    std::string eventKey;
+};
+
+class IMarketDataSource {
+public:
+    using MarketDataCallback = std::function<void(const MarketDataEvent&)>;
+
+    virtual ~IMarketDataSource() = default;
+    virtual void setMarketDataCallback(MarketDataCallback callback) = 0;
 };
 
 struct RuleLimit {

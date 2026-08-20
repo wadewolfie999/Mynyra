@@ -11,6 +11,8 @@
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
+#include <limits>
+#include <stdexcept>
 
 ExecutionEngine::ExecutionEngine(PortfolioManager& portfolio,
                                  RiskEngine&       riskEngine,
@@ -21,10 +23,19 @@ ExecutionEngine::ExecutionEngine(PortfolioManager& portfolio,
     : m_portfolio(portfolio)
     , m_riskEngine(riskEngine)
     , m_symbol(std::move(symbol))
-    , m_feeRate(feeRate)
-    , m_slippage(slippageBps / 10'000.0)
     , m_riskPct(riskPct)
 {
+    const auto normalizedFeeRate = Financial::fraction(feeRate);
+    const auto normalizedSlippage = Financial::fraction(slippageBps / 10'000.0);
+    if (!normalizedFeeRate.has_value() || normalizedFeeRate->isNegative()
+        || normalizedFeeRate->units >= Financial::SCALE_FACTOR
+        || !normalizedSlippage.has_value() || normalizedSlippage->isNegative()
+        || normalizedSlippage->units >= Financial::SCALE_FACTOR
+        || !std::isfinite(riskPct) || riskPct < 0.0) {
+        throw std::invalid_argument("ExecutionEngine: invalid financial configuration");
+    }
+    m_feeRate = *normalizedFeeRate;
+    m_slippage = *normalizedSlippage;
     m_orderPool.resize(ORDER_POOL_SIZE);
     m_freeOrderNodes.reserve(ORDER_POOL_SIZE);
     for (auto& node : m_orderPool) {
@@ -46,8 +57,14 @@ void ExecutionEngine::bindBrokerGateway(BrokerGateway* gateway) noexcept
 {
     m_gateway = gateway;
     if (!m_gateway) { return; }
-    m_gateway->addFillCallback([this](const BrokerFill& fill) {
-        onBrokerFill(fill);
+    (void)m_gateway->setPaperSimulationCosts(
+        m_feeRate.toDouble(), m_slippage.toDouble() * 10'000.0);
+    m_gateway->addAcknowledgementCallback(
+        [this](const OrderAcknowledgement& acknowledgement) {
+            onBrokerAcknowledgement(acknowledgement);
+        });
+    m_gateway->addExecutionCallback([this](const ExecutionEvent& execution) {
+        onBrokerExecution(execution);
     });
 }
 
@@ -122,17 +139,43 @@ void ExecutionEngine::drainOrderBus()
             m_riskEngine.reportLatency(static_cast<uint32_t>(std::ceil(deltaMs)));
         }
 
-        const std::string symbol = fromFixed(node->event.symbol);
-        const std::string strategyId = fromFixed(node->event.strategyId);
-        const BrokerFill fill = m_gateway->submitOrder(symbol,
-                                                       node->event.isBuy,
-                                                       node->event.quantity,
-                                                       node->event.requestedPrice,
-                                                       node->event.timestamp,
-                                                       strategyId);
+        OrderRequest request;
+        request.localOrderId = node->event.orderLocalId;
+        request.canonicalSymbol = fromFixed(node->event.symbol);
+        request.side = node->event.isBuy ? OrderSide::Buy : OrderSide::Sell;
+        request.type = BrokerOrderType::Market;
+        request.quantity = Decimal64::fromDouble(
+            node->event.quantity, 8, DecimalRounding::TowardZero)
+            .value_or(Decimal64{});
+        request.referencePrice = Decimal64::fromDouble(
+            node->event.requestedPrice, 8,
+            DecimalRounding::NearestTiesAwayFromZero);
+        request.sourceId = fromFixed(node->event.strategyId);
+        request.timestampNs = node->event.timestamp;
+        request.sequence = 1;
+        request.idempotencyKey = "execution-"
+                               + std::to_string(request.localOrderId);
+
+        std::string rejection;
+        const auto normalized = m_gateway->normalizeOrder(request, &rejection);
+        if (!normalized.has_value()) {
+            ++m_blockedCount;
+            releaseOrderNode(node);
+            continue;
+        }
+
         {
             std::lock_guard<std::mutex> lock(m_fillMutex);
-            m_orderStrategyMap[fill.orderId] = strategyId;
+            m_gatewayOrderContexts.emplace(request.localOrderId,
+                GatewayOrderContext{*normalized, request.sourceId, Decimal64{},
+                                    {}, 0, 0});
+        }
+        const auto dispatch = m_gateway->dispatchOrder(*normalized,
+                                                        node->event.riskDecision);
+        if (!dispatch.dispatched) {
+            std::lock_guard<std::mutex> lock(m_fillMutex);
+            m_gatewayOrderContexts.erase(request.localOrderId);
+            ++m_blockedCount;
         }
         releaseOrderNode(node);
     }
@@ -147,6 +190,12 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
 
     ++m_signalCount;
 
+    const auto normalizedMarketPrice = Financial::price(marketPrice);
+    if (!normalizedMarketPrice.has_value() || !normalizedMarketPrice->isPositive()) {
+        ++m_blockedCount;
+        return false;
+    }
+
     // Once a gateway is bound it is the only execution boundary. Never turn
     // transport/readiness failure into a local fill that could be mistaken for
     // externally executed state.
@@ -158,7 +207,8 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
     }
 
     if (signal == Signal::BUY) {
-        if (!m_riskEngine.canTrade()) {
+        const RiskDecision riskDecision = m_riskEngine.evaluateOrder(OrderSide::Buy);
+        if (!riskDecision.allowed) {
             ++m_blockedCount;
             std::cout << "[RISK]  BUY blocked by RiskEngine"
                       << " | Price: "  << std::fixed << std::setprecision(2) << marketPrice
@@ -172,17 +222,22 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
             return false;
         }
 
-        // Buy-side slippage: fill above market.
-        const double fillPrice = marketPrice * (1.0 + m_slippage);
+        const auto fillPrice = Financial::applySlippage(
+            *normalizedMarketPrice, m_slippage, true);
+        const auto availableCash = Financial::money(
+            m_portfolio.getCashBalance(), Financial::Rounding::RejectUnaligned);
+        if (!fillPrice.has_value() || !availableCash.has_value()
+            || !availableCash->isPositive()) {
+            ++m_blockedCount;
+            return false;
+        }
 
         // ── Dynamic ATR-based position sizing ────────────────────────────
-        const double      cash    = m_portfolio.getCashBalance();
         const std::size_t maxPos  = m_riskEngine.getMaxConcurrentPositions();
         const std::size_t openPos = m_portfolio.getOpenPositionCount();
 
-        double units   = 0.0;
-        double capital = 0.0;
-        double fee     = 0.0;
+        Financial::Money totalBudget = *availableCash;
+        Financial::Quantity units{};
 
         if (m_strategy != nullptr && m_strategy->isATRValid()
             && m_strategy->getATR() > 0.0)
@@ -190,25 +245,61 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
             // ATR parity sizing: Units = (E_total * riskPct) / ATR(t)
             const double equity = m_portfolio.getTotalEquity();
             const double atr    = m_strategy->getATR();
-            units   = (equity * m_riskPct) / atr;
-            capital = units * fillPrice;
-            fee     = capital * m_feeRate;
-            // Safety cap: never commit more than available cash
-            if (capital + fee > cash) {
-                const double scaleFactor = cash / (capital + fee);
-                units   *= scaleFactor;
-                capital *= scaleFactor;
-                fee      = capital * m_feeRate;
+            const auto desired = Financial::quantity(
+                (equity * m_riskPct) / atr, Financial::Rounding::TowardZero);
+            if (!desired.has_value() || !desired->isPositive()) {
+                ++m_blockedCount;
+                return false;
             }
+            units = *desired;
             std::cout << "[SIZE]  ATR=" << std::fixed << std::setprecision(4) << atr
-                      << " | Units=" << std::setprecision(4) << units
-                      << " | Capital=$" << std::setprecision(2) << capital
+                      << " | Units=" << std::setprecision(4) << units.toDouble()
                       << "\n";
         } else {
             // Fallback: equal-slice capital allocation
             const std::size_t remaining = (maxPos > openPos) ? (maxPos - openPos) : 1;
-            capital = (maxPos == 0) ? cash : cash / static_cast<double>(remaining);
-            fee     = capital * m_feeRate;
+            totalBudget = (maxPos == 0)
+                ? *availableCash
+                : Financial::Money{
+                    availableCash->units / static_cast<std::int64_t>(remaining)};
+            const auto notionalBudget = Financial::notionalBeforeFee(
+                totalBudget, m_feeRate);
+            const auto affordable = notionalBudget.has_value()
+                ? Financial::quantityForNotional(*notionalBudget, *fillPrice)
+                : std::nullopt;
+            if (!affordable.has_value() || !affordable->isPositive()) {
+                ++m_blockedCount;
+                return false;
+            }
+            units = *affordable;
+        }
+
+        auto cost = Financial::notional(*fillPrice, units);
+        auto executionFee = cost.has_value()
+            ? Financial::fee(*cost, m_feeRate) : std::nullopt;
+        auto debit = (cost.has_value() && executionFee.has_value())
+            ? Financial::add(*cost, *executionFee) : std::nullopt;
+        if (!debit.has_value() || debit->units > totalBudget.units) {
+            const auto notionalBudget = Financial::notionalBeforeFee(
+                totalBudget, m_feeRate);
+            const auto affordable = notionalBudget.has_value()
+                ? Financial::quantityForNotional(*notionalBudget, *fillPrice)
+                : std::nullopt;
+            if (!affordable.has_value() || !affordable->isPositive()) {
+                ++m_blockedCount;
+                return false;
+            }
+            units = *affordable;
+            cost = Financial::notional(*fillPrice, units);
+            executionFee = cost.has_value()
+                ? Financial::fee(*cost, m_feeRate) : std::nullopt;
+            debit = (cost.has_value() && executionFee.has_value())
+                ? Financial::add(*cost, *executionFee) : std::nullopt;
+        }
+        if (!cost.has_value() || !executionFee.has_value() || !debit.has_value()
+            || debit->units > totalBudget.units) {
+            ++m_blockedCount;
+            return false;
         }
 
         if (m_gateway && m_gateway->isConnected()) {
@@ -217,40 +308,38 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
             copyToFixed(evt.symbol, m_symbol);
             copyToFixed(evt.strategyId, strategyId);
             evt.isBuy = true;
-            evt.quantity = (units > 0.0) ? units : ((capital - fee) / fillPrice);
-            evt.requestedPrice = marketPrice;
+            evt.quantity = units.toDouble();
+            evt.requestedPrice = normalizedMarketPrice->toDouble();
             evt.timestamp = timestamp;
             evt.signalNs = static_cast<uint64_t>(
                 std::chrono::duration_cast<std::chrono::nanoseconds>(
                     std::chrono::steady_clock::now().time_since_epoch()).count());
+            evt.riskDecision = riskDecision;
 
             queueOrderEvent(evt);
             drainOrderBus();
             return true;
         } else {
-            if (units > 0.0) {
-                m_portfolio.openLong(m_symbol, fillPrice, timestamp, fee,
-                                     capital, units, strategyId);
-            } else {
-                m_portfolio.openLong(m_symbol, fillPrice, timestamp, fee,
-                                     capital, 0.0, strategyId);
-            }
+            m_portfolio.openLong(m_symbol, fillPrice->toDouble(), timestamp,
+                                 executionFee->toDouble(), debit->toDouble(),
+                                 units.toDouble(), strategyId);
             ++m_filledCount;
 
             if (m_analytics) {
-                m_analytics->recordTrade(timestamp, 'B', fillPrice,
+                m_analytics->recordTrade(timestamp, 'B', fillPrice->toDouble(),
                                          m_portfolio.getPositionQuantity(m_symbol),
-                                         fee, 0.0, 0.0, strategyId);
-                m_analytics->recordSlippage(timestamp, m_symbol, marketPrice,
-                                            fillPrice,
+                                         executionFee->toDouble(), 0.0, 0.0, strategyId);
+                m_analytics->recordSlippage(timestamp, m_symbol,
+                                            normalizedMarketPrice->toDouble(),
+                                            fillPrice->toDouble(),
                                             m_portfolio.getPositionQuantity(m_symbol));
             }
 
             std::cout << "[TRADE] BUY"
                       << " | Symbol: "   << m_symbol
                       << " | Strategy: " << (strategyId.empty() ? "N/A" : strategyId)
-                      << " | Fill: $"    << std::fixed << std::setprecision(2) << fillPrice
-                      << " | Fee: $"     << std::setprecision(2) << fee
+                      << " | Fill: $"    << std::fixed << std::setprecision(2) << fillPrice->toDouble()
+                      << " | Fee: $"     << std::setprecision(2) << executionFee->toDouble()
                       << " | Equity: "   << m_portfolio.getTotalEquity()
                       << " | DD: "       << std::setprecision(4)
                       << (m_portfolio.getCurrentDrawdown() * 100.0) << "%"
@@ -260,15 +349,29 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
     }
 
     if (signal == Signal::SELL) {
+        const RiskDecision riskDecision = m_riskEngine.evaluateOrder(OrderSide::Sell);
+        if (!riskDecision.allowed) {
+            ++m_blockedCount;
+            return false;
+        }
         if (!m_portfolio.hasPosition(m_symbol)) {
             return false;
         }
 
-        // Sell-side slippage: fill below market.
-        const double fillPrice = marketPrice * (1.0 - m_slippage);
-        const double qty       = m_portfolio.getPositionQuantity(m_symbol);
-        const double proceeds  = qty * fillPrice;
-        const double fee       = proceeds * m_feeRate;
+        const auto fillPrice = Financial::applySlippage(
+            *normalizedMarketPrice, m_slippage, false);
+        const auto qty = Financial::quantity(
+            m_portfolio.getPositionQuantity(m_symbol),
+            Financial::Rounding::RejectUnaligned);
+        const auto proceeds = (fillPrice.has_value() && qty.has_value())
+            ? Financial::notional(*fillPrice, *qty) : std::nullopt;
+        const auto executionFee = proceeds.has_value()
+            ? Financial::fee(*proceeds, m_feeRate) : std::nullopt;
+        if (!fillPrice.has_value() || !qty.has_value() || !qty->isPositive()
+            || !proceeds.has_value() || !executionFee.has_value()) {
+            ++m_blockedCount;
+            return false;
+        }
 
         if (m_gateway && m_gateway->isConnected()) {
             OrderBusEvent evt;
@@ -276,17 +379,20 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
             copyToFixed(evt.symbol, m_symbol);
             copyToFixed(evt.strategyId, strategyId);
             evt.isBuy = false;
-            evt.quantity = qty;
-            evt.requestedPrice = marketPrice;
+            evt.quantity = qty->toDouble();
+            evt.requestedPrice = normalizedMarketPrice->toDouble();
             evt.timestamp = timestamp;
             evt.signalNs = static_cast<uint64_t>(
                 std::chrono::duration_cast<std::chrono::nanoseconds>(
                     std::chrono::steady_clock::now().time_since_epoch()).count());
+            evt.riskDecision = riskDecision;
             queueOrderEvent(evt);
             drainOrderBus();
             return true;
         } else {
-            m_portfolio.closePosition(m_symbol, fillPrice, timestamp, fee, strategyId);
+            m_portfolio.closePosition(m_symbol, fillPrice->toDouble(), timestamp,
+                                      executionFee->toDouble(), strategyId,
+                                      qty->toDouble());
             ++m_filledCount;
 
             // Retrieve accurate PnL from the just-recorded TradeRecord.
@@ -299,17 +405,19 @@ bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timest
             }
 
             if (m_analytics) {
-                m_analytics->recordTrade(timestamp, 'S', fillPrice, qty, fee,
+                m_analytics->recordTrade(timestamp, 'S', fillPrice->toDouble(),
+                                         qty->toDouble(), executionFee->toDouble(),
                                          accuratePnL, accurateGross, strategyId);
-                m_analytics->recordSlippage(timestamp, m_symbol, marketPrice,
-                                            fillPrice, qty);
+                m_analytics->recordSlippage(timestamp, m_symbol,
+                                            normalizedMarketPrice->toDouble(),
+                                            fillPrice->toDouble(), qty->toDouble());
             }
 
             std::cout << "[TRADE] SELL"
                       << " | Symbol: "   << m_symbol
                       << " | Strategy: " << (strategyId.empty() ? "N/A" : strategyId)
-                      << " | Fill: $"    << std::fixed << std::setprecision(2) << fillPrice
-                      << " | Fee: $"     << std::setprecision(2) << fee
+                      << " | Fill: $"    << std::fixed << std::setprecision(2) << fillPrice->toDouble()
+                      << " | Fee: $"     << std::setprecision(2) << executionFee->toDouble()
                       << " | PnL: $"     << std::setprecision(2) << accuratePnL
                       << " | Equity: "   << m_portfolio.getTotalEquity()
                       << " | DD: "       << std::setprecision(4)
@@ -338,99 +446,195 @@ double ExecutionEngine::pendingBrokerQuantity(uint64_t orderId) const noexcept
     return (it == m_pendingBrokerQty.end()) ? 0.0 : it->second;
 }
 
-void ExecutionEngine::onBrokerFill(const BrokerFill& fill)
+void ExecutionEngine::onBrokerAcknowledgement(
+    const OrderAcknowledgement& acknowledgement)
 {
-    if (fill.symbol != m_symbol) {
+    std::lock_guard<std::mutex> lock(m_fillMutex);
+    const auto it = m_gatewayOrderContexts.find(acknowledgement.localOrderId);
+    if (it == m_gatewayOrderContexts.end()) {
         return;
     }
-    m_lastBrokerOrderId.store(fill.orderId);
+    if (!acknowledgement.accepted) {
+        m_gatewayOrderContexts.erase(it);
+        m_pendingBrokerQty.erase(acknowledgement.localOrderId);
+        m_riskEngine.reportApiError();
+        return;
+    }
+    if (acknowledgement.externalOrderId.empty()) {
+        m_gatewayOrderContexts.erase(it);
+        m_pendingBrokerQty.erase(acknowledgement.localOrderId);
+        m_riskEngine.reportApiError();
+        return;
+    }
+    it->second.externalOrderId = acknowledgement.externalOrderId;
+}
 
-    if (!fill.success) {
+void ExecutionEngine::onBrokerExecution(const ExecutionEvent& execution)
+{
+    std::unique_lock<std::mutex> lock(m_fillMutex);
+    const auto contextIt = m_gatewayOrderContexts.find(execution.localOrderId);
+    if (contextIt == m_gatewayOrderContexts.end()) {
+        return;
+    }
+    GatewayOrderContext& context = contextIt->second;
+    const auto& request = context.order.request;
+    const auto quantityScale = context.order.normalizedQuantity.scale;
+    const bool sequenceStale = context.lastExecutionSequence > 0
+        && execution.sequence > 0
+        && execution.sequence <= context.lastExecutionSequence;
+    const bool timestampStale = context.lastExecutionTimestamp > 0
+        && execution.timestampNs > 0
+        && execution.timestampNs < context.lastExecutionTimestamp;
+    const bool cumulativeOverflow = execution.cumulativeFilledQuantity.units < 0
+        || execution.cumulativeFilledQuantity.units
+            > context.order.normalizedQuantity.units;
+    const bool remainingOverflow = execution.remainingQuantity.units < 0
+        || execution.remainingQuantity.units
+            > context.order.normalizedQuantity.units;
+    bool quantitiesDoNotReconcile = true;
+    if (!cumulativeOverflow && !remainingOverflow
+        && execution.cumulativeFilledQuantity.units
+            <= std::numeric_limits<std::int64_t>::max()
+                - execution.remainingQuantity.units) {
+        quantitiesDoNotReconcile =
+            execution.cumulativeFilledQuantity.units
+                + execution.remainingQuantity.units
+            != context.order.normalizedQuantity.units;
+    }
+    if (request.canonicalSymbol != m_symbol
+        || execution.eventKey.empty()
+        || execution.externalOrderId.empty()
+        || (!context.externalOrderId.empty()
+            && execution.externalOrderId != context.externalOrderId)
+        || execution.cumulativeFilledQuantity.scale != quantityScale
+        || execution.remainingQuantity.scale != quantityScale
+        || sequenceStale || timestampStale
+        || execution.cumulativeFilledQuantity.units
+            <= context.cumulativeFilled.units
+        || cumulativeOverflow || remainingOverflow
+        || quantitiesDoNotReconcile) {
         m_riskEngine.reportApiError();
         return;
     }
 
-    const double executedQty = (fill.filledQuantity > 0.0)
-                               ? fill.filledQuantity
-                               : fill.quantity;
-    if (executedQty <= 0.0) {
+    const Decimal64 filledDelta{
+        execution.cumulativeFilledQuantity.units - context.cumulativeFilled.units,
+        quantityScale};
+    if (!filledDelta.isPositive()) {
+        m_riskEngine.reportApiError();
         return;
     }
 
-    std::string strategyId;
-    {
-        std::lock_guard<std::mutex> lock(m_fillMutex);
-        auto it = m_orderStrategyMap.find(fill.orderId);
-        if (it != m_orderStrategyMap.end()) {
-            strategyId = it->second;
-        }
-        if (!fill.strategyId.empty()) {
-            strategyId = fill.strategyId;
-        }
+    const auto fillPrice = Financial::price(execution.fillPrice.toDouble(),
+                                            Financial::Rounding::RejectUnaligned);
+    const auto executedQuantity = Financial::quantity(filledDelta.toDouble(),
+                                                       Financial::Rounding::RejectUnaligned);
+    const auto fillFee = Financial::money(execution.fee.toDouble(),
+                                          Financial::Rounding::RejectUnaligned);
+    if (!fillPrice.has_value() || !fillPrice->isPositive()
+        || !executedQuantity.has_value() || !executedQuantity->isPositive()
+        || !fillFee.has_value() || fillFee->isNegative()) {
+        m_riskEngine.reportApiError();
+        return;
     }
 
-    if (fill.isBuy) {
-        const double capital = (fill.fillPrice * executedQty) + fill.feePaid;
-        if (!m_portfolio.hasPosition(fill.symbol)) {
-            m_portfolio.openLong(fill.symbol,
-                                 fill.fillPrice,
-                                 fill.fillTimestamp,
-                                 fill.feePaid,
-                                 capital,
-                                 executedQty,
-                                 strategyId);
+    const std::string& strategyId = context.strategyId;
+
+    try {
+        if (request.side == OrderSide::Buy) {
+            const auto cost = Financial::notional(*fillPrice, *executedQuantity);
+            const auto debit = cost.has_value()
+                ? Financial::add(*cost, *fillFee) : std::nullopt;
+            if (!cost.has_value() || !debit.has_value()) {
+                m_riskEngine.reportApiError();
+                return;
+            }
+            if (!m_portfolio.hasPosition(request.canonicalSymbol)) {
+                m_portfolio.openLong(request.canonicalSymbol,
+                                     fillPrice->toDouble(),
+                                     execution.timestampNs,
+                                     fillFee->toDouble(),
+                                     debit->toDouble(),
+                                     executedQuantity->toDouble(),
+                                     strategyId);
+            } else {
+                m_portfolio.addToLong(request.canonicalSymbol,
+                                      fillPrice->toDouble(),
+                                      executedQuantity->toDouble(),
+                                      fillFee->toDouble(),
+                                      debit->toDouble(),
+                                      strategyId);
+            }
+            if (m_analytics) {
+                m_analytics->recordTrade(execution.timestampNs, 'B',
+                                         fillPrice->toDouble(),
+                                         executedQuantity->toDouble(),
+                                         fillFee->toDouble(), 0.0, 0.0,
+                                         strategyId);
+                m_analytics->recordSlippage(execution.timestampNs,
+                                            request.canonicalSymbol,
+                                            request.referencePrice.has_value()
+                                                ? request.referencePrice->toDouble()
+                                                : 0.0,
+                                            fillPrice->toDouble(),
+                                            executedQuantity->toDouble());
+            }
         } else {
-            m_portfolio.addToLong(fill.symbol,
-                                  fill.fillPrice,
-                                  executedQty,
-                                  fill.feePaid,
-                                  capital,
-                                  strategyId);
+            const auto held = Financial::quantity(
+                m_portfolio.getPositionQuantity(request.canonicalSymbol),
+                Financial::Rounding::RejectUnaligned);
+            if (!held.has_value() || !held->isPositive()
+                || executedQuantity->units > held->units) {
+                m_riskEngine.reportApiError();
+                return;
+            }
+            m_portfolio.closePosition(request.canonicalSymbol,
+                                      fillPrice->toDouble(),
+                                      execution.timestampNs,
+                                      fillFee->toDouble(),
+                                      strategyId,
+                                      executedQuantity->toDouble());
+            double accuratePnL = 0.0;
+            double accurateGross = 0.0;
+            const auto& log = m_portfolio.getTradeLog();
+            if (!log.empty()) {
+                accuratePnL = log.back().realizedPnL;
+                accurateGross = log.back().grossPnL;
+            }
+            if (m_analytics) {
+                m_analytics->recordTrade(execution.timestampNs, 'S',
+                                         fillPrice->toDouble(),
+                                         executedQuantity->toDouble(),
+                                         fillFee->toDouble(),
+                                         accuratePnL, accurateGross, strategyId);
+                m_analytics->recordSlippage(execution.timestampNs,
+                                            request.canonicalSymbol,
+                                            request.referencePrice.has_value()
+                                                ? request.referencePrice->toDouble()
+                                                : 0.0,
+                                            fillPrice->toDouble(),
+                                            executedQuantity->toDouble());
+            }
         }
-        if (m_analytics) {
-            m_analytics->recordTrade(fill.fillTimestamp, 'B', fill.fillPrice,
-                                     executedQty, fill.feePaid, 0.0, 0.0, strategyId);
-            m_analytics->recordSlippage(fill.fillTimestamp, fill.symbol,
-                                        fill.requestedPrice, fill.fillPrice,
-                                        executedQty);
-        }
-    } else {
-        const double qtyHeld = m_portfolio.getPositionQuantity(fill.symbol);
-        const double closeQty = std::min(qtyHeld, executedQty);
-        m_portfolio.closePosition(fill.symbol,
-                                  fill.fillPrice,
-                                  fill.fillTimestamp,
-                                  fill.feePaid,
-                                  strategyId,
-                                  closeQty);
-        double accuratePnL = 0.0;
-        double accurateGross = 0.0;
-        const auto& log = m_portfolio.getTradeLog();
-        if (!log.empty()) {
-            accuratePnL   = log.back().realizedPnL;
-            accurateGross = log.back().grossPnL;
-        }
-        if (m_analytics) {
-            m_analytics->recordTrade(fill.fillTimestamp, 'S', fill.fillPrice,
-                                     closeQty, fill.feePaid,
-                                     accuratePnL, accurateGross, strategyId);
-            m_analytics->recordSlippage(fill.fillTimestamp, fill.symbol,
-                                        fill.requestedPrice, fill.fillPrice,
-                                        closeQty);
-        }
+    } catch (const std::exception&) {
+        m_riskEngine.reportApiError();
+        return;
     }
 
-    m_riskEngine.syncPosition(fill.symbol, m_portfolio.getPositionQuantity(fill.symbol));
+    context.cumulativeFilled = execution.cumulativeFilledQuantity;
+    context.lastExecutionTimestamp = execution.timestampNs;
+    context.lastExecutionSequence = execution.sequence;
+    m_riskEngine.syncPosition(request.canonicalSymbol,
+                              m_portfolio.getPositionQuantity(request.canonicalSymbol));
+    m_lastBrokerOrderId.store(execution.localOrderId);
     ++m_filledCount;
 
-    {
-        std::lock_guard<std::mutex> lock(m_fillMutex);
-        if (fill.partialFill && fill.remainingQuantity > 0.0) {
-            m_pendingBrokerQty[fill.orderId] = fill.remainingQuantity;
-        } else {
-            m_pendingBrokerQty.erase(fill.orderId);
-            m_orderStrategyMap.erase(fill.orderId);
-        }
+    if (!execution.remainingQuantity.isZero()) {
+        m_pendingBrokerQty[execution.localOrderId] =
+            execution.remainingQuantity.toDouble();
+    } else {
+        m_pendingBrokerQty.erase(execution.localOrderId);
+        m_gatewayOrderContexts.erase(contextIt);
     }
 }
 
@@ -520,65 +724,113 @@ int ExecutionEngine::processPendingOrders(const MarketCandle& candle)
     for (const auto& res : fills) {
         if (!res.filled) { continue; }
 
-        const double fillPrice = res.fillPrice;
+        const auto fillPrice = Financial::price(res.fillPrice);
+        if (!fillPrice.has_value() || !fillPrice->isPositive()) {
+            ++m_blockedCount;
+            continue;
+        }
 
         if (res.isBuy) {
             if (!m_riskEngine.canTrade()) {
                 ++m_blockedCount;
                 std::cout << "[RISK]  Pending BUY (id=" << res.orderId
                           << ") blocked by RiskEngine at $"
-                          << std::fixed << std::setprecision(2) << fillPrice << "\n";
+                          << std::fixed << std::setprecision(2)
+                          << fillPrice->toDouble() << "\n";
                 continue;
             }
             if (m_portfolio.hasPosition(res.symbol)) {
                 continue;
             }
 
-            const double slippedPrice = fillPrice * (1.0 + m_slippage);
-            const double cash   = m_portfolio.getCashBalance();
-            double capital      = (res.capitalToCommit > 0.0 && res.capitalToCommit <= cash)
-                                  ? res.capitalToCommit
-                                  : cash;
-            double units        = res.quantity;
-            double fee          = (units > 0.0)
-                                  ? units * slippedPrice * m_feeRate
-                                  : capital * m_feeRate;
-
-            if (units > 0.0) {
-                capital = units * slippedPrice + fee;
-                if (capital > cash) {
-                    const double scale = cash / capital;
-                    units   *= scale;
-                    capital *= scale;
-                    fee      = capital * m_feeRate;
-                }
-                m_portfolio.openLong(res.symbol, slippedPrice,
-                                     res.fillTimestamp, fee, capital, units);
-            } else {
-                m_portfolio.openLong(res.symbol, slippedPrice,
-                                     res.fillTimestamp, fee, capital);
+            const auto slippedPrice = Financial::applySlippage(
+                *fillPrice, m_slippage, true);
+            const auto cash = Financial::money(
+                m_portfolio.getCashBalance(), Financial::Rounding::RejectUnaligned);
+            if (!slippedPrice.has_value() || !cash.has_value() || !cash->isPositive()) {
+                ++m_blockedCount;
+                continue;
             }
+            Financial::Money budget = *cash;
+            if (res.capitalToCommit > 0.0) {
+                const auto requestedBudget = Financial::money(res.capitalToCommit);
+                if (!requestedBudget.has_value() || !requestedBudget->isPositive()) {
+                    ++m_blockedCount;
+                    continue;
+                }
+                budget = requestedBudget->units < cash->units ? *requestedBudget : *cash;
+            }
+
+            auto units = res.quantity > 0.0
+                ? Financial::quantity(res.quantity)
+                : std::optional<Financial::Quantity>{};
+            if (!units.has_value() || !units->isPositive()) {
+                const auto notionalBudget = Financial::notionalBeforeFee(budget, m_feeRate);
+                units = notionalBudget.has_value()
+                    ? Financial::quantityForNotional(*notionalBudget, *slippedPrice)
+                    : std::nullopt;
+            }
+            auto cost = units.has_value()
+                ? Financial::notional(*slippedPrice, *units) : std::nullopt;
+            auto executionFee = cost.has_value()
+                ? Financial::fee(*cost, m_feeRate) : std::nullopt;
+            auto debit = (cost.has_value() && executionFee.has_value())
+                ? Financial::add(*cost, *executionFee) : std::nullopt;
+            if (!debit.has_value() || debit->units > budget.units) {
+                const auto notionalBudget = Financial::notionalBeforeFee(budget, m_feeRate);
+                units = notionalBudget.has_value()
+                    ? Financial::quantityForNotional(*notionalBudget, *slippedPrice)
+                    : std::nullopt;
+                cost = units.has_value()
+                    ? Financial::notional(*slippedPrice, *units) : std::nullopt;
+                executionFee = cost.has_value()
+                    ? Financial::fee(*cost, m_feeRate) : std::nullopt;
+                debit = (cost.has_value() && executionFee.has_value())
+                    ? Financial::add(*cost, *executionFee) : std::nullopt;
+            }
+            if (!units.has_value() || !units->isPositive() || !executionFee.has_value()
+                || !debit.has_value() || debit->units > budget.units) {
+                ++m_blockedCount;
+                continue;
+            }
+            m_portfolio.openLong(res.symbol, slippedPrice->toDouble(),
+                                 res.fillTimestamp, executionFee->toDouble(),
+                                 debit->toDouble(), units->toDouble());
             ++m_filledCount;
             ++filledCount;
 
             if (m_analytics) {
-                m_analytics->recordTrade(res.fillTimestamp, 'B', slippedPrice,
+                m_analytics->recordTrade(res.fillTimestamp, 'B',
+                                         slippedPrice->toDouble(),
                                          m_portfolio.getPositionQuantity(res.symbol),
-                                         fee, 0.0);
+                                         executionFee->toDouble(), 0.0);
             }
             std::cout << "[PENDING] BUY FILL id=" << res.orderId
                       << " sym=" << res.symbol
-                      << " price=$" << std::fixed << std::setprecision(2) << slippedPrice
+                      << " price=$" << std::fixed << std::setprecision(2)
+                      << slippedPrice->toDouble()
                       << "\n";
         } else {
             if (!m_portfolio.hasPosition(res.symbol)) { continue; }
 
-            const double slippedPrice = fillPrice * (1.0 - m_slippage);
-            const double qty          = m_portfolio.getPositionQuantity(res.symbol);
-            const double proceeds     = qty * slippedPrice;
-            const double fee          = proceeds * m_feeRate;
+            const auto slippedPrice = Financial::applySlippage(
+                *fillPrice, m_slippage, false);
+            const auto qty = Financial::quantity(
+                m_portfolio.getPositionQuantity(res.symbol),
+                Financial::Rounding::RejectUnaligned);
+            const auto proceeds = (slippedPrice.has_value() && qty.has_value())
+                ? Financial::notional(*slippedPrice, *qty) : std::nullopt;
+            const auto executionFee = proceeds.has_value()
+                ? Financial::fee(*proceeds, m_feeRate) : std::nullopt;
+            if (!slippedPrice.has_value() || !qty.has_value() || !qty->isPositive()
+                || !proceeds.has_value() || !executionFee.has_value()) {
+                ++m_blockedCount;
+                continue;
+            }
 
-            m_portfolio.closePosition(res.symbol, slippedPrice, res.fillTimestamp, fee);
+            m_portfolio.closePosition(res.symbol, slippedPrice->toDouble(),
+                                      res.fillTimestamp, executionFee->toDouble(),
+                                      "", qty->toDouble());
             ++m_filledCount;
             ++filledCount;
 
@@ -590,12 +842,15 @@ int ExecutionEngine::processPendingOrders(const MarketCandle& candle)
                 accurateGross = log.back().grossPnL;
             }
             if (m_analytics) {
-                m_analytics->recordTrade(res.fillTimestamp, 'S', slippedPrice,
-                                         qty, fee, accuratePnL, accurateGross);
+                m_analytics->recordTrade(res.fillTimestamp, 'S',
+                                         slippedPrice->toDouble(), qty->toDouble(),
+                                         executionFee->toDouble(),
+                                         accuratePnL, accurateGross);
             }
             std::cout << "[PENDING] SELL FILL id=" << res.orderId
                       << " sym=" << res.symbol
-                      << " price=$" << std::fixed << std::setprecision(2) << slippedPrice
+                      << " price=$" << std::fixed << std::setprecision(2)
+                      << slippedPrice->toDouble()
                       << " PnL=$" << std::setprecision(2) << accuratePnL << "\n";
         }
     }

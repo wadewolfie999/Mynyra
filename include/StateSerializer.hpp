@@ -8,12 +8,13 @@
 #include <cstdint>
 #include <string>
 
-// Versioned BACKTEST restart-state serializer. Version 12 uses a strict,
+// Versioned BACKTEST restart-state serializer. Version 13 uses a strict,
 // checksummed JSON envelope and atomic same-directory replacement. Earlier
-// versions are deliberately rejected; no implicit migration exists.
+// versions are deliberately rejected; financial values are fixed-scale integer
+// units and no implicit migration exists.
 class StateSerializer {
 public:
-    static constexpr uint64_t SNAPSHOT_VERSION = 12;
+    static constexpr uint64_t SNAPSHOT_VERSION = 13;
 
     bool saveSnapshot(const PortfolioManager& portfolio,
                       const RiskEngine& riskEngine,

@@ -6,7 +6,8 @@
   their dependencies, entry and exit gates, evidence requirements, and safety
   boundaries.
 - Status: focus lock and foundational governance approved; WP-0 and WP-1
-  merged and accepted; WP-2 through WP-8 Planned / NO-GO.
+  merged and accepted; WP-2 execution authorized with local candidate and
+  acceptance pending; WP-3 through WP-8 Planned / NO-GO.
 - Owner and review authority: Wade.
 - Program plan: `PLAN-20260813-repository-cohesion-remediation` in
   `../PLANS.md`.
@@ -37,8 +38,9 @@ Until Wade explicitly changes this lock:
 4. Historical phase and provider-gate records remain evidence, not current
    execution authority.
 5. A package title alone does not authorize implementation. WP-0 and WP-1 have
-   consumed historical approvals recorded here; WP-2 through WP-8 require a
-   separate operator GO after their entry conditions are reviewed.
+   consumed historical approvals recorded here. WP-2 received a separate
+   execution GO on 2026-08-14; WP-3 through WP-8 require their own operator GO
+   after entry conditions are reviewed.
 6. Live trading, real or demo orders, provider execution, credential-value
    access, risk-limit changes, release, and deployment remain separate NO-GO
    actions even after all nine packages are complete.
@@ -93,7 +95,7 @@ The approved foundation establishes:
 | --- | --- | --- | --- | --- |
 | WP-0 | Live containment | Critical | Complete — merged and accepted | Approved program foundation |
 | WP-1 | Persistence and generated-state containment | Critical | Complete — merged and accepted | Accepted WP-0 evidence |
-| WP-2 | Accounting and quantity correctness | High | Planned / NO-GO | WP-1 |
+| WP-2 | Accounting and quantity correctness | High | In Progress — local candidate; acceptance pending | WP-1 |
 | WP-3 | Risk-state repair | High | Planned / NO-GO | WP-2 |
 | WP-4 | Unified order lifecycle | High | Planned / NO-GO | WP-0 through WP-3 |
 | WP-5 | Runtime-mode and data contracts | High | Planned / NO-GO | WP-0 through WP-4 |
@@ -104,8 +106,11 @@ The approved foundation establishes:
 `Approved — current` authorizes the named package's offline planning and
 implementation within its canonical scope. `Approved — queued` carries the
 same bounded authority but cannot activate until its dependency is accepted.
-`Planned / NO-GO` means that problem definition and sequencing are accepted as
-the focal queue, but implementation has not been authorized.
+`In Progress — local candidate` means implementation is authorized only to the
+active plan's stop boundary; it does not authorize staging, publication,
+acceptance, or the next package. `Planned / NO-GO` means that problem definition
+and sequencing are accepted as the focal queue, but implementation has not been
+authorized.
 
 ## Sequencing And Parallelism
 

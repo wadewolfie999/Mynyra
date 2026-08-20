@@ -2,7 +2,7 @@
 
 #include "CTraderGate7OAuthDiagnostics.hpp"
 #include "CTraderGate7Proof.hpp"
-#include "CTraderOAuthCorrelation.hpp"
+#include "providers/ctrader/CTraderOAuthCorrelation.hpp"
 #include "OpenApiCommonMessages.pb.h"
 #include "OpenApiCommonModelMessages.pb.h"
 #include "OpenApiMessages.pb.h"

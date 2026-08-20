@@ -15,8 +15,9 @@ TradeBot defaults to `BACKTEST`, dry-run, simulation, or paper behavior. Live tr
 The Repository Remediation Program in
 `REPOSITORY_REMEDIATION_PROGRAM.md` is the sole current implementation queue.
 Its foundational governance is approved. WP-0 and WP-1 are merged and
-accepted; WP-2 through WP-8 remain Planned /
-NO-GO except for integrated WP-7/WP-8 closure slices. Existing source is
+accepted. WP-2 has an authorized local accounting candidate awaiting review
+and acceptance; WP-3 through WP-8 remain Planned / NO-GO except for integrated
+WP-7/WP-8 closure slices. Existing source is
 classified as operationally unsafe for live use until accepted package evidence
 supports a narrower conclusion.
 
@@ -93,6 +94,13 @@ Before live trading, all requirements in `LIVE_TRADING_READINESS.md` must be sat
 - Performance and strategy reviews must include fees and slippage assumptions.
 - `ExecutionEngine` fee and slippage parameters are part of financial-sensitive behavior.
 - Actual fill feedback in live-capable paths must be distinguished from modeled slippage.
+- The WP-2 candidate normalizes internal price, quantity, money, fee, and rate
+  values to signed scale-8 units. Invalid or overflowing arithmetic must fail
+  before portfolio mutation; this representation change does not authorize a
+  fee/slippage default or risk-limit change.
+- PAPER's deterministic adapter must use the `ExecutionEngine` fee/slippage
+  configuration so simulated fill evidence and portfolio accounting do not
+  charge different costs.
 
 ## Position Sizing And Drawdown Controls
 

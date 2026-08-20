@@ -21,9 +21,9 @@ The workstream map is a planning/governance artifact only. It does not authorize
 `REPOSITORY_REMEDIATION_PROGRAM.md` defines the sole current cross-cutting
 implementation focus. It does not alter the intended component map below; it
 records that the observed implementation does not yet uphold all of these
-boundaries coherently. WP-0 and WP-1 are merged and accepted; WP-2 through
-WP-8 remain Planned / NO-GO except for
-WP-7/WP-8 closure slices integrated into WP-0 and WP-1.
+boundaries coherently. WP-0 and WP-1 are merged and accepted. WP-2 has an
+authorized local candidate awaiting review and acceptance; WP-3 through WP-8
+remain Planned / NO-GO except for package-integrated WP-7/WP-8 closure slices.
 
 The repository must not advance provider, feature, phase, research,
 optimization, or deployment work until package-specific evidence repairs the
@@ -46,6 +46,7 @@ ADR decisions remain constraints, not proof that implementation is complete.
 | Area | Verified files | Responsibility |
 | --- | --- | --- |
 | Runtime config | `include/SystemConfig.hpp` | `BACKTEST`, `PAPER`, `LIVE` modes; endpoints; credential env names; circuit-breaker thresholds |
+| Financial values | `FinancialMath` | Canonical scale-8 price, quantity, money, rate, checked arithmetic, and rounding contract |
 | CSV input | `CsvReader` | Candle input for deterministic backtest path |
 | Local replay | `LocalDataReplayAdapter` | CSV/binary replay ticks, pacing, generated binary replay writes |
 | Order book | `L2OrderBook` | L2 level storage, BBO updates, recentering |
@@ -92,13 +93,16 @@ flowchart LR
    credential, or network initialization.
 5. Per-symbol strategies and event loops produce signals.
 6. `PortfolioAllocator` weighs strategies.
-7. `RiskEngine` gates new trading actions.
+7. `RiskEngine` produces the authoritative `RiskDecision` for each order;
+   `ExecutionEngine` passes that decision unchanged to `BrokerGateway`.
 8. `ExecutionEngine` simulates fills only when no gateway is bound. Once a
    gateway is bound, an unavailable gateway rejects execution rather than
-   falling back to a local fill.
+   falling back to a local fill. Confirmed execution events are fully
+   validated before execution context or portfolio state advances.
 9. Analytics writes generated outputs. BACKTEST checkpoints write canonical,
-   checksummed version-12 snapshots by atomic replacement; any checkpoint
-   failure stops processing.
+   checksummed version-13 snapshots by atomic replacement; accounting fields
+   are signed scale-8 integer units, and any checkpoint failure stops
+   processing.
 
 ## Execution Modes
 
@@ -243,7 +247,15 @@ Strategies emit signals and should not directly mutate portfolio state, bypass r
 
 ## Portfolio And Risk Boundary
 
-`PortfolioManager` owns position and trade accounting. `RiskEngine` owns drawdown, VaR, position limits, halt state, circuit breakers, and live volatility scaling. Execution must consult risk before opening new positions.
+`PortfolioManager` owns position and trade accounting. The WP-2 candidate uses
+`Financial::Price`, `Quantity`, `Money`, and `Fraction` at scale 8 for internal
+accounting. Buys debit notional plus fee; sells credit notional minus fee;
+partial reductions allocate cost basis and entry fees proportionally; and each
+position retains its latest mark. Unsupported short reversal or over-close
+fails before mutation. Public compatibility getters remain `double` conversion
+boundaries. `RiskEngine` owns drawdown, VaR, position limits, halt state,
+circuit breakers, and live volatility scaling. Execution must consult risk
+before opening new positions. WP-2 does not alter any risk-limit value.
 
 ## Analytics And Persistence Boundary
 
@@ -251,7 +263,9 @@ Strategies emit signals and should not directly mutate portfolio state, bypass r
 `StateSerializer` write generated results, latency reports, metrics, and
 snapshots. `StateSerializer` owns a complete BACKTEST restart contract for
 portfolio/accounting, pending-order identity, risk, regime, and allocation
-state. It validates into detached state before a single commit to the runtime
+state. Version 13 persists accounting financial fields as signed scale-8
+integer units and rejects earlier versions rather than reinterpreting them. It
+validates into detached state before a single commit to the runtime
 objects. PAPER/LIVE resume remains fail-closed until WP-4 supplies a unified,
 reconcilable broker lifecycle. The runtime CLI opens only the governed
 `data/results/snapshot.json` restart path; direct serializer callers remain
@@ -322,13 +336,12 @@ codes are memory-only. See `CTRADER_OPEN_API_GATE5.md`.
 
 ## Current Architectural Debt
 
-- The WP-0 candidate establishes a default-off compile/runtime gate, rejects
-  unauthorized LIVE startup before credentials/network setup, and prevents an
-  unavailable bound gateway from creating local fills. Acceptance remains
-  pending until its reviewed branch is merged.
-- Persistence, generated-state containment, accounting/quantity units, risk
-  state, order lifecycle, runtime/data contracts, transport/provider mapping,
-  CI/observability, and authority synchronization require WP-1 through WP-8.
+- WP-0 and WP-1 are merged and accepted. WP-2 has an authorized local
+  fixed-scale accounting candidate; review and operator acceptance remain
+  pending.
+- Risk state, order lifecycle, runtime/data contracts, transport/provider
+  mapping, CI/observability, and final authority synchronization require WP-3
+  through WP-8.
 - Source comments reference deprecated MOP/workstream labels; ADR 0001 makes those labels historical only.
 - `docs/ARCHITECTURE.md` previously referenced `data/historical/` before that path existed in the tracked tree; it is now described as code-referenced, not tracked.
 - Build currently emits two warnings.

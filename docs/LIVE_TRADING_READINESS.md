@@ -21,7 +21,8 @@ retry, reconnect, autonomous restart, or a later gate.
 
 The nine-package Repository Remediation Program is the current prerequisite
 overlay. Its foundational governance is approved; WP-0 and WP-1 are merged and
-accepted. Live readiness cannot be evaluated as satisfied until every
+accepted, and WP-2 has an authorized local candidate awaiting acceptance. Live
+readiness cannot be evaluated as satisfied until every
 package is accepted and the final WP-8 closeout explicitly reassesses this
 checklist. Even then, live trading requires a new exact operator authorization;
 program completion is not an unlock.

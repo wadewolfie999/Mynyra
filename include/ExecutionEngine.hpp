@@ -1,4 +1,6 @@
 #pragma once
+#include "BrokerAdapterContracts.hpp"
+#include "FinancialMath.hpp"
 #include "IStrategy.hpp"
 #include "LockFreeRingBuffer.hpp"
 #include "PortfolioManager.hpp"
@@ -16,7 +18,6 @@
 class AnalyticsEngine;
 class SmaCrossStrategy;
 class BrokerGateway;
-struct BrokerFill;
 class TriggerOrderManager;
 class L2OrderBook;
 
@@ -108,6 +109,7 @@ private:
         double      requestedPrice{0.0};
         uint64_t    timestamp{0};
         uint64_t    signalNs{0};
+        RiskDecision riskDecision;
     };
 
     static constexpr std::size_t ORDER_POOL_SIZE = 2048;
@@ -122,15 +124,16 @@ private:
     void releaseOrderNode(OrderNode* node) noexcept;
     void queueOrderEvent(const OrderBusEvent& event) noexcept;
     void drainOrderBus();
-    void onBrokerFill(const BrokerFill& fill);
+    void onBrokerAcknowledgement(const OrderAcknowledgement& acknowledgement);
+    void onBrokerExecution(const ExecutionEvent& execution);
     static void copyToFixed(std::array<char, 24>& dst, const std::string& src) noexcept;
     static std::string fromFixed(const std::array<char, 24>& src);
 
     PortfolioManager& m_portfolio;
     RiskEngine&       m_riskEngine;
     std::string       m_symbol;
-    double            m_feeRate;
-    double            m_slippage;          // fractional (bps / 10000)
+    Financial::Fraction m_feeRate;
+    Financial::Fraction m_slippage;
     double            m_riskPct;           // fraction of equity risked per trade
     AnalyticsEngine*  m_analytics{nullptr};
     SmaCrossStrategy* m_strategy{nullptr};
@@ -154,9 +157,18 @@ private:
     std::atomic<double> m_maxRouteLatencyMs{0.0};
     std::atomic<uint64_t> m_latencyBreaches{0};
 
-    // Partial-fill tracking.
+    struct GatewayOrderContext {
+        NormalizedOrder order;
+        std::string strategyId;
+        Decimal64 cumulativeFilled;
+        std::string externalOrderId;
+        uint64_t lastExecutionTimestamp{0};
+        uint64_t lastExecutionSequence{0};
+    };
+
+    // Partial-fill tracking for normalized gateway lifecycle events.
     std::unordered_map<uint64_t, double> m_pendingBrokerQty;
-    std::unordered_map<uint64_t, std::string> m_orderStrategyMap;
+    std::unordered_map<uint64_t, GatewayOrderContext> m_gatewayOrderContexts;
     mutable std::mutex m_fillMutex;
     std::atomic<uint64_t> m_lastBrokerOrderId{0};
 };

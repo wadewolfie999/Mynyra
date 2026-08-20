@@ -89,6 +89,8 @@ public:
     void setExecutionCallback(ExecutionCallback callback) noexcept;
     void setCancelCallback(CancelCallback callback) noexcept;
     void setHealthCallback(HealthCallback callback) noexcept;
+    void addAcknowledgementCallback(AcknowledgementCallback callback) noexcept;
+    void addExecutionCallback(ExecutionCallback callback) noexcept;
 
     // Compatibility API. New Phase 22 code must use normalizeOrder(),
     // dispatchOrder(), lifecycle callbacks, and requestCancel().
@@ -107,6 +109,7 @@ public:
     void simulateFillConfirmation(const BrokerFill& fill);
     void injectNextOrderError(const std::string& errorMessage) noexcept;
     void injectNextPartialFill(double fillRatio) noexcept;
+    bool setPaperSimulationCosts(double feeRate, double slippageBps) noexcept;
     void setFaultInjectorConfig(const FaultInjectorConfig& config) noexcept;
     FaultInjectorConfig faultInjectorConfig() const noexcept;
 
@@ -161,6 +164,8 @@ private:
     ExecutionCallback m_executionCallback;
     CancelCallback m_cancelCallback;
     HealthCallback m_healthCallback;
+    std::vector<AcknowledgementCallback> m_acknowledgementCallbacks;
+    std::vector<ExecutionCallback> m_executionCallbacks;
 
     std::atomic<std::uint64_t> m_nextOrderId{1000};
     std::atomic<std::uint64_t> m_totalOrdersSubmitted{0};

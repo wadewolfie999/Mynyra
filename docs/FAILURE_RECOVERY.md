@@ -65,7 +65,8 @@ If branch, status, or commits differ from handoff:
 
 ## Snapshot Or Checkpoint Failure
 
-- Version-12 snapshots are BACKTEST-only. PAPER/LIVE resume is rejected before
+- Version-13 snapshots are BACKTEST-only. Their accounting fields use signed
+  scale-8 integer units. PAPER/LIVE resume is rejected before
   file opening, adapter construction, credential access, or broker work because
   broker lifecycle and reconciliation recovery belongs to WP-4.
 - Snapshot load validates the complete envelope, checksum, schema, version,
@@ -75,8 +76,8 @@ If branch, status, or commits differ from handoff:
   before replacing the prior checkpoint. Non-finite values fail the checkpoint.
 - The persisted immutable risk configuration must equal the runtime
   configuration, and restored effective limits may never exceed that baseline.
-- Unsupported older versions fail with a migration-required diagnostic; no
-  implicit migration is attempted.
+- Unsupported older versions, including version 12, fail with a
+  migration-required diagnostic; no implicit migration is attempted.
 - A nonempty steady-clock API-error window is not portable across restart and
   makes checkpointing fail. A durable external halt and latency close-only
   state remain conservative and round-trip exactly.

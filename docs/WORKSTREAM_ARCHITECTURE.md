@@ -19,10 +19,10 @@ feature work, research, optimization, documentation-platform selection, and
 deployment work while the approved infrastructure-foundation packages are
 executed.
 
-WP-0 and WP-1 are merged and accepted; WP-2
-through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices integrated
-into WP-0 and WP-1. Any workstream proposal must map to one of those packages
-or stop for Wade's explicit scope revision.
+WP-0 and WP-1 are merged and accepted. WP-2 has an authorized local candidate
+awaiting review and acceptance; WP-3 through WP-8 remain Planned / NO-GO except
+for package-integrated WP-7/WP-8 slices. Any workstream proposal must map to one
+of those packages or stop for Wade's explicit scope revision.
 
 ## Current Workstream Map
 
@@ -84,7 +84,8 @@ Strategy 3 gate labels may be added later as a governance overlay. A full Kanban
 
 ## Professional Halting Point
 
-WP-0 and WP-1 are merged and accepted. Stop before WP-2 until Wade separately
-authorizes its exact action. Provider execution, Gates 8–9, orders, risk-limit
-changes, workflow dispatch, deployment, release, and live actions remain
-outside current authorization.
+WP-0 and WP-1 are merged and accepted. Stop after the authorized WP-2 local
+candidate and handoff; WP-2 acceptance and Git publication remain separate.
+WP-3, provider execution, Gates 8–9, orders, risk-limit changes, workflow
+dispatch, deployment, release, and live actions remain outside current
+authorization.

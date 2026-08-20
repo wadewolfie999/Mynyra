@@ -1,6 +1,6 @@
 #pragma once
 
-#include "CTraderOAuthCorrelation.hpp"
+#include "providers/ctrader/CTraderOAuthCorrelation.hpp"
 
 #include <chrono>
 #include <cstddef>

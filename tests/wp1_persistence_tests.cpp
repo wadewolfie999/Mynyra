@@ -29,7 +29,7 @@ std::filesystem::path testRoot() {
 }
 
 void seedPortfolio(PortfolioManager& portfolio, int positions) {
-    portfolio.openLong("CLOSED", 25.0, 11, 0.25, 250.0, 10.0, "MR_01");
+    portfolio.openLong("CLOSED", 25.0, 11, 0.25, 250.25, 10.0, "MR_01");
     portfolio.closePosition("CLOSED", 27.5, 12, 0.30, "MR_01");
     if (positions >= 1) {
         portfolio.openLong("FIRST", 100.25, 101, 1.25, 10'000.0, 10.0, "SMA_01");
@@ -73,6 +73,7 @@ void requirePortfolioEqual(const PortfolioManager::Snapshot& a,
         require(x.position.symbol == y.position.symbol && x.position.quantity == y.position.quantity
                 && x.position.entryPrice == y.position.entryPrice && x.position.isLong == y.position.isLong
                 && x.entryTimestamp == y.entryTimestamp && x.entryFee == y.entryFee
+                && x.costBasis == y.costBasis && x.lastMarkPrice == y.lastMarkPrice
                 && x.strategyId == y.strategyId, "open-position metadata changed");
     }
     require(a.pendingOrders.size() == b.pendingOrders.size(), "pending orders changed");
@@ -176,8 +177,8 @@ void testRejectsWithoutMutation(const std::filesystem::path& root) {
     const std::string original = readFile(valid);
     for (const auto& [name, contents] : {
             std::pair<std::string, std::string>{"malformed.json", "{not-json"},
-            {"legacy.json", [&] { auto value = original; const auto pos = value.find("\"version\": 12");
-                value.replace(pos, std::string("\"version\": 12").size(), "\"version\": 11"); return value; }()},
+            {"legacy.json", [&] { auto value = original; const auto pos = value.find("\"version\": 13");
+                value.replace(pos, std::string("\"version\": 13").size(), "\"version\": 12"); return value; }()},
             {"corrupt.json", [&] { auto value = original; const auto pos = value.find("\"payload\": \"") + 12;
                 value[pos] = value[pos] == '0' ? '1' : '0'; return value; }()},
             {"trailing.json", original + "garbage"}}) {

@@ -9,8 +9,10 @@
   `7f89c597d3874e5c8782a49a31d42335c8bf1e17`; the diagnosis is the baseline
   for the Repository Remediation Program, not proof of the current candidate
   tree after later edits.
-- Last CMake/CTest verification evidence: 2026-08-13 diagnosis baseline at
-  commit `7f89c597d3874e5c8782a49a31d42335c8bf1e17`.
+- Last CMake/CTest verification evidence: 2026-08-14 unstaged WP-2 working-tree
+  candidate based on `179817972cf469c67384f5f8c2245ecf09044621`; ordinary
+  default-off and ASan/UBSan suites passed 14/14 sequentially. This is not
+  exact-commit evidence.
 - Codex execution/evidence governance is centralized in
   `CODEX_EXECUTION_EVIDENCE.md`; skills carry durable domain procedure and must
   resolve volatile branch, phase, gate, provider, and approval state at use
@@ -49,11 +51,13 @@ Current status: focus lock and foundational governance approved by Wade on
 separate preliminary gate. WP-0 is merged and accepted at
 `eef91ed4abf35bd09462deb1a55a0c72d95edea7`. WP-1 is merged and accepted
 through PRs #36 and #37 at
-`c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`. No package is currently
-authorized for implementation. WP-2 through WP-8 remain
-Planned / NO-GO, except for WP-7 evidence and WP-8 synchronization included
-inside the approved WP-0 and WP-1 scopes. No older phase, workstream, plan,
-ADR, or provider-gate action is the current next action.
+`c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`. Wade authorized WP-2 execution
+on 2026-08-14 under `PLAN-20260814-wp2-accounting-correctness`. A local
+working-tree candidate exists on `codex/wp2-accounting-correctness`; review,
+acceptance, and every Git publication action remain pending. WP-3 through WP-8
+remain Planned / NO-GO except for WP-7 evidence and WP-8 synchronization
+inside authorized package scope. No older phase, workstream, plan, ADR, or
+provider-gate action is the current next action.
 
 WP-0 merged through PR #35. Its accepted boundary adds default-off
 compile/runtime containment, pre-startup LIVE rejection, explicit invalid-mode
@@ -66,6 +70,13 @@ state, validation before mutation or checkpoint replacement, atomic writes,
 risk-configuration compatibility, fail-closed PAPER/LIVE restart, governed
 runtime snapshot paths, actionable checkpoint failure, exact generated-path
 containment, and focused state/startup/source-control tests.
+
+The authorized WP-2 candidate introduces canonical signed scale-8 financial
+values and checked arithmetic; exact cash/cost/fee/P&L accounting; independent
+per-symbol marks; deterministic PAPER cost parity; explicit long-only
+over-close rejection; snapshot version 13; and a 261-event correctness-only
+benchmark assertion. ADR 0005 is Proposed, and neither the candidate nor test
+evidence constitutes Wade's acceptance.
 
 ## Current Roadmap State
 
@@ -141,8 +152,10 @@ Historical summary:
   `eef91ed4abf35bd09462deb1a55a0c72d95edea7`.
 - WP-1 is complete and accepted through PRs #36 and #37 at
   `c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`.
-- WP-2 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices required
-  to close the approved WP-0 and WP-1 work.
+- WP-2 is In Progress with an authorized unstaged local candidate; acceptance
+  and Git actions are pending.
+- WP-3 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices required
+  to close authorized package work.
 
 ## Blocked Or Constrained Work
 
@@ -182,9 +195,11 @@ Historical summary:
 - The repository-wide diagnosis classified the repository as operationally
   unsafe for live use and identified the nine package problem areas now
   controlled by `REPOSITORY_REMEDIATION_PROGRAM.md`.
-- `throughput_bench 100000` consumed 100,000 ticks but reported 260 fills; a
-  261-tick run also reported 260 fills. This is a correctness finding for WP-2,
-  not a performance claim.
+- The WP-2 baseline `throughput_bench 261` consumed 261 ticks but reported 260
+  fills because accumulated modeled costs reached the unchanged drawdown gate.
+  The candidate's declared zero-cost correctness workload requires all 261
+  fills while nonzero costs remain covered by accounting tests. This is not a
+  performance claim, and acceptance remains pending.
 - WP-1 replaces extension-wide generated-state rules with exact directory
   containment and explicit fixture-visibility checks.
 - Previous full compile output emitted existing warnings:
@@ -281,6 +296,24 @@ Results:
   fail-closed allocation injection for correlation, account state, and token
   parsing.
 
+WP-2 candidate evidence on 2026-08-14, from the unstaged working tree based on
+`179817972cf469c67384f5f8c2245ecf09044621`:
+
+- Fresh `RelWithDebInfo` candidate configure/build succeeded; six selected
+  WP-1/WP-2/execution regressions passed 6/6.
+- The explicit 261-event correctness workload reported 261 produced, 261
+  consumed, and 261 fills; it skipped CSV output and made no performance claim.
+- `./scripts/ci_validate.sh build/wp2-ci-validation` passed 14/14 default-off
+  tests after validating 23 skills and four offline workflows.
+- `./scripts/ci_deep_validate.sh build/wp2-ci-deep-validation` passed the same
+  14/14 tests under ASan/UBSan. Full suites ran sequentially.
+- Repository automation validation, offline CI policy, and `git diff --check`
+  passed after documentation synchronization. The two existing compile
+  warnings remain. Markdown formatter/link/lint tooling is not configured.
+- No provider process, credential access, external traffic, order, risk-limit
+  change, workflow dispatch, stage, commit, push, PR, merge, deployment,
+  release, or live action occurred. This is candidate-tree evidence only.
+
 ## Operating Constraints
 
 - Default operation remains offline-first and low-bandwidth-conscious.
@@ -290,16 +323,15 @@ Results:
 
 ## Next Safe Action
 
-Stop at the WP-1 boundary. WP-2 is the next dependency-eligible package but
-remains Planned / NO-GO until Wade separately authorizes its exact action.
-Provider activity, credentials, orders, financial-limit changes, workflow
-dispatch, deployment, release, and live use remain prohibited.
+Complete the local WP-2 verification/review handoff and stop. Wade must
+separately decide package acceptance and any stage/commit/push/PR/merge action.
+WP-3, provider activity, credentials, orders, financial-limit changes,
+workflow dispatch, deployment, release, and live use remain prohibited.
 
 ## Next Professional Halting Point
 
-Merged, accepted WP-1 evidence plus this WP-8 authority closeout is the current
-professional transition point. No further implementation package is
-authorized. Workflow dispatch, credential access, provider execution,
-reconnect, orders, risk-limit changes, deployment, release, later packages,
-and live use remain prohibited. WP-2 remains Planned / NO-GO until separately
-authorized.
+The review-ready unstaged WP-2 candidate and this WP-8 authority closeout are
+the current professional transition point. Workflow dispatch, credential
+access, provider execution, reconnect, orders, risk-limit changes, deployment,
+release, WP-3 and later packages, and live use remain prohibited. WP-2
+acceptance and Git actions require separate Wade decisions.

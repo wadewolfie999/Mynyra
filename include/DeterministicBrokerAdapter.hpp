@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FinancialMath.hpp"
 #include "IBrokerAdapter.hpp"
 
 #include <cstdint>
@@ -10,6 +11,8 @@
 
 class DeterministicBrokerAdapter final : public IBrokerAdapter {
 public:
+    DeterministicBrokerAdapter();
+
     struct FaultConfig {
         bool enabled{false};
         std::uint32_t dropEveryN{0};
@@ -39,6 +42,7 @@ public:
     void setAccountSnapshot(const AccountSnapshot& snapshot);
     void injectNextError(std::string reason);
     void injectNextPartialFill(double ratio) noexcept;
+    bool setSimulationCosts(double feeRate, double slippageBps) noexcept;
     void setFaultConfig(const FaultConfig& config) noexcept;
     FaultConfig faultConfig() const noexcept;
 
@@ -70,6 +74,8 @@ private:
     bool m_injectError{false};
     std::string m_injectedError;
     std::optional<double> m_partialFillRatio;
+    Financial::Fraction m_feeRate{100'000};
+    Financial::Fraction m_slippageRate{50'000};
     FaultConfig m_faultConfig;
     AdapterHealthEvent m_health;
     std::optional<AccountSnapshot> m_accountSnapshot;

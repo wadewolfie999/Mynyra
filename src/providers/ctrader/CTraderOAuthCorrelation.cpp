@@ -1,4 +1,4 @@
-#include "CTraderOAuthCorrelation.hpp"
+#include "providers/ctrader/CTraderOAuthCorrelation.hpp"
 
 #include <algorithm>
 #include <array>

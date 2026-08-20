@@ -91,7 +91,7 @@ if (TRADEBOT_ENABLE_CTRADER_GATE6)
 
     add_library(ctrader_gate6_runtime STATIC
         src/CTraderGate6Runtime.mm
-        src/CTraderOAuthCorrelation.cpp
+        src/providers/ctrader/CTraderOAuthCorrelation.cpp
     )
     target_include_directories(ctrader_gate6_runtime PUBLIC include)
     target_link_libraries(ctrader_gate6_runtime PUBLIC
@@ -182,7 +182,7 @@ if (TRADEBOT_ENABLE_CTRADER_GATE7)
 
     add_library(ctrader_gate7_runtime STATIC
         src/CTraderGate7Runtime.mm
-        src/CTraderOAuthCorrelation.cpp)
+        src/providers/ctrader/CTraderOAuthCorrelation.cpp)
     target_include_directories(ctrader_gate7_runtime PUBLIC include)
     target_link_libraries(ctrader_gate7_runtime PUBLIC
         ctrader_gate7_core
@@ -198,6 +198,7 @@ if (TRADEBOT_ENABLE_CTRADER_GATE7)
 endif()
 
 set(CORE_SOURCES
+    src/FinancialMath.cpp
     src/CsvReader.cpp
     src/AsyncNetworkClient.cpp
     src/AuthManager.cpp
@@ -220,7 +221,8 @@ set(CORE_SOURCES
     src/TriggerOrderManager.cpp
     src/OrderLifecycleStore.cpp
     src/DeterministicBrokerAdapter.cpp
-    src/CTraderOAuthCorrelation.cpp
+    src/providers/ctrader/CTraderOAuthCorrelation.cpp
+    src/providers/ctrader/CTraderProviderAdapter.cpp
 )
 
 add_library(tradebot_core_lib ${CORE_SOURCES})
@@ -285,6 +287,12 @@ if (BUILD_TESTING)
     target_link_libraries(phase22_tests PRIVATE tradebot_core_lib)
     add_test(NAME phase22_tests COMMAND phase22_tests)
 
+    add_executable(execution_pipeline_correctness_tests
+        tests/execution_pipeline_correctness_tests.cpp)
+    target_link_libraries(execution_pipeline_correctness_tests PRIVATE tradebot_core_lib)
+    add_test(NAME execution_pipeline_correctness_tests
+        COMMAND execution_pipeline_correctness_tests)
+
     add_executable(wp0_containment_tests tests/wp0_containment_tests.cpp)
     target_link_libraries(wp0_containment_tests PRIVATE tradebot_core_lib)
     add_test(NAME wp0_containment_tests COMMAND wp0_containment_tests)
@@ -311,9 +319,23 @@ if (BUILD_TESTING)
             -DTRADEBOT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
             -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/wp1_generated_paths.cmake)
 
+    add_executable(wp2_accounting_tests tests/wp2_accounting_tests.cpp)
+    target_link_libraries(wp2_accounting_tests PRIVATE tradebot_core_lib)
+    add_test(NAME wp2_accounting_tests COMMAND wp2_accounting_tests)
+
+    add_test(
+        NAME wp2_throughput_correctness
+        COMMAND throughput_bench 261 --correctness-only)
+
     add_executable(ctrader_gate5_1_tests tests/ctrader_gate5_1_tests.cpp)
     target_link_libraries(ctrader_gate5_1_tests PRIVATE tradebot_core_lib)
     add_test(NAME ctrader_gate5_1_tests COMMAND ctrader_gate5_1_tests)
+
+    add_executable(ctrader_provider_architecture_tests
+        tests/ctrader_provider_architecture_tests.cpp)
+    target_link_libraries(ctrader_provider_architecture_tests PRIVATE tradebot_core_lib)
+    add_test(NAME ctrader_provider_architecture_tests
+        COMMAND ctrader_provider_architecture_tests)
 
     if (TRADEBOT_ENABLE_CTRADER_GATE6)
         add_executable(ctrader_gate6_tests tests/ctrader_gate6_tests.cpp)

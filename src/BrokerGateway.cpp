@@ -384,6 +384,25 @@ void BrokerGateway::setHealthCallback(HealthCallback callback) noexcept
     m_healthCallback = std::move(callback);
 }
 
+void BrokerGateway::addAcknowledgementCallback(
+    AcknowledgementCallback callback) noexcept
+{
+    if (!callback) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_acknowledgementCallbacks.push_back(std::move(callback));
+}
+
+void BrokerGateway::addExecutionCallback(ExecutionCallback callback) noexcept
+{
+    if (!callback) {
+        return;
+    }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_executionCallbacks.push_back(std::move(callback));
+}
+
 BrokerFill BrokerGateway::submitOrder(const std::string& symbol,
                                       bool isBuy,
                                       double quantity,
@@ -533,22 +552,34 @@ void BrokerGateway::simulateFillConfirmation(const BrokerFill& fill)
             fill.filledQuantity > 0.0 ? fill.filledQuantity : fill.quantity,
             record->request.quantity.scale,
             DecimalRounding::TowardZero);
-        if (!fillQuantity.has_value()) {
+        const auto fillPrice = Decimal64::fromDouble(fill.fillPrice, 8);
+        const auto fee = Decimal64::fromDouble(fill.feePaid, 8);
+        if (!fillQuantity.has_value() || !fillQuantity->isPositive()
+            || !fillPrice.has_value() || !fillPrice->isPositive()
+            || !fee.has_value() || fee->isNegative()
+            || record->filledQuantity.units < 0
+            || record->filledQuantity.units
+                > std::numeric_limits<std::int64_t>::max() - fillQuantity->units) {
+            ++m_totalApiErrors;
+            return;
+        }
+        const std::int64_t cumulativeUnits = record->filledQuantity.units
+                                           + fillQuantity->units;
+        if (cumulativeUnits > record->request.quantity.units
+            || record->lastSequence == std::numeric_limits<std::uint64_t>::max()) {
+            ++m_totalApiErrors;
             return;
         }
         execution.localOrderId = fill.orderId;
         execution.externalOrderId = record->externalOrderId;
         execution.cumulativeFilledQuantity = Decimal64{
-            record->filledQuantity.units + fillQuantity->units,
+            cumulativeUnits,
             record->request.quantity.scale};
         execution.remainingQuantity = Decimal64{
-            record->request.quantity.units
-                - execution.cumulativeFilledQuantity.units,
+            record->request.quantity.units - cumulativeUnits,
             record->request.quantity.scale};
-        execution.fillPrice = Decimal64::fromDouble(fill.fillPrice, 8)
-            .value_or(Decimal64{});
-        execution.fee = Decimal64::fromDouble(fill.feePaid, 8)
-            .value_or(Decimal64{});
+        execution.fillPrice = *fillPrice;
+        execution.fee = *fee;
         execution.timestampNs = fill.fillTimestamp;
         execution.sequence = record->lastSequence + 1;
         execution.eventKey = "simulated-fill-" + std::to_string(fill.orderId)
@@ -569,6 +600,14 @@ void BrokerGateway::injectNextPartialFill(double fillRatio) noexcept
     if (auto* deterministic = deterministicAdapter()) {
         deterministic->injectNextPartialFill(fillRatio);
     }
+}
+
+bool BrokerGateway::setPaperSimulationCosts(double feeRate,
+                                            double slippageBps) noexcept
+{
+    auto* deterministic = deterministicAdapter();
+    return deterministic != nullptr
+        && deterministic->setSimulationCosts(feeRate, slippageBps);
 }
 
 void BrokerGateway::setFaultInjectorConfig(
@@ -680,6 +719,7 @@ void BrokerGateway::handleAcknowledgement(
     const OrderAcknowledgement& acknowledgement)
 {
     AcknowledgementCallback callback;
+    std::vector<AcknowledgementCallback> callbacks;
     std::optional<BrokerFill> failureFill;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -689,6 +729,7 @@ void BrokerGateway::handleAcknowledgement(
             return;
         }
         callback = m_acknowledgementCallback;
+        callbacks = m_acknowledgementCallbacks;
         if (!acknowledgement.accepted) {
             ++m_totalApiErrors;
             const auto contextIt = m_legacyContexts.find(
@@ -712,6 +753,11 @@ void BrokerGateway::handleAcknowledgement(
     if (callback) {
         callback(acknowledgement);
     }
+    for (const auto& additional : callbacks) {
+        if (additional) {
+            additional(acknowledgement);
+        }
+    }
     if (failureFill.has_value()) {
         publishLegacyFill(*failureFill);
     }
@@ -720,6 +766,7 @@ void BrokerGateway::handleAcknowledgement(
 void BrokerGateway::handleExecution(const ExecutionEvent& execution)
 {
     ExecutionCallback callback;
+    std::vector<ExecutionCallback> callbacks;
     std::optional<BrokerFill> legacyFill;
     {
         std::lock_guard<std::mutex> lock(m_mutex);
@@ -738,6 +785,7 @@ void BrokerGateway::handleExecution(const ExecutionEvent& execution)
         }
         ++m_totalFillsReceived;
         callback = m_executionCallback;
+        callbacks = m_executionCallbacks;
 
         const auto contextIt = m_legacyContexts.find(execution.localOrderId);
         if (contextIt != m_legacyContexts.end()) {
@@ -763,6 +811,11 @@ void BrokerGateway::handleExecution(const ExecutionEvent& execution)
     }
     if (callback) {
         callback(execution);
+    }
+    for (const auto& additional : callbacks) {
+        if (additional) {
+            additional(execution);
+        }
     }
     if (legacyFill.has_value()) {
         publishLegacyFill(*legacyFill);

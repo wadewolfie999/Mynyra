@@ -1,4 +1,5 @@
 #pragma once
+#include "BrokerAdapterContracts.hpp"
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -83,6 +84,11 @@ public:
     // OR circuit breakers).
     // Must return true before a new BUY order can be submitted.
     bool canTrade() const noexcept;
+
+    // Produce the single risk decision that must accompany an order to the
+    // broker boundary. Risk-increasing orders use the full gate; exits remain
+    // allowed while the engine is close-only or halted.
+    RiskDecision evaluateOrder(OrderSide side) const noexcept;
 
     // Update the current total drawdown (as a fraction, e.g. 0.05 == 5%).
     void setTotalDrawdown(double drawdown) noexcept;

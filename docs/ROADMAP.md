@@ -45,9 +45,10 @@ historical phase or ADR status.
 
 The foundational governance is approved. The objective is infrastructure-
 foundation strengthening; there is no separate preliminary roadmap gate. WP-0
-is merged and accepted; WP-1 is merged and accepted; WP-2
-through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices integrated
-into the approved work. During this lock, the phase table below is historical
+is merged and accepted; WP-1 is merged and accepted; WP-2 has an authorized
+local implementation candidate awaiting review and acceptance; WP-3 through
+WP-8 remain Planned / NO-GO except for the WP-7/WP-8 slices integrated into
+approved package work. During this lock, the phase table below is historical
 and structural authority only: no provider continuation, later phase,
 workstream, feature, strategy, optimization, deployment, or platform-selection
 action may pre-empt the remediation queue.
@@ -56,7 +57,7 @@ action may pre-empt the remediation queue.
 | --- | --- |
 | WP-0 Live containment | Complete — merged and accepted at `eef91ed4abf35bd09462deb1a55a0c72d95edea7` |
 | WP-1 Persistence and generated-state containment | Complete — merged and accepted through PRs #36 and #37 at `c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2` |
-| WP-2 Accounting and quantity correctness | Planned / NO-GO |
+| WP-2 Accounting and quantity correctness | In Progress — authorized local candidate; acceptance pending |
 | WP-3 Risk-state repair | Planned / NO-GO |
 | WP-4 Unified order lifecycle | Planned / NO-GO |
 | WP-5 Runtime-mode and data contracts | Planned / NO-GO |
@@ -272,10 +273,7 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 
 ## Next Roadmap Action
 
-Preserve the reviewed Gate 7 residual-diagnostics patch, exact local
-commit/binary identity, full offline verification matrix, and sanitized
-evidence template. Resolve presence-only preflight and clock-health
-preconditions, then recheck immediate port/process state. Do not run the
-provider proof until Wade separately approves one exact process. Do not begin
-Gate 8, reconnect testing, orders, live accounts, live trading, or risk-limit
-changes.
+Complete the offline verification and review handoff for the authorized WP-2
+working-tree candidate, then stop for Wade's separate acceptance and Git-action
+decision. Do not begin WP-3, provider work, workflow dispatch, staging,
+publication, orders, risk-limit changes, deployment, release, or live use.

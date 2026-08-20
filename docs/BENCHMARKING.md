@@ -18,6 +18,19 @@ Build all benchmarks:
 cmake --build build
 ```
 
+Run the WP-2 correctness workload:
+
+```sh
+build/throughput_bench 261 --correctness-only
+```
+
+Both throughput workloads use deterministic PAPER input with zero modeled fee
+and slippage so the benchmark measures pipeline delivery rather than eventually
+stopping at the unchanged drawdown gate. Fee and slippage accounting are pinned
+separately by `wp2_accounting_tests`. Correctness-only mode requires produced,
+consumed, and confirmed-fill counts all to equal the requested input, skips CSV
+output and performance thresholds, and makes no performance claim.
+
 Run Phase 19 microbenchmark:
 
 ```sh
@@ -71,3 +84,9 @@ If a benchmark regresses:
 - Compare against prior commit or archived evidence.
 - Inspect build mode and compiler.
 - Halt performance claims until the regression is understood.
+
+The WP-2 baseline `throughput_bench 261` result of 261 produced, 261 consumed,
+and 260 fills was caused by accumulated modeled costs reaching the existing
+drawdown gate before the final order. The correction does not weaken or bypass
+that gate: the benchmark's synthetic transport workload declares zero costs,
+while independent accounting tests retain nonzero fee/slippage coverage.

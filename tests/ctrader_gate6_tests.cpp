@@ -1,6 +1,6 @@
 #include "CTraderGate6Proof.hpp"
 #include "CTraderGate6Runtime.hpp"
-#include "CTraderOAuthCorrelation.hpp"
+#include "providers/ctrader/CTraderOAuthCorrelation.hpp"
 #include "OpenApiCommonModelMessages.pb.h"
 #include "OpenApiModelMessages.pb.h"
 

@@ -217,8 +217,9 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 
 ## Current Active Plan Register
 
-`PLAN-20260813-repository-cohesion-remediation` is the sole current execution
-plan. Older plans below are retained as decision and execution history; any
+`PLAN-20260813-repository-cohesion-remediation` is the controlling program
+plan. `PLAN-20260814-wp2-accounting-correctness` is its sole active package
+slice. Older plans below are retained as decision and execution history; any
 stale `In Progress`, provider-next-action, or residual-authorization wording in
 those records is non-controlling under Wade's current focus lock. Work from an
 older plan must first map to WP-0 through WP-8 and receive new exact authority.
@@ -227,7 +228,8 @@ older plan must first map to WP-0 through WP-8 and receive new exact authority.
 
 - Plan ID: `PLAN-20260813-repository-cohesion-remediation`
 - Status: In Progress — foundational governance approved; WP-0 and WP-1 merged
-  and accepted; WP-2 through WP-8 Planned / NO-GO
+  and accepted; WP-2 implementation authorized; WP-3 through WP-8 Planned /
+  NO-GO
 - Owner: Wade
 - Implementer: separately assigned per package
 - Review authority: Wade
@@ -336,6 +338,13 @@ credential-value access, provider traffic, external retries, demo or real
 orders, risk-limit changes, release, deployment, live use, or workflow
 dispatch. No current external process/attempt budget exists.
 
+On 2026-08-14 Wade separately authorized Codex to execute WP-2. That current
+grant covers one local branch, planning, source/test/documentation edits, and
+offline validation for the canonical accounting-and-quantity scope. It does
+not authorize staging, commit, push, PR creation, merge, workflow dispatch,
+provider access, credentials, orders, financial-limit changes, release,
+deployment, live use, WP-3, or an external retry/process.
+
 ## Files Expected to Change
 
 Foundational governance work:
@@ -368,6 +377,8 @@ slice is controlled by its canonical definition and remains dependency-queued.
 7. Complete WP-7 evidence and WP-8 synchronization for WP-0 and obtain its
    acceptance before activating WP-1.
 8. Execute WP-1 only after that dependency is satisfied.
+9. Execute WP-2 under `PLAN-20260814-wp2-accounting-correctness` only after
+   WP-1 acceptance and a separate exact operator GO.
 
 ## Verification
 
@@ -495,13 +506,253 @@ enabled unsafe runtime. Historical phase/ADR evidence remains preserved.
   `eef91ed4abf35bd09462deb1a55a0c72d95edea7`.
 - WP-1: complete and accepted through merged PRs #36 and #37 at
   `c438d1ffae1d6118f3a2b1cb8c7c5c4e10bcb4f2`.
-- WP-2 through WP-8: implementation evidence pending and not authorized.
+- WP-2: authorized local implementation and offline validation complete on
+  2026-08-14; review and operator acceptance pending.
+- WP-3 through WP-8: implementation evidence pending and not authorized.
 
 ## Final Outcome
 
 Open. The focus lock and foundational governance are approved. WP-0 and WP-1
-are merged and accepted. No implementation package is currently authorized. WP-2
-through WP-8 remain Planned / NO-GO.
+are merged and accepted. WP-2 is the sole authorized implementation package;
+WP-3 through WP-8 remain Planned / NO-GO.
+
+# Plan: WP-2 Accounting And Quantity Correctness
+
+- Plan ID: `PLAN-20260814-wp2-accounting-correctness`
+- Status: Review Ready — unstaged local candidate verified; Wade acceptance
+  and every Git action pending
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Repository Remediation Program WP-2; no historical
+  phase transition
+- Related issue or decision: 2026-08-13 repository diagnosis and Wade's
+  2026-08-14 WP-2 execution authorization
+- Created: 2026-08-14
+- Updated: 2026-08-14
+
+## Objective
+
+Establish one deterministic financial-value contract for price, quantity,
+money, fees, and fractional rates, then make portfolio accounting conserve
+cash, positions, costs, and P&L across fills and multiple symbols.
+
+Success requires checked rounding and overflow behavior; correct buy, add,
+reduce, close, rejected-reversal, partial-fill, fee, and slippage accounting;
+per-symbol persistent marks; explicit snapshot compatibility; and a named
+correctness check for the 261-tick/260-fill benchmark regression.
+
+## Context
+
+At baseline commit `179817972cf469c67384f5f8c2245ecf09044621`, all 12
+existing CTest cases pass. `build/throughput_bench 261` fails after consuming
+261 ticks but recording 260 fills. Portfolio inspection also shows that marking
+one symbol resets aggregate unrealized P&L for other symbols, add-on entry fees
+are not accumulated, and execution/accounting boundaries mix `double` with
+dynamic-scale `Decimal64` values without one checked arithmetic owner.
+
+## Scope
+
+- Canonical fixed-scale price, quantity, money, fee, and fractional-rate
+  values with named conversion, rounding, checked arithmetic, and overflow
+  rules.
+- Portfolio debit/credit, cost basis, average entry, entry-fee allocation,
+  realized/unrealized P&L, aggregate equity, per-symbol marks, partial
+  reductions, and fail-closed unsupported reversal/over-close behavior.
+- Consistent local and deterministic-PAPER fee/slippage calculations and
+  checked double/fixed-point normalization boundaries.
+- Versioned snapshot accounting fields and explicit rejection of incompatible
+  earlier snapshots.
+- A correctness-only benchmark mode and WP-2 unit/integration coverage.
+- Required WP-7 evidence and WP-8 documentation/authority synchronization for
+  this package candidate.
+
+## Out of Scope
+
+- Strategy parameters, signal behavior, profitability claims, performance
+  optimization, new instruments, short-selling support, or margin accounting.
+- Risk-limit values, drawdown/VaR policy repair, halt/close-only composition,
+  or WP-3 behavior.
+- Unified lifecycle/cancellation/reconciliation redesign owned by WP-4.
+- Runtime/data topology, provider transport, credentials, external traffic,
+  demo or real orders, deployment, release, or live trading.
+
+## Preconditions
+
+- WP-0 and WP-1 are merged and accepted.
+- The branch begins from clean `main` at
+  `179817972cf469c67384f5f8c2245ecf09044621`.
+- Wade's explicit WP-2 execution GO is the current operator authority.
+- Existing risk-limit values and default-off runtime gates remain unchanged.
+
+## Assumptions
+
+- The accounting core remains long-only in WP-2; a sell beyond the held
+  quantity is an unsupported reversal and must fail before mutation.
+- External public compatibility is limited to repository call sites and
+  documented snapshots.
+- Exact arithmetic can use a portable two-limb unsigned product/division
+  implementation without adding a dependency.
+
+## Invariants
+
+- Financial inputs normalize once at their owning boundary; non-finite,
+  non-positive where prohibited, unrepresentable, or overflowing values fail
+  before portfolio mutation.
+- Buys debit exact notional plus fee; sells credit exact notional minus fee.
+- Aggregate equity equals cash plus every open position's latest stored mark.
+- A symbol without a new mark retains its prior mark; marking another symbol
+  cannot replace it with entry price.
+- Confirmed, deduplicated broker fills remain the only broker path that mutates
+  portfolio accounting.
+- `BACKTEST` remains default, LIVE remains contained, and no risk limit changes.
+
+## Authorization Boundary
+
+Allowed action: one focused local WP-2 implementation and offline validation
+pass on `codex/wp2-accounting-correctness`, including up to two evidence-backed
+diagnose-and-correct cycles for the same local failure. Allowed artifacts are
+task-scoped tracked source, tests, CMake, plan, architecture, testing,
+benchmarking, data/risk policy, roadmap, project-state, and agent-governance
+files plus ignored build/results output. Stop after a review-ready unstaged
+working-tree handoff, on the third recurrence of one blocker, on required scope
+expansion, or at any external/live/financial-limit boundary.
+
+Staging, commit, push, PR creation, merge, workflow dispatch, provider access,
+credential inspection, demo or real orders, financial-limit changes, release,
+deployment, live use, WP-3, and external retries are not authorized.
+
+## Files Expected to Change
+
+- Financial/accounting contracts under `include/` and `src/`, primarily
+  `FinancialMath`, `PortfolioManager`, `ExecutionEngine`, `BrokerGateway`,
+  `DeterministicBrokerAdapter`, and `StateSerializer`.
+- `src/benchmarks/throughput_bench.cpp`, `tests/wp2_accounting_tests.cpp`,
+  affected regression tests, and `CMakeLists.txt`.
+- The controlling remediation, architecture, risk, data, testing,
+  benchmarking, project-state, roadmap, plan, and agent-governance documents.
+
+## Implementation Steps
+
+1. Add the canonical fixed-scale values and checked arithmetic.
+2. Move portfolio state mutation to normalized, exact accounting operations
+   while preserving repository-facing double getters.
+3. Normalize execution/gateway/PAPER simulation costs consistently and reject
+   invalid arithmetic before callbacks or state mutation.
+4. Persist the required per-symbol mark/cost state under a new snapshot version
+   and explicitly reject older versions.
+5. Add golden vectors, accounting scenarios, multi-symbol conservation,
+   partial-fill, overflow, snapshot, and benchmark-regression tests.
+6. Run targeted checks, full default-off validation, sequential sanitizer
+   validation, policy/automation checks, and the correctness benchmark.
+7. Synchronize WP-7/WP-8 evidence and stop at the unstaged candidate boundary.
+
+## Verification
+
+```sh
+cmake -S . -B build/wp2-candidate -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build/wp2-candidate --parallel 2
+ctest --test-dir build/wp2-candidate -R 'wp2_|phase13_tests|phase17_tests|phase22_tests|wp1_persistence_tests' --output-on-failure
+./scripts/ci_validate.sh build/wp2-ci-validation
+./scripts/ci_deep_validate.sh build/wp2-ci-deep-validation
+build/wp2-candidate/throughput_bench 261 --correctness-only
+python3 scripts/validate_automation.py
+./scripts/ci_policy_checks.sh
+git diff --check
+```
+
+Full suites from distinct build trees run sequentially. The correctness-only
+benchmark uses deterministic synthetic PAPER input, does not make a throughput
+claim, and writes generated output only under ignored `data/results/`.
+
+## Risks
+
+- Unit migration can silently change cash or fee semantics; golden vectors and
+  conservation tests must pin every boundary.
+- Snapshot changes can make prior checkpoints unsafe; version mismatch must be
+  explicit and non-mutating.
+- A benchmark fix could hide a genuine risk block; correctness mode must state
+  its zero-cost synthetic workload and separately assert every requested fill.
+- Broker lifecycle changes could leak into WP-4; retain existing acknowledgement
+  and deduplication ownership and change only arithmetic validation.
+
+## Rollback
+
+With separate operator approval, revert the WP-2 candidate as one bounded
+change. Version-13 snapshots must not be loaded by version-12 code; rollback
+therefore requires discarding generated WP-2 checkpoints or an explicitly
+approved migration. Never silently reinterpret snapshot units.
+
+## Progress Log
+
+- 2026-08-14: Wade authorized Codex to execute WP-2.
+- 2026-08-14: Clean baseline recorded on `main` at
+  `179817972cf469c67384f5f8c2245ecf09044621`; all 12 CTest cases passed.
+- 2026-08-14: `build/throughput_bench 261` reproduced the known failure with
+  261 produced, 261 consumed, and 260 fills.
+- 2026-08-14: Local branch `codex/wp2-accounting-correctness` created; no
+  stage, commit, push, provider, credential, order, or live action occurred.
+- 2026-08-14: Added `FinancialMath` scale-8 strong values and portable checked
+  arithmetic; migrated portfolio cash, quantity, cost basis, entry fees, marks,
+  fee/slippage calculation, PAPER simulation, and snapshot accounting to the
+  canonical contract. Snapshot version advanced from 12 to 13 with explicit
+  rejection of earlier versions.
+- 2026-08-14: Added deterministic accounting/overflow/PAPER/conservation tests,
+  malformed fill-confirmation rejection, and a 261-event correctness-only
+  benchmark test. ADR 0005 records the durable contract as Proposed; source
+  authorization is not represented as ADR acceptance.
+- 2026-08-14: The first targeted regression run exposed an intentional contract
+  mismatch in legacy fixtures: explicit quantity plus fee exceeded the stated
+  total debit budget in `phase13_tests` and `wp1_persistence_tests`. Execution
+  call sites and the persistence fixture were aligned to the total-debit rule.
+- 2026-08-14: A second `phase13_tests` run exposed overly strict rejection of
+  exact fixed values round-tripped through repository-facing `double` getters;
+  the reject-unaligned tolerance was bounded by double representation error.
+  `wp1_persistence_tests` retained a separate stale-budget fixture failure and
+  passed after that fixture was corrected.
+- 2026-08-14: The first new WP-2 test run found an incorrect expected total-fee
+  constant in the test (2.37 instead of the correct 3.37). The implementation
+  result reconciled with the individual fills, so the test expectation was
+  corrected before the fresh evidence epoch.
+- 2026-08-14: Fresh `build/wp2-candidate` configure/build succeeded. The six
+  selected regression tests passed 6/6, and
+  `throughput_bench 261 --correctness-only` reported 261 produced, 261 consumed,
+  and 261 fills with CSV output skipped.
+- 2026-08-14: `./scripts/ci_validate.sh build/wp2-ci-validation` passed all
+  14 default-off tests after validating 23 skills and four offline workflows.
+  `./scripts/ci_deep_validate.sh build/wp2-ci-deep-validation` then passed the
+  same 14 tests under ASan/UBSan. The suites ran sequentially.
+- 2026-08-14: Both builds retained the two known baseline warnings:
+  `AsyncNetworkClient.cpp` has unused `SSL_ERROR_NONE`, and `RiskEngine.cpp`
+  has unused `totalPositioned`.
+
+## Deviations
+
+- ADR 0005 was added as Proposed because the scale-8 financial contract is a
+  durable architecture decision. Neither WP-2 execution authorization nor the
+  passing candidate evidence is treated as ADR acceptance.
+- No risk-limit value, runtime default, provider boundary, credential path,
+  external action, order operation, or WP-3 behavior changed.
+
+## Completion Evidence
+
+- Candidate evidence epoch: unstaged working tree based on
+  `179817972cf469c67384f5f8c2245ecf09044621` on branch
+  `codex/wp2-accounting-correctness`; it is not exact-commit evidence.
+- Fresh candidate build and selected tests: pass, 6/6.
+- Explicit 261-event correctness workload: pass, 261 produced/consumed/filled.
+- Ordinary default-off CI-equivalent suite: pass, 14/14.
+- Sequential ASan/UBSan default-off suite: pass, 14/14.
+- Automation validation: pass, 23 skills and four offline workflows.
+- Final automation/policy scans and `git diff --check`: pass after governance
+  synchronization. Markdown link/lint tooling remains unavailable locally.
+
+## Final Outcome
+
+Open. The review-ready unstaged WP-2 candidate and offline evidence are
+complete; Wade acceptance remains. Staging, commit,
+publication, merge, WP-3, provider activity, risk-limit changes, deployment,
+release, and live use remain separate decisions.
 
 # Plan: Complete Gate 5 OAuth Correlation Controls
 

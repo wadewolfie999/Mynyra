@@ -149,10 +149,12 @@ Financial limit changes require operator approval.
 
 Generated outputs are ignored by Git unless intentionally versioned.
 `--resume data/results/snapshot.json` accepts only the governed default path and
-a canonical version-12 BACKTEST snapshot. Other paths are rejected before file
+a canonical version-13 BACKTEST snapshot. Financial fields use signed scale-8
+integer units. Other paths are rejected before file
 or runtime setup. PAPER and LIVE resume are rejected because external order
 lifecycle and reconciliation state is not yet restart-safe. Snapshot version
-migration is explicit; versions 9 and 11 are not loaded automatically.
+migration is explicit; earlier versions, including version 12, are not loaded
+automatically.
 
 ## Configuration Change Rules
 

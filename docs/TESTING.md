@@ -23,7 +23,13 @@ Tests are evidence, not ceremony. TradeBot is financial-sensitive, so tests must
   - `phase22_tests`
   - `wp0_containment_tests`
   - `wp0_live_startup_rejected`
+  - `wp1_persistence_tests`
+  - `wp1_nonbacktest_resume_rejected`
+  - `wp1_generated_paths`
+  - `wp2_accounting_tests`
+  - `wp2_throughput_correctness`
   - `ctrader_gate5_1_tests`
+  - `ctrader_provider_architecture_tests`
 - The opt-in Gate 6 configuration additionally registers
   `ctrader_gate6_tests`; normal builds remain unchanged.
 - The opt-in Gate 7 configuration additionally registers
@@ -83,6 +89,7 @@ Targeted test:
 ctest --test-dir build -R phase18_tests --output-on-failure
 ctest --test-dir build -R '^ctrader_gate5_1_tests$' --output-on-failure
 ctest --test-dir build -R '^wp0_' --output-on-failure
+ctest --test-dir build -R '^wp2_' --output-on-failure
 ```
 
 Opt-in Gate 6 suite:
@@ -180,7 +187,21 @@ deployment, provider traffic, or live transition occurs.
   extend the absolute deadline. It proves the target cannot construct trading/
   order/position/depth/trendbar/historical/reconnect payloads. Provider
   execution is reported separately and is never a substitute for offline tests.
+- Provider-architecture tests: `ctrader_provider_architecture_tests` verifies
+  the normalized market-data contract, independent gateway acknowledgement and
+  execution callback fan-out, and that the cTrader adapter skeleton remains
+  disconnected, unsupported, and free of provider side effects.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
+- WP-2 accounting tests: `wp2_accounting_tests` covers scale-8 conversion,
+  rounding and overflow vectors; buy/add/reduce/close and reversal rejection;
+  multi-symbol marks; deterministic PAPER costs; malformed fill rejection;
+  and 1,000 round trips. `wp2_throughput_correctness` runs 261 deterministic
+  zero-cost PAPER events and requires one confirmed fill per consumed event.
+  It skips performance thresholds and makes no throughput claim.
+- Execution pipeline correctness tests: `execution_pipeline_correctness_tests`
+  verifies RiskEngine decision propagation, duplicate/stale event idempotency,
+  rejected-acknowledgement cleanup, partial/final sells, and transactional
+  over-close rejection without portfolio or execution-context mutation.
 
 ## GitHub Actions Evidence
 
@@ -274,7 +295,8 @@ and Wade acceptance are also required, and the next package remains NO-GO.
 - Historical data under `data/historical/` is referenced by benchmark code but not tracked in the verified tree.
 - Fixture provenance must be documented before committing new data.
 - `wp1_persistence_tests` covers zero/one/many open-position round trips,
-  accounting, risk halt/close-only state, pending-order identity, regime and
+  version-13 fixed-unit accounting, risk halt/close-only state, pending-order
+  identity, regime and
   allocator state, corrupt/malformed/legacy rejection without mutation,
   atomic-write failure, non-finite pre-write rejection, risk-configuration
   mismatch rejection, transient API-error incompatibility, and event-loop

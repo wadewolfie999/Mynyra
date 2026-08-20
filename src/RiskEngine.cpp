@@ -46,6 +46,24 @@ bool RiskEngine::canTrade() const noexcept
     return true;
 }
 
+RiskDecision RiskEngine::evaluateOrder(OrderSide side) const noexcept
+{
+    RiskDecision decision;
+    decision.riskIncreasing = side == OrderSide::Buy;
+    decision.allowed = !decision.riskIncreasing || canTrade();
+    decision.action = decision.allowed ? RuleBreachAction::Warn
+                                       : RuleBreachAction::Halt;
+    if (decision.allowed) {
+        decision.reason = decision.riskIncreasing
+            ? "RiskEngine accepted new exposure"
+            : "RiskEngine accepted position reduction";
+    } else {
+        decision.failure = FailureCategory::Validation;
+        decision.reason = "RiskEngine rejected new exposure";
+    }
+    return decision;
+}
+
 void RiskEngine::setTotalDrawdown(double drawdown) noexcept
 {
     m_totalDrawdown = drawdown;
