@@ -6,14 +6,14 @@ Mynyra-Trade is the intended **product-level home** for the broader software sys
 
 > **Current authority:** Mynyra-Trade may contain static local presentation and product documentation. It may not contact providers, read or represent credentials, access accounts, retrieve market data, create orders, change risk limits, or imply any of those capabilities.[1]
 
-The repository remains an initial Git repository on `main`, with no commit yet. At the current evidence epoch, its foundation is staged for review; this summary describes that staged source tree, not a published or deployed system.
+The repository is a Radicle working copy on `main`. At the Codex/Radicle integration evidence epoch, the source has an initial local commit and a Radicle-only upstream; verify the current branch, commit, and Radicle identity before any forge action. This summary describes local repository state, not a published, deployed, or peer-synced system.
 
 | Dimension | Current fact | Implication for Codex |
 | --- | --- | --- |
 | Product role | Future software-level product home around TradeBot | Do not treat this as a TradeBot checkout or silently import TradeBot source. |
 | Runtime mode | Static React frontend with a small static-serving Node entrypoint | No backend route, database, provider client, or real-time data path exists. |
 | Operational posture | Offline and non-trading | Preserve absence of credentials, accounts, market data, orders, and risk controls. |
-| Git posture | Initial `main`, staged foundation, no commit | Review the index before any proposed commit; do not assume a prior baseline commit exists. |
+| Forge posture | Radicle-only upstream on `main` | Use local Git for inspection and Radicle for authorized collaboration; do not add GitHub or another centralized forge. |
 | Evidence posture | Local UI state and documented verification only | Label future values as observed, inferred, or unavailable; never present synthetic live state as fact. |
 
 ## System topology
@@ -45,6 +45,7 @@ No arrow crosses from the UI to an external provider, a credential store, a fina
 | `AGENTS.md` | Repository contract | Product boundary, working rules, safety limits, reporting requirements | Read first; it is the operating contract for any change. |
 | `README.md` | Repository orientation | Scope, exclusions, local run and verification commands | Keep it aligned with actual capabilities. |
 | `ARCHITECTURE.md` | Architecture contract | Static-only topology, ownership boundary, extension seams, non-goals | Update for any durable system or boundary change. |
+| `RADICLE.md` | Forge and runtime-placement contract | Radicle-only workflow, Manus provenance, future `asus-node` backend boundary | Read before issue, patch, publish, sync, deployment, or source migration work. |
 | `HANDOFF.md` | Execution evidence | Authorized scope, verification, warnings, rollback posture, prohibited actions | Treat it as the continuation record for this foundation. |
 | `ideas.md` | Design contract | Night Operations Manual design system and interaction ethos | Follow it before changing composition or visual language. |
 | `CODEX_ARCHITECTURE_SUMMARY.md` | Codex integration map | This detailed implementation and governance summary | Start here after `AGENTS.md`; keep it evidence-based. |
@@ -104,7 +105,7 @@ Prohibited absent new authority:
 
 ## Build, verification, and evidence epoch
 
-The local Mynyra-Trade worktree has passed the following checks using the project-pinned pnpm release through `npx pnpm@10.4.1` because a global `pnpm` executable was unavailable on the desktop:
+The following are historical verification results from the initial Manus-source foundation. They are useful provenance, but not a claim about the current worktree; re-run the relevant checks before any source, packaging, or deployment decision:
 
 | Verification | Result | Notes |
 | --- | --- | --- |
@@ -119,25 +120,28 @@ The local Mynyra-Trade worktree has passed the following checks using the projec
 
 The build currently emits non-failing warnings. pnpm reports that native build scripts for `@tailwindcss/oxide` and `esbuild` are not approved. Node 26 reports a `module.register()` deprecation. Vite also reports unresolved optional analytics placeholders in `client/index.html` and a non-module analytics script reference. The site still builds, but analytics must be removed, configured, or safely guarded before production-oriented work.[3]
 
-## Staged diff-check exception
+## Wouter patch formatting exception
 
-`git diff --cached --check` reports three findings in `patches/wouter@3.7.1.patch`: two whitespace-only hunk-context lines and the final hunk-context blank line. These are formatting markers inside the unified diff, not trailing whitespace in the generated application source.
+The initial source review reported three `git diff --cached --check` findings in `patches/wouter@3.7.1.patch`: two whitespace-only hunk-context lines and the final hunk-context blank line. These are formatting markers inside the unified diff, not trailing whitespace in the generated application source.
 
 An attempted blanket trim made pnpm reject the patch with `ERR_PNPM_INVALID_PATCH` because it changed the hunk old-side line count. The valid patch was restored and its application was verified with an offline pnpm install. Codex should therefore treat this as a **narrow, verified patch-format exception**, not as permission to waive whitespace checks elsewhere. If a fully clean `git diff --cached --check` is mandatory, regenerate an equivalent patch against the exact Wouter package under separately explicit approval, then update the lockfile hash and rerun all verification.
 
 ## Codex continuation protocol
 
-Codex should begin with repository evidence, not the UI alone. Read `AGENTS.md`, `README.md`, `ARCHITECTURE.md`, `HANDOFF.md`, `ideas.md`, and this summary. Then inspect `git status`, the staged index, and the exact package patch. Do not create a commit merely because the source is staged.
+Codex should begin with repository evidence, not the UI alone. Read `AGENTS.md`, `README.md`, `ARCHITECTURE.md`, `RADICLE.md`, `HANDOFF.md`, `ideas.md`, and this summary. Then inspect `git status`, any staged index, the Radicle project/node state, and the exact package patch. Do not create a commit merely because source is staged or a Radicle node is healthy.
 
 | Proposed Codex action | Present authority | Required condition |
 | --- | --- | --- |
-| Review staged architecture and source | Allowed | Preserve current boundaries and distinguish facts from assumptions. |
+| Review architecture and source | Allowed | Preserve current boundaries and distinguish facts from assumptions. |
 | Normalize ordinary source whitespace | Allowed if scoped | Exclude the verified Wouter patch-format exception unless a replacement patch is approved. |
 | Change UI composition or copy | Needs scoped review | Keep it static, evidence-aware, and non-operational. Update `ideas.md` or architecture docs if the decision is durable. |
 | Add a data adapter | Not authorized | Obtain a reviewed evidence/provenance plan and exact operator authorization. |
 | Add backend, database, auth, or secrets | Not authorized | Obtain a distinct architecture and implementation authorization. |
 | Import TradeBot code or documents | Not authorized | Obtain a dedicated migration plan that explicitly lists source and evidence boundaries. |
+| Create or operate a backend on `asus-node` | Not authorized | Obtain an asus-node deployment plan with service, network, secrets, observability, rollback, and operator authority. |
 | Commit, push, publish, deploy, or create a PR | Not authorized | Obtain explicit Git/publication authorization. |
+| Radicle issue, patch, publish, sync, seed, or follow-policy change | Not authorized by this foundation | Use `RADICLE.md`; persistent collaboration and network effects require explicit authorization. |
+| GitHub remote, workflow, issue, PR, release, or `gh` command | Prohibited | Radicle is the repository's sole forge. |
 | Provider traffic, account access, orders, or risk changes | Prohibited | Requires a separate safety and operator authorization path. |
 
 The immediate safe next action is a Codex review of the staged diff against this summary and the existing handoff documents. The next implementation action should be selected only after the operator names a narrow product capability and its evidence boundary.
