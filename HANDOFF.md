@@ -42,6 +42,31 @@
   installation, provider traffic, credential access, market-data request, or
   order attempt has occurred in this source step.
 
+## 2026-08-26 Radicle transition checkpoint (blocked)
+
+- The existing Mac delegate accepted revision
+  `dab5e1ce55e457b201e492315b45a924f7b6890a`, which adds the existing ASUS
+  developer DID `did:key:z6MkecLT6jhzsBR5KJmxWrpBiHH8GnX2g8vs3mUVuafXdGZD`.
+  Threshold remains `1`; the initial identity remains the active document
+  until the metadata proposal below reaches its required quorum.
+- Proposal `61c1929dae3268dc6eda4e011f132fcea0dac222` changes only the
+  project payload description to the offline-only statement. The Mac delegate
+  has accepted it, but Radicle reports `quorum no` after the delegate addition.
+  ASUS cannot attest yet because it does not have the canonical RID in local
+  storage. Do not treat the new description as active.
+- Local canonical Radicle storage was fast-forwarded through the configured
+  `rad` Git remote: `main` is
+  `7cb95892bef5c6813f72b557cfcf7704e786892c`. This was an offline Radicle
+  reference update, not a publication or network sync.
+- The Mac Radicle node remained stopped: `rad node start` safely failed before
+  startup because the owner key requires its passphrase. No passphrase was
+  requested, captured, or supplied. The next operator action is to start the
+  Mac Radicle node locally, then run bounded `rad sync --announce` with an
+  existing outbound peer; only then may ASUS fetch the RID and attest proposal
+  `61c1929...`.
+- No ASUS filesystem/workload/service change, provider action, credential
+  access, market-data request, or order attempt has occurred.
+
 ## 2026-08-25 Mynyra Engine consolidation (active)
 
 - Branch: `codex/mynyra-engine-cutover`.
