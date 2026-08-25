@@ -53,6 +53,13 @@ and structural authority only: no provider continuation, later phase,
 workstream, feature, strategy, optimization, deployment, or platform-selection
 action may pre-empt the remediation queue.
 
+Exception: Wade explicitly authorized `PLAN-20260824-mynyra-demo-m1` on
+2026-08-24 as one bounded WP-5-through-WP-8 slice. It permits a default-off
+cTrader Demo XAUUSD/M1 runtime, read-only proof, and exactly one
+minimum-volume commissioning entry attempt with controlled close and final
+flat reconciliation. No other package, phase, provider retry, live support,
+publication, or deployment is activated.
+
 | Package | Current status |
 | --- | --- |
 | WP-0 Live containment | Complete — merged and accepted at `eef91ed4abf35bd09462deb1a55a0c72d95edea7` |
@@ -89,7 +96,10 @@ the remediation overlay controls the current execution queue:
   OAuth, fixed demo TLS, application/account authentication, canonical XAUUSD
   resolution, and full metadata validation before stopping at
   `gate7_subscription_failed`. No accepted subscription, BBO, or timestamp
-  proof was obtained. Gates 8–9 and live work remain unauthorized.
+  proof was obtained. That evidence remains historical. The active M1
+  candidate is authorized separately; its offline implementation is in
+  progress and its external acceptance has not yet run. Live work remains
+  unauthorized.
 - Workstream III — Documentation & Knowledge Architecture: parallel/future unless separately activated.
 - Workstream IV — ML Optimization & Strategy Research: parallel/future unless separately activated.
 - Workstream V — Core Platform Enhancement: parallel/future unless separately activated.
@@ -100,8 +110,11 @@ Workstream II includes a demo validation path and a separate live-readiness path
 The Gate 6 sequence completed through Gate 6A, Wade's mandatory safe-metadata
 checkpoint, and Gate 6B in one process. Wade accepted the execution result and
 PR #25 is merged. Gate 7 reached full XAUUSD metadata validation but has not
-proved an accepted subscription, quote, or timestamp. Reconnect proof, demo
-orders, live deployment, and live trading remain unauthorized.
+proved an accepted subscription, quote, or timestamp. The new M1 plan is the
+controlling exception for Demo market data, bounded reconnect/reconciliation,
+and one commissioning order lifecycle. The Demo phase remains unstarted until
+the external runtime emits `mynyra_demo_m1_succeeded`; live deployment and
+live trading remain unauthorized.
 
 ## Deterministic Phase Authority
 
@@ -112,7 +125,7 @@ This table is the canonical phase state for Workstreams I-III. `PROJECT_STATE.md
 | I — Broker-Neutral Execution Foundation | Phase 21: Infrastructure Alignment | Complete — Approved | Internal TradeBot integration architecture and boundary alignment. ADR 0003 is Accepted; Phase 21 planning artifacts are approved. |
 | I — Broker-Neutral Execution Foundation | Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness | Complete — Accepted | `PLAN-20260624-workstream-i-broker-neutral-completion` closed the provider-neutral contracts, deterministic simulation, execution/risk alignment, persistence, replay, tests, and documentation boundary. No broker or prop firm selection, connection method, connectivity, credentials, account access, real or sandbox orders, broker-dependent implementation, or live trading is authorized. |
 | II — Broker Integration Program | Phase 23: Broker Selection | Complete — Selected | Wade selected FIBO Group through cTrader for demo-only XAUUSD. OANDA is permanently cancelled. Selection does not authorize OAuth, connectivity, credentials, account access, market data, orders, or live trading. |
-| II — Broker Integration Program | Phase 24: Connection Protocol | Historical gate evidence preserved; Gate 7 incomplete at the latest `gate7_subscription_failed` transition; current continuation paused by the remediation focus lock | Official Open API remains the accepted sole path. Any further offline integration must map to WP-6 after predecessor acceptance and receive new exact authorization. Provider execution, quote evidence, reconnect proof, order proof, Gate 8–9 work, and live use remain blocked. |
+| II — Broker Integration Program | Phase 24: Connection Protocol | Mynyra Demo M1 candidate In Progress under explicit 2026-08-24 exception; external milestone not yet proven | Official Open API remains the accepted sole path. `PLAN-20260824-mynyra-demo-m1` authorizes one default-off Demo-only XAUUSD/M1 slice, three external stages, one entry attempt, and controlled close. Success requires `mynyra_demo_m1_succeeded` after final flat reconciliation. Live use and adjacent work remain blocked. |
 | III — Documentation & Knowledge Architecture | Phase 25: Documentation Platform Evaluation & Selection | Not Started | Evaluate and select the documentation platform. No platform is selected. |
 | III — Documentation & Knowledge Architecture | Phase 26: Core Documentation Architecture & Drafting | Blocked | Build the core documentation structure and draft canonical documentation only after Phase 25 selection and operator approval of the documentation architecture. |
 
@@ -226,10 +239,13 @@ The Foundation through Phase 19 entries below are historical context reconstruct
   timeout to a latest process that passed OAuth, account authentication,
   canonical XAUUSD resolution, and full metadata validation before
   `gate7_subscription_failed`. Residual subscription/spot diagnostics,
-  heartbeat handling, and the first-single-complete-BBO policy are authorized
-  offline. Provider execution remains a separate exact approval; no accepted
-  subscription, quote, or timestamp evidence exists. Gates 8–9 and every
-  trading/live gate remain blocked.
+  heartbeat handling, and the first-single-complete-BBO policy are historical.
+  Wade's 2026-08-24 M1 plan now authorizes a distinct default-off Demo runtime,
+  fresh OAuth stage, read-only XAUUSD M1 stage, and one commissioning entry
+  followed by native position close. The candidate is not complete until its
+  external final-flat success marker exists. Live accounts/endpoints, a second
+  entry, risk-limit changes, release, deployment, and live trading remain
+  blocked.
 
 ### Phase 25: Workstream III Documentation Platform Evaluation And Selection
 
@@ -273,7 +289,11 @@ The Foundation through Phase 19 entries below are historical context reconstruct
 
 ## Next Roadmap Action
 
-Complete the offline verification and review handoff for the authorized WP-2
-working-tree candidate, then stop for Wade's separate acceptance and Git-action
-decision. Do not begin WP-3, provider work, workflow dispatch, staging,
-publication, orders, risk-limit changes, deployment, release, or live use.
+Offline verification of the current uncommitted M1 candidate is complete.
+After the identifier-only `TRADEBOT_CTRADER_CLIENT_ID` is available to the
+Codex application process, execute only the three authorized external Demo
+stages. Stop on the first failure or recovery-required state. The next
+transition is either a final-flat
+`mynyra_demo_m1_succeeded` result or a redacted incomplete handoff. Do not
+stage, publish, add another entry, change risk limits, deploy, release, or use
+live accounts/endpoints.

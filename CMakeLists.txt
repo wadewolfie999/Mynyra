@@ -19,6 +19,9 @@ find_library(DL_LIB dl)
 option(TRADEBOT_ENABLE_LIVE_RUNTIME
     "Compile the legacy LIVE runtime path (still requires an explicit CLI unlock)" OFF)
 
+option(TRADEBOT_ENABLE_CTRADER_DEMO
+    "Build the contained cTrader Demo-only Mynyra M1 runtime" OFF)
+
 # Provider-owned offline support remains separate from the core library. This
 # target contains no transport or runtime activation; it is shared only by
 # synthetic proof targets and the opt-in proof runtimes below.
@@ -228,26 +231,128 @@ set(CORE_SOURCES
     src/TriggerOrderManager.cpp
     src/OrderLifecycleStore.cpp
     src/DeterministicBrokerAdapter.cpp
+    src/IPortfolioView.cpp
+    src/StrategyPipeline.cpp
+    src/MynyraEventSink.cpp
+    src/MynyraDemoCommissioning.cpp
 )
 
 add_library(tradebot_core_lib ${CORE_SOURCES})
 target_include_directories(tradebot_core_lib PUBLIC include)
 target_link_libraries(tradebot_core_lib PUBLIC Threads::Threads)
 target_compile_definitions(tradebot_core_lib PUBLIC
-    TRADEBOT_ENABLE_LIVE_RUNTIME=$<BOOL:${TRADEBOT_ENABLE_LIVE_RUNTIME}>)
+    TRADEBOT_ENABLE_LIVE_RUNTIME=$<BOOL:${TRADEBOT_ENABLE_LIVE_RUNTIME}>
+    TRADEBOT_ENABLE_CTRADER_DEMO=$<BOOL:${TRADEBOT_ENABLE_CTRADER_DEMO}>)
 if (DL_LIB)
     target_link_libraries(tradebot_core_lib PUBLIC ${DL_LIB})
 endif()
 
 # The provider seam depends on normalized core contracts, while core targets
-# remain unaware of cTrader implementation types.
-add_library(tradebot_ctrader_provider STATIC
+# remain unaware of cTrader implementation types. The default target remains a
+# no-I/O skeleton. The opt-in Demo build substitutes the Demo-only provider and
+# exact pinned schema/runtime dependencies.
+set(TRADEBOT_CTRADER_PROVIDER_SOURCES
     src/providers/ctrader/CTraderProviderAdapter.cpp)
+if (TRADEBOT_ENABLE_CTRADER_DEMO)
+    if (NOT APPLE)
+        message(FATAL_ERROR
+            "cTrader Demo M1 requires the macOS Keychain environment")
+    endif()
+    enable_language(OBJCXX)
+    find_package(Protobuf 35.1.0 EXACT CONFIG REQUIRED)
+    find_package(CURL 8.7.1 REQUIRED)
+    find_package(OpenSSL 3.6.3 REQUIRED)
+    find_library(CTRADER_DEMO_APPKIT_FRAMEWORK AppKit)
+    find_library(CTRADER_DEMO_SECURITY_FRAMEWORK Security)
+    if (NOT CTRADER_DEMO_APPKIT_FRAMEWORK
+        OR NOT CTRADER_DEMO_SECURITY_FRAMEWORK)
+        message(FATAL_ERROR "cTrader Demo M1 requires AppKit and Security")
+    endif()
+    if (NOT Protobuf_VERSION VERSION_EQUAL "35.1.0")
+        message(FATAL_ERROR
+            "cTrader Demo M1 requires exact Protobuf 35.1.0; found ${Protobuf_VERSION}")
+    endif()
+
+    set(CTRADER_DEMO_PROTO_DIR
+        "${CMAKE_CURRENT_SOURCE_DIR}/vendor/ctrader/openapi-proto")
+    set(CTRADER_DEMO_PROTO_FILES
+        "${CTRADER_DEMO_PROTO_DIR}/OpenApiCommonMessages.proto"
+        "${CTRADER_DEMO_PROTO_DIR}/OpenApiCommonModelMessages.proto"
+        "${CTRADER_DEMO_PROTO_DIR}/OpenApiMessages.proto"
+        "${CTRADER_DEMO_PROTO_DIR}/OpenApiModelMessages.proto")
+    set(CTRADER_DEMO_PROTO_EXPECTED_HASHES
+        "9816cd24b340dcc4eb28548eb4dd16735995d2a61889337591e5c4d8021652a2"
+        "b95d7df670a7e890a53ec08f676198ace7bb0a074a4b07ff0b493c4be00a0dea"
+        "a84df9b528e69a494e197d48e21d6291b3d76db31396663a8188721eef9fcf35"
+        "56338dcac45a149227678b7c23637d64f4e2b607f6649af82394ce5c0957fedf")
+    list(LENGTH CTRADER_DEMO_PROTO_FILES CTRADER_DEMO_PROTO_COUNT)
+    math(EXPR CTRADER_DEMO_PROTO_LAST "${CTRADER_DEMO_PROTO_COUNT} - 1")
+    foreach(CTRADER_DEMO_PROTO_INDEX RANGE ${CTRADER_DEMO_PROTO_LAST})
+        list(GET CTRADER_DEMO_PROTO_FILES ${CTRADER_DEMO_PROTO_INDEX}
+             CTRADER_DEMO_PROTO_FILE)
+        list(GET CTRADER_DEMO_PROTO_EXPECTED_HASHES ${CTRADER_DEMO_PROTO_INDEX}
+             CTRADER_DEMO_PROTO_EXPECTED_HASH)
+        file(SHA256 "${CTRADER_DEMO_PROTO_FILE}" CTRADER_DEMO_PROTO_ACTUAL_HASH)
+        if (NOT CTRADER_DEMO_PROTO_ACTUAL_HASH STREQUAL
+            CTRADER_DEMO_PROTO_EXPECTED_HASH)
+            message(FATAL_ERROR
+                "Pinned cTrader schema hash mismatch: ${CTRADER_DEMO_PROTO_FILE}")
+        endif()
+    endforeach()
+
+    protobuf_generate(
+        LANGUAGE cpp
+        OUT_VAR CTRADER_DEMO_PROTO_GENERATED
+        IMPORT_DIRS "${CTRADER_DEMO_PROTO_DIR}"
+        PROTOS ${CTRADER_DEMO_PROTO_FILES})
+    add_library(ctrader_demo_openapi_proto STATIC
+        ${CTRADER_DEMO_PROTO_GENERATED})
+    target_include_directories(ctrader_demo_openapi_proto PUBLIC
+        "${CMAKE_CURRENT_BINARY_DIR}")
+    target_link_libraries(ctrader_demo_openapi_proto PUBLIC
+        protobuf::libprotobuf)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(ctrader_demo_openapi_proto PRIVATE
+            -Wno-nullability-extension)
+    endif()
+
+    add_library(ctrader_demo_provider_support STATIC
+        src/CTraderGate7Proof.cpp
+        src/CTraderGate7OAuthDiagnostics.cpp)
+    target_include_directories(ctrader_demo_provider_support PUBLIC include)
+    target_link_libraries(ctrader_demo_provider_support PUBLIC
+        tradebot_ctrader_oauth)
+
+    set(TRADEBOT_CTRADER_PROVIDER_SOURCES
+        src/providers/ctrader/CTraderProviderAdapterDemo.mm
+        src/providers/ctrader/CTraderDemoRuntime.cpp)
+endif()
+
+add_library(tradebot_ctrader_provider STATIC
+    ${TRADEBOT_CTRADER_PROVIDER_SOURCES})
 target_include_directories(tradebot_ctrader_provider PUBLIC include)
 target_link_libraries(tradebot_ctrader_provider PUBLIC tradebot_core_lib)
+if (TRADEBOT_ENABLE_CTRADER_DEMO)
+    target_include_directories(tradebot_ctrader_provider PRIVATE
+        "${CMAKE_CURRENT_BINARY_DIR}")
+    target_link_libraries(tradebot_ctrader_provider PUBLIC
+        ctrader_demo_provider_support
+        ctrader_demo_openapi_proto
+        CURL::libcurl
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        ${CTRADER_DEMO_APPKIT_FRAMEWORK}
+        ${CTRADER_DEMO_SECURITY_FRAMEWORK})
+    target_compile_definitions(tradebot_ctrader_provider PRIVATE
+        TRADEBOT_ENABLE_CTRADER_DEMO=1)
+endif()
 
 add_executable(tradebot_core src/main.cpp)
-target_link_libraries(tradebot_core PRIVATE tradebot_core_lib)
+if (TRADEBOT_ENABLE_CTRADER_DEMO)
+    target_link_libraries(tradebot_core PRIVATE tradebot_ctrader_provider)
+else()
+    target_link_libraries(tradebot_core PRIVATE tradebot_core_lib)
+endif()
 
 add_executable(throughput_bench src/benchmarks/throughput_bench.cpp)
 target_link_libraries(throughput_bench PRIVATE tradebot_core_lib)
@@ -350,6 +455,49 @@ if (BUILD_TESTING)
         tradebot_ctrader_provider)
     add_test(NAME ctrader_provider_architecture_tests
         COMMAND ctrader_provider_architecture_tests)
+
+    add_executable(mynyra_demo_core_tests
+        tests/mynyra_demo_core_tests.cpp)
+    target_link_libraries(mynyra_demo_core_tests PRIVATE tradebot_core_lib)
+    add_test(NAME mynyra_demo_core_tests COMMAND mynyra_demo_core_tests)
+
+    add_test(
+        NAME mynyra_demo_cli_containment
+        COMMAND ${CMAKE_COMMAND}
+            -DTRADEBOT_EXECUTABLE=$<TARGET_FILE:tradebot_core>
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/mynyra_demo_cli_containment.cmake)
+
+    if (TRADEBOT_ENABLE_CTRADER_DEMO)
+        add_executable(ctrader_demo_frame_decoder_tests
+            tests/ctrader_demo_frame_decoder_tests.cpp)
+        target_include_directories(ctrader_demo_frame_decoder_tests PRIVATE include)
+        add_test(NAME ctrader_demo_frame_decoder_tests
+            COMMAND ctrader_demo_frame_decoder_tests)
+
+        add_executable(ctrader_demo_market_state_tests
+            tests/ctrader_demo_market_state_tests.cpp)
+        target_include_directories(ctrader_demo_market_state_tests PRIVATE include)
+        add_test(NAME ctrader_demo_market_state_tests
+            COMMAND ctrader_demo_market_state_tests)
+
+        add_executable(ctrader_demo_provider_private_tests
+            tests/ctrader_demo_provider_private_tests.mm)
+        target_include_directories(ctrader_demo_provider_private_tests PRIVATE
+            include "${CMAKE_CURRENT_BINARY_DIR}")
+        target_link_libraries(ctrader_demo_provider_private_tests PRIVATE
+            tradebot_core_lib
+            ctrader_demo_provider_support
+            ctrader_demo_openapi_proto
+            CURL::libcurl
+            OpenSSL::SSL
+            OpenSSL::Crypto
+            ${CTRADER_DEMO_APPKIT_FRAMEWORK}
+            ${CTRADER_DEMO_SECURITY_FRAMEWORK})
+        target_compile_definitions(ctrader_demo_provider_private_tests PRIVATE
+            TRADEBOT_ENABLE_CTRADER_DEMO=1)
+        add_test(NAME ctrader_demo_provider_private_tests
+            COMMAND ctrader_demo_provider_private_tests)
+    endif()
 
     if (TRADEBOT_ENABLE_CTRADER_GATE6)
         add_executable(ctrader_gate6_tests tests/ctrader_gate6_tests.cpp)

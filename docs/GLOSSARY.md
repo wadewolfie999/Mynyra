@@ -12,6 +12,8 @@
 - BBO: best bid and offer.
 - Benchmark: performance measurement, not a correctness test by itself.
 - Codex: repository-side inspection and implementation agent governed by `AGENTS.md`.
+- Demo: the default-off `DEMO` mode that uses cTrader's external Demo venue;
+  it can mutate a simulated broker account but has no live-account support.
 - Dry-run: validation that records or simulates actions without real orders.
 - Generated output: file produced by build, test, benchmark, replay, or analytics, usually ignored.
 - Handoff: structured state transfer between sessions or actors.

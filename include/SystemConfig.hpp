@@ -32,12 +32,17 @@
 #define TRADEBOT_ENABLE_LIVE_RUNTIME 0
 #endif
 
+#ifndef TRADEBOT_ENABLE_CTRADER_DEMO
+#define TRADEBOT_ENABLE_CTRADER_DEMO 0
+#endif
+
 // -- SystemMode --------------------------------------------------------------
 
 enum class SystemMode : uint8_t {
     BACKTEST = 0,   // deterministic CSV replay (default)
     PAPER    = 1,   // live data, simulated execution
-    LIVE     = 2    // live-capable; execution requires separate adapter approval
+    DEMO     = 2,   // cTrader Demo only; default-off and separately commissioned
+    LIVE     = 3    // live-capable; execution requires separate adapter approval
 };
 
 // Convert a CLI string (e.g. "paper") to SystemMode. Invalid values are
@@ -45,6 +50,7 @@ enum class SystemMode : uint8_t {
 inline std::optional<SystemMode> parseModeFlag(std::string_view s) noexcept
 {
     if (s == "PAPER"    || s == "paper")    { return SystemMode::PAPER;    }
+    if (s == "DEMO"     || s == "demo")     { return SystemMode::DEMO;     }
     if (s == "LIVE"     || s == "live")     { return SystemMode::LIVE;     }
     if (s == "BACKTEST" || s == "backtest") { return SystemMode::BACKTEST; }
     return std::nullopt;
@@ -55,11 +61,17 @@ inline constexpr bool liveRuntimeBuildEnabled() noexcept
     return TRADEBOT_ENABLE_LIVE_RUNTIME != 0;
 }
 
+inline constexpr bool cTraderDemoBuildEnabled() noexcept
+{
+    return TRADEBOT_ENABLE_CTRADER_DEMO != 0;
+}
+
 inline const char* modeName(SystemMode m) noexcept
 {
     switch (m) {
         case SystemMode::BACKTEST: return "BACKTEST";
         case SystemMode::PAPER:    return "PAPER";
+        case SystemMode::DEMO:     return "DEMO";
         case SystemMode::LIVE:     return "LIVE";
     }
     return "UNKNOWN";
@@ -74,6 +86,12 @@ struct SystemConfig {
     // The LIVE runtime requires both the default-off CMake option and the
     // explicit startup flag. Neither gate is operator authorization.
     bool liveRuntimeUnlocked{false};
+
+    // DEMO never accepts endpoint/account/quantity overrides. These flags are
+    // runtime intent only; the build option remains the primary containment
+    // gate and cTrader's account metadata must independently prove isLive=false.
+    bool commissionDemoOrder{false};
+    bool freshOAuth{false};
 
     // -- Live adapter settings -----------------------------------------------
     std::string wssEndpoint{"wss://stream.example.com/ws"};
@@ -110,10 +128,15 @@ struct SystemConfig {
 
     // -- Helpers -------------------------------------------------------------
     bool isLiveMode()  const noexcept { return mode == SystemMode::LIVE;     }
+    bool isDemoMode()  const noexcept { return mode == SystemMode::DEMO;     }
     bool isPaperMode() const noexcept { return mode == SystemMode::PAPER;    }
     bool isBacktest()  const noexcept { return mode == SystemMode::BACKTEST; }
     bool canEnterLiveRuntime() const noexcept
     {
         return isLiveMode() && liveRuntimeBuildEnabled() && liveRuntimeUnlocked;
+    }
+    bool canEnterCTraderDemoRuntime() const noexcept
+    {
+        return isDemoMode() && cTraderDemoBuildEnabled();
     }
 };

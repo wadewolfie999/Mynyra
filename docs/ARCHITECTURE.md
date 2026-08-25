@@ -31,6 +31,13 @@ containment, persistence, accounting, risk, lifecycle, runtime/data,
 transport, CI/observability, and authority gaps. Historical architecture and
 ADR decisions remain constraints, not proof that implementation is complete.
 
+`PLAN-20260824-mynyra-demo-m1` is the explicit operator-authorized exception:
+it maps one default-off, Demo-only XAUUSD commissioning slice to WP-5 through
+WP-8. It does not authorize live support, configurable sizing, a second entry,
+publication, or deployment. The candidate remains incomplete until the
+external process reaches final flat reconciliation and emits
+`mynyra_demo_m1_succeeded`.
+
 ## Architectural Principles
 
 - Default to deterministic `BACKTEST` behavior.
@@ -45,19 +52,19 @@ ADR decisions remain constraints, not proof that implementation is complete.
 
 | Area | Verified files | Responsibility |
 | --- | --- | --- |
-| Runtime config | `include/SystemConfig.hpp` | `BACKTEST`, `PAPER`, `LIVE` modes; endpoints; credential env names; circuit-breaker thresholds |
+| Runtime config | `include/SystemConfig.hpp` | `BACKTEST`, `PAPER`, default-off cTrader `DEMO`, and contained legacy `LIVE` modes; endpoints; credential env names; circuit-breaker thresholds |
 | Financial values | `FinancialMath` | Canonical scale-8 price, quantity, money, rate, checked arithmetic, and rounding contract |
 | CSV input | `CsvReader` | Candle input for deterministic backtest path |
 | Local replay | `LocalDataReplayAdapter` | CSV/binary replay ticks, pacing, generated binary replay writes |
 | Order book | `L2OrderBook` | L2 level storage, BBO updates, recentering |
-| Strategies | `IStrategy`, `SmaCrossStrategy`, `MeanReversionStrategy` | Signal generation boundary |
+| Strategies | `IStrategy`, `SmaCrossStrategy`, `MeanReversionStrategy`, `StrategyPipeline` | Signal generation and side-effect-free ensemble evaluation |
 | Allocation/regime | `PortfolioAllocator`, `RegimeDetector` | Strategy weights and market-regime classification |
-| Portfolio/risk | `PortfolioManager`, `RiskEngine` | Position accounting, drawdown, VaR, circuit breakers, halt state |
-| Execution | `ExecutionEngine`, `TriggerOrderManager` | Signal execution, pending/trigger orders, broker routing bridge |
+| Portfolio/risk | `PortfolioManager`, `IPortfolioView`, `BrokerPortfolioMirror`, `RiskEngine` | Local spot-cash accounting, read-only economic view, Demo broker-authoritative CFD mirror, drawdown, margin, freshness, exposure, circuit breakers, and halt state |
+| Execution | `ExecutionEngine`, `MynyraDemoCommissioningController`, `TriggerOrderManager` | Signal execution, one-shot Demo lifecycle control, pending/trigger orders, and broker routing bridge |
 | Live data | `LiveDataAdapter` | Live-like candle queue, simulated external payload/test hooks, reconnect/gap-fill state; no credential ownership or provider-specific REST requests |
-| Broker | `BrokerGateway`, `IBrokerAdapter`, `DeterministicBrokerAdapter`, `OrderLifecycleStore` | Broker-neutral order normalization, lifecycle events, paper-mode deterministic adapter simulation, live-capable broker boundary, reconciliation snapshot |
+| Broker | `BrokerGateway`, `IBrokerAdapter`, `DeterministicBrokerAdapter`, `OrderLifecycleStore`, cTrader Demo adapter | Broker-neutral exact intents, lifecycle events, paper-mode deterministic simulation, default-off Demo provider boundary, and reconciliation snapshots |
 | Network/auth | `AsyncNetworkClient`, `AuthManager`, `CTraderOAuthCorrelationGuard` | Async network bridge, HMAC signing, env/config credential loading, and offline-only one-shot cTrader OAuth correlation control |
-| Analytics/persistence | `AnalyticsEngine`, `MetricsAggregator`, `LocalMetricsExporter`, `StateSerializer` | CSV outputs, latency summaries, local metrics, resume snapshots |
+| Analytics/persistence | `AnalyticsEngine`, `MetricsAggregator`, `LocalMetricsExporter`, `StateSerializer`, `IEventSink` | CSV outputs, latency summaries, local metrics, resume snapshots, and versioned console/NDJSON lifecycle evidence |
 | Tests | `tests/phase13_tests.cpp` through `tests/phase18_tests.cpp` | Phase regression coverage |
 | Benchmarks | `src/benchmarks/` | Throughput, Phase 18 burn-in, Phase 19 `applyBbo` microbenchmark |
 
@@ -89,8 +96,8 @@ flowchart LR
 2. `SystemConfig` defaults to `BACKTEST`.
 3. In `BACKTEST`, file readers drive deterministic candle streams.
 4. In `PAPER`, `LiveDataAdapter` and `BrokerGateway` connect to local
-   deterministic simulations. The default build rejects `LIVE` before engine,
-   credential, or network initialization.
+   deterministic simulations. The default build rejects `DEMO` and `LIVE`
+   before credential or network initialization.
 5. Per-symbol strategies and event loops produce signals.
 6. `PortfolioAllocator` weighs strategies.
 7. `RiskEngine` produces the authoritative `RiskDecision` for each order;
@@ -104,12 +111,22 @@ flowchart LR
    are signed scale-8 integer units, and any checkpoint failure stops
    processing.
 
+The default-off DEMO control flow is separate: provider-normalized completed
+M1 candles advance `StrategyPipeline`; the one-shot controller converts the
+first eligible decision into an exact minimum-volume `OrderIntent`; the normal
+execution/risk/gateway path submits it; validated lifecycle events and
+authoritative reconciliation update `BrokerPortfolioMirror`; and a native
+position close must reconcile the whole account flat before success.
+
 ## Execution Modes
 
 Verified code modes:
 
 - `BACKTEST`: default deterministic CSV-driven path.
 - `PAPER`: local live-data-like adapter path with deterministic broker behavior.
+- `DEMO`: default-off cTrader Demo-only XAUUSD/M1 runtime. It is read-only
+  unless `--commission-demo-order` is present and has no live endpoint or
+  live-account path.
 - `LIVE`: legacy live-capable market-data path, default-disabled at compile
   time and requiring `--unlock-live-runtime` in addition to a non-default
   build; broker execution remains separately fail-closed.
@@ -118,10 +135,73 @@ Architecture policy:
 
 - `BACKTEST` and dry-run behavior are safe defaults.
 - `PAPER` must remain simulated locally unless explicitly connected to a sandbox by approved work.
+- `DEMO` requires `TRADEBOT_ENABLE_CTRADER_DEMO=ON`; this compile-time gate
+  does not by itself authorize credentials, provider traffic, or an order.
 - `LIVE` is technically contained by a default-off build option and an explicit
   runtime flag. Those gates do not replace operator approval, risk review, or
   the readiness checklist.
 - Sandbox is a governance concept, not a verified `SystemMode` value.
+
+### Mynyra Demo M1 Boundary
+
+The candidate implements ADR 0006 as a default-off provider composition below
+`BrokerGateway`:
+
+```text
+completed cTrader M1 candle
+  -> StrategyPipeline
+  -> MynyraDemoCommissioningController
+  -> ExecutionEngine
+  -> RiskEngine (authoritative exact-quantity decision)
+  -> BrokerGateway
+  -> cTrader Demo IBrokerAdapter
+  -> validated execution events + authoritative reconciliation
+  -> BrokerPortfolioMirror
+  -> native position close
+  -> account-wide flat reconciliation
+```
+
+Historical warmup changes strategy state but is execution-ineligible. Arming
+requires 100 distinct completed historical bars, one completed live M1 bar,
+both current BBO sides no older than five seconds, a complete instrument, and
+same-generation empty-account reconciliation. DEMO selects exactly one FIBO
+account with explicitly present `isLive=false`; missing or true live status,
+multiple matches, pending orders, positions, unsupported account types, or
+limited-risk status fail closed.
+
+The runtime submits at most one entry, for exactly the provider minimum volume
+aligned to its step. It never resubmits an ambiguous entry. After an entry
+fill, it requires the broker position side and quantity to match the validated
+local lifecycle, then closes that logical position using
+`ProtoOAClosePositionReq`. One residual close is allowed only after
+reconciliation proves an exact residual quantity and no pending close. A
+locally complete close followed by broker residual exposure is recovery-only,
+even if one safety close flattens it. Unknown or mismatched exposure emits
+`mynyra_demo_recovery_required`, never success.
+
+Transport ownership is confined to one I/O thread with bounded queues,
+correlation, incremental frame decoding, ten-second heartbeats, documented
+rate limits, and at most two bounded in-process reconnect/reconcile attempts.
+The module contains only `demo.ctraderapi.com:5035`. Process-crash recovery is
+not implemented; a later run refuses to arm against a non-empty account.
+
+Subscription failures retain the failing safe leg (`spots` or `live_m1`) and a
+fixed transport/protocol failure class. This distinction crosses the provider
+boundary only as redacted diagnostics; native response text, identifiers, and
+payloads remain provider-private.
+Valid asynchronous spot events are normalized while another correlated
+response is pending. If their local validation fails, the spot-specific fixed
+cause is preserved rather than being relabelled as an ordering failure.
+Live trendbar open/close/high deltas that are absent use their Protobuf numeric
+default of zero; they are not filled from earlier or local market values. Low
+and timestamp must remain present, and arithmetic overflow plus OHLC invariants
+remain fail-closed.
+
+The current macOS Keychain read uses synchronous `SecItemCopyMatching`. If the
+Security framework waits for operator authorization, the outer startup future
+can report its bounded timeout but cannot cancel or join that blocked call.
+This is a known local teardown limitation until the authorization prompt is
+completed or the Keychain boundary gains an explicit noninteractive contract.
 
 ## Exchange And Broker Boundary
 
@@ -247,15 +327,22 @@ Strategies emit signals and should not directly mutate portfolio state, bypass r
 
 ## Portfolio And Risk Boundary
 
-`PortfolioManager` owns position and trade accounting. The WP-2 candidate uses
+`PortfolioManager` owns BACKTEST/PAPER position and trade accounting. The WP-2 candidate uses
 `Financial::Price`, `Quantity`, `Money`, and `Fraction` at scale 8 for internal
 accounting. Buys debit notional plus fee; sells credit notional minus fee;
 partial reductions allocate cost basis and entry fees proportionally; and each
 position retains its latest mark. Unsupported short reversal or over-close
 fails before mutation. Public compatibility getters remain `double` conversion
-boundaries. `RiskEngine` owns drawdown, VaR, position limits, halt state,
-circuit breakers, and live volatility scaling. Execution must consult risk
-before opening new positions. WP-2 does not alter any risk-limit value.
+boundaries. DEMO deliberately does not represent leveraged CFD fills in that
+spot-cash ledger. `BrokerPortfolioMirror` advances only from validated
+execution events and complete authoritative reconciliation and exposes state
+through `IPortfolioView`. `RiskEngine` owns drawdown, VaR, position limits,
+halt state, circuit breakers, live volatility scaling, and DEMO checks over
+exact quantity, direction-bound expected margin, direction-specific BBO
+reference price, BBO/account/reconciliation freshness, account emptiness, and
+instrument direction support. Execution must consult risk before opening new
+positions; risk-reducing reconciled closes remain possible under
+halt/close-only states. No existing risk-limit value is widened.
 
 ## Analytics And Persistence Boundary
 
@@ -266,7 +353,12 @@ portfolio/accounting, pending-order identity, risk, regime, and allocation
 state. Version 13 persists accounting financial fields as signed scale-8
 integer units and rejects earlier versions rather than reinterpreting them. It
 validates into detached state before a single commit to the runtime
-objects. PAPER/LIVE resume remains fail-closed until WP-4 supplies a unified,
+objects. PAPER/DEMO/LIVE resume remains fail-closed; M1 has no process-crash
+recovery. DEMO writes versioned redacted events to console and
+`output/mynyra-demo/<session-id>.ndjson` through `IEventSink`, flushing
+lifecycle boundaries. Provider account/order/position IDs, tokens, URLs, and
+raw provider errors are excluded. A later SQLite sink can implement the same
+interface. PAPER/LIVE resume remains fail-closed until WP-4 supplies a unified,
 reconcilable broker lifecycle. The runtime CLI opens only the governed
 `data/results/snapshot.json` restart path; direct serializer callers remain
 responsible for supplying trusted paths. Generated outputs belong under exact
@@ -283,6 +375,12 @@ CTest registers phase tests:
 - `phase18_tests`
 - `phase22_tests`
 - `ctrader_gate5_1_tests`
+- `ctrader_provider_architecture_tests`
+- `mynyra_demo_core_tests`
+- `mynyra_demo_cli_containment`
+
+The DEMO-enabled build additionally registers frame-decoder, market-state, and
+provider-private tests. All are synthetic and perform no provider traffic.
 
 Tests are C++ executables linked against `tradebot_core_lib`. Some tests create temporary files under `/tmp`.
 
@@ -300,19 +398,28 @@ Benchmark outputs can write generated CSVs under `data/results/` or logs under `
 
 Configuration currently lives in `SystemConfig` and CLI parsing in `src/main.cpp`. Verified CLI flags:
 
-- `--mode backtest|paper|live`
+- `--mode backtest|paper|demo|live`
 - `--resume data/results/snapshot.json`
+- `--provider ctrader --symbol XAUUSD --timeframe M1`
+- `--commission-demo-order`
+- `--fresh-oauth`
 
-Unrecognized mode strings parse to `BACKTEST`. Credential env fallbacks are `AIIO_API_KEY` and `AIIO_API_SECRET`.
+Unrecognized mode strings are rejected. DEMO rejects CSV input, resume,
+endpoint/account/volume overrides, and unsupported provider/symbol/timeframe
+values. Credential env fallbacks for legacy components are `AIIO_API_KEY` and
+`AIIO_API_SECRET`.
 
 ## Credential Boundary
 
 `AuthManager` loads credentials from `SystemConfig` first, then environment variables. Secrets must not be committed, logged, or documented. Documentation may mention env var names but never values.
 
-Future cTrader credentials do not use the generic copying `AuthManager` API.
+M1 cTrader credentials do not use the generic copying `AuthManager` API.
 The client ID is injected by the name `TRADEBOT_CTRADER_CLIENT_ID`; the client
 secret and scope-qualified token envelope live in macOS Keychain. Authorization
-codes are memory-only. See `CTRADER_OPEN_API_GATE5.md`.
+codes are memory-only. Normal startup uses a valid token or one refresh and
+never silently opens a browser. `--fresh-oauth` is the only browser path and
+atomically replaces the trading-scope Keychain envelope after validation. No
+credential file or encoded copy is parsed. See `SECURITY.md`.
 
 ## Extension Points
 
@@ -347,6 +454,13 @@ codes are memory-only. See `CTRADER_OPEN_API_GATE5.md`.
 - Build currently emits two warnings.
 - No configured formatter, static analyzer, or Markdown link checker was found.
 - Live-capable code exists, but live readiness is not established.
+- The Mynyra Demo M1 candidate has offline evidence only until the three
+  external acceptance stages finish. SQLite/process-crash recovery and a
+  transport-level fake cTrader server remain deferred proof gaps. M1 currently
+  keeps the provider-private protocol operations behind one ordered
+  `CTraderSession` translation unit that reuses the audited Gate 7 primitives;
+  splitting those operations into the separately compiled service files from
+  the target architecture remains a systematic-design follow-up.
 
 ## Architecture Validation
 

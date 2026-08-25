@@ -36,6 +36,18 @@ void testNormalizedMarketDataContract()
 void testDefaultDisabledProviderSkeleton()
 {
     tradebot::ctrader::CTraderProviderAdapter adapter;
+#if TRADEBOT_ENABLE_CTRADER_DEMO
+    require(!adapter.isConnected(),
+            "opt-in provider must not perform implicit startup I/O");
+    require(!adapter.accountSnapshot().has_value(),
+            "inactive opt-in provider must not invent account state");
+    NormalizedOrder order;
+    order.request.localOrderId = 1;
+    require(!adapter.submit(order),
+            "inactive opt-in provider must reject dispatch without connecting");
+    require(adapter.reconcile(1000).status == ReconciliationStatus::Unsupported,
+            "inactive opt-in provider must reject reconciliation without I/O");
+#else
     int healthEvents = 0;
     adapter.setHealthCallback([&](const AdapterHealthEvent& event) {
         ++healthEvents;
@@ -63,6 +75,7 @@ void testDefaultDisabledProviderSkeleton()
     require(!adapter.cancel(cancel), "skeleton cancel must fail closed");
     require(adapter.reconcile(1000).status == ReconciliationStatus::Unsupported,
             "skeleton reconciliation must remain unsupported");
+#endif
 }
 
 void testGatewayFansOutNormalizedLifecycleEvents()

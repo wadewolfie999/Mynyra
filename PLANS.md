@@ -217,12 +217,341 @@ Do not delete abandoned or superseded plans if they contain decision-relevant hi
 
 ## Current Active Plan Register
 
-`PLAN-20260813-repository-cohesion-remediation` is the controlling program
-plan. `PLAN-20260814-wp2-accounting-correctness` is its sole active package
-slice. Older plans below are retained as decision and execution history; any
-stale `In Progress`, provider-next-action, or residual-authorization wording in
-those records is non-controlling under Wade's current focus lock. Work from an
-older plan must first map to WP-0 through WP-8 and receive new exact authority.
+`PLAN-20260824-mynyra-demo-m1` is an explicit operator-authorized exception to
+the repository-remediation focus lock for the first Mynyra Demo milestone. It
+maps its runtime/data, lifecycle, transport/provider, evidence, and authority
+work to WP-5 through WP-8 and authorizes only the bounded Demo-only behavior
+recorded below. `PLAN-20260813-repository-cohesion-remediation` remains the
+controlling program outside that exception. Older plans below are retained as
+decision and execution history; stale authorization wording in them remains
+non-controlling.
+
+# Plan: Mynyra Demo M1 Closed-Loop cTrader Order
+
+- Plan ID: `PLAN-20260824-mynyra-demo-m1`
+- Status: In Progress — Stages 1 and 2 complete; Stage 3 commissioning pending
+- Owner: Wade
+- Implementer: Codex
+- Review authority: Wade
+- Related roadmap phase: Workstream II / Phase 24; WP-5 through WP-8 bounded exception
+- Related issue or decision: ADR 0004 and Wade's 2026-08-24 implementation directive
+- Created: 2026-08-24
+- Updated: 2026-08-24
+
+## Objective
+
+Add a default-off cTrader `DEMO` runtime that consumes XAUUSD M1 data through
+the existing strategy layer and completes one minimum-volume, long-or-short
+commissioning lifecycle through `RiskEngine`, `ExecutionEngine`, and
+`BrokerGateway`: acceptance, fill, entry reconciliation, controlled
+position-specific close, close fill, and final flat reconciliation.
+
+Success is exactly one external Demo entry attempt followed by a confirmed
+close and account-wide flat reconciliation, ending in the fixed terminal event
+`mynyra_demo_m1_succeeded`. Any other terminal result leaves the Demo milestone
+incomplete.
+
+## Context
+
+Implementation starts from the normalized provider seam at
+`701afd4f53e094c16ac7ea5dc46b39cea4a2386a`. The existing Gate 7 proof contains
+reusable macOS Keychain, loopback OAuth, TLS, framing, account, symbol, and
+market-data code but is detached from the broker gateway and collapses token
+refresh failures. The provider adapter at the selected baseline is default-off
+and performs no I/O.
+
+## Scope
+
+- `SystemMode::DEMO`, default-off cTrader Demo build wiring, and contained CLI.
+- Reusable Demo-only OAuth, transport, account, instrument, market-data, order,
+  close, and reconciliation services below `BrokerGateway`.
+- XAUUSD M1 historical warmup and completed-live-bar strategy ingestion.
+- Broker-neutral long/short, open/close, risk-context, portfolio-view, and
+  broker-mirror contracts.
+- One-shot minimum-volume commissioning control with no entry retry.
+- Console plus ignored NDJSON evidence through `IEventSink`.
+- Deterministic offline tests, synthetic provider integration, documentation,
+  and the three explicitly authorized external Demo acceptance stages.
+
+## Out of Scope
+
+- Live accounts, live endpoint support, legacy LIVE activation, deployment,
+  release, publication, push, PR, or merge.
+- SQLite, multi-symbol operation, configurable position sizing, persistent
+  post-crash recovery, or strategy optimization.
+- Credential-file parsing, secret/token environment variables, or credential
+  values in logs and artifacts.
+
+## Preconditions
+
+- Worktree and index are clean at branch creation.
+- Branch `codex/mynyra-demo-m1` starts at exact commit `701afd4f...`.
+- External acceptance uses only `demo.ctraderapi.com:5035`, exactly one
+  `isLive=false` FIBO account, and an initially empty account.
+- `TRADEBOT_CTRADER_CLIENT_ID` supplies only the identifier; client secret and
+  token envelope remain in macOS Keychain.
+
+## Assumptions
+
+- Warmup uses 100 completed M1 bars and live BBO freshness is five seconds.
+- Signal observation lasts at most four hours.
+- The first eligible ensemble action may be BUY or SELL.
+- A successful refresh or fresh OAuth exchange atomically replaces the
+  Keychain token envelope only after cTrader application and Demo account
+  authentication validate the token.
+
+## Invariants
+
+- BACKTEST remains deterministic and offline; PAPER remains simulated.
+- DEMO has no live endpoint, fallback, account, or runtime override.
+- New exposure always follows strategy -> allocation -> `ExecutionEngine` ->
+  authoritative `RiskEngine` decision -> `BrokerGateway` -> cTrader adapter.
+- Acknowledgement is not a fill; economic state changes only from validated
+  execution events and is confirmed or replaced by reconciliation.
+- Provider identifiers and sensitive values never enter console or NDJSON.
+- No second entry is submitted, including after timeout or disconnect.
+
+## Authorization Boundary
+
+- Authorized actions: create the named local branch; edit scoped source,
+  tests, CMake, plans, and documentation; run offline builds/tests; use the
+  configured Demo OAuth/Keychain path; run one fresh-auth stage, one read-only
+  market-data stage, and one commissioning process with exactly one entry
+  attempt and the close operations needed to flatten only its confirmed
+  position.
+- External environment: cTrader Demo endpoint and selected FIBO Demo account
+  only. Browser OAuth uses the operator-confirmed Wade/Wolfski Chrome profile.
+- Attempt budget: no entry retry. One initial close plus at most one residual
+  close after authoritative reconciliation proves the remaining quantity and
+  absence of a pending close.
+- Stop conditions: any live account/endpoint, non-empty initial account,
+  ambiguous account/symbol, stale/incomplete risk evidence, secret exposure,
+  unknown entry outcome not resolved by reconciliation, unrelated external
+  position/order, or non-flat final reconciliation.
+- Prohibited adjacent actions: live use, arbitrary provider retry, additional
+  entries, configurable sizing, risk-limit widening, commit, push, PR, merge,
+  release, or deployment.
+
+## Files Expected to Change
+
+- Core contracts, runtime mode, risk, execution, gateway, strategy/event-loop,
+  portfolio view/mirror, and main runtime composition under `include/` and
+  `src/`.
+- cTrader provider-private implementation and opt-in build wiring.
+- Deterministic tests and fake-provider fixtures under `tests/`.
+- `PLANS.md` and affected architecture, configuration, security, risk,
+  testing, roadmap, state, and documentation indexes.
+
+## Implementation Steps
+
+1. Establish the plan/branch evidence epoch and verify the selected baseline.
+2. Add DEMO mode, normalized position/effect/risk contracts, portfolio view,
+   broker mirror, strategy pipeline, event sinks, and contained CLI.
+3. Extract and implement provider-private OAuth, transport, account, symbol,
+   M1/BBO, order, close, and reconciliation services.
+4. Implement the one-shot commissioning state machine and lifecycle recovery.
+5. Add deterministic unit/integration coverage and synchronize documentation.
+6. Run targeted, full, sanitizer, policy, hygiene, and boundary reviews.
+7. Run external auth, read-only data, and one-shot commissioning stages
+   sequentially, preserving exact-artifact evidence.
+
+## Verification
+
+- Default and opt-in DEMO configure/build trees, run sequentially.
+- Targeted strategy, contract, risk, lifecycle, event-sink, provider-codec,
+  OAuth, market-data, and commissioning tests.
+- Full CTest, ASan/UBSan, CI policy, automation validator, and `git diff --check`.
+- External acceptance records branch/commit or candidate epoch, binary SHA-256,
+  console output, and NDJSON hash. Only final flat reconciliation may emit the
+  success marker.
+
+## Risks
+
+- Provider message ordering and direct-fill behavior can differ from synthetic
+  fixtures; lifecycle accepts conclusive direct fill without inventing an
+  explicit accepted event.
+- A process crash after entry has no automatic recovery in M1. A subsequent
+  run refuses to arm while the account is non-empty.
+- cTrader margin/account fields are composite; incomplete or mixed-generation
+  snapshots fail closed.
+
+## Rollback
+
+Stop the process, leave the default-off option disabled, and abandon the local
+branch. If a Demo position remains, close only that confirmed position in the
+cTrader Demo UI before another commissioning run. No main-branch history or
+credential file is changed by rollback.
+
+## Progress Log
+
+- 2026-08-24: Wade supplied and explicitly authorized the decision-complete
+  plan. Clean branch created from `701afd4f...`; implementation started.
+- 2026-08-24: Added the default-off DEMO composition, normalized position and
+  risk contracts, `StrategyPipeline`, broker mirror, redacted event sinks,
+  cTrader Demo transport/account/symbol/M1/order/close adapter, and one-shot
+  commissioning controller.
+- 2026-08-24: Hardened unknown-submit recovery, confirmed partial exposure,
+  exact residual close handling, account/reconciliation freshness, exact FIBO
+  selection, deferred token persistence, persistent provider-state clearing,
+  and the clean OAuth completion response.
+- 2026-08-24: Bound expected-margin evidence to the chosen direction, required
+  direction-specific BBO reference prices, rejected invalid provider trade
+  sides and local-fill/broker-quantity mismatches, and made a broker residual
+  after a locally complete close recovery-only. Terminal frame failures now
+  wipe buffered state. All four current-tree test matrices pass; all three
+  external stages remain pending.
+- 2026-08-24: Presence-only inspection found both required Keychain items but
+  no `TRADEBOT_CTRADER_CLIENT_ID` in the Codex process environment. No
+  credential file was opened or decoded, and no provider traffic or order was
+  initiated.
+- 2026-08-24: The client identifier became available in the Codex process.
+  External Stage 1 attempt 1 stopped at the fixed OAuth callback-timeout
+  boundary before token exchange because the bounded loopback listener expired
+  while awaiting operator confirmation. Wade authorized exactly one retry.
+- 2026-08-24: External Stage 1 attempt 2 completed fresh OAuth, application
+  authentication, exact Demo account selection/authentication, full-access
+  trader validation, and atomic Keychain token-envelope replacement. The same
+  process then continued into Stage 2 and stopped at the subscription boundary.
+  No order was submitted in either process.
+- 2026-08-24: Replaced the generic Demo subscription diagnostic with fixed,
+  redacted leg and failure-class diagnostics for spots and live M1 without
+  exposing provider text or identifiers. Focused tests, the full 21-test Demo
+  suite, the 21-test Demo ASan/UBSan suite, policy checks, automation
+  validation, shell syntax validation, and `git diff --check` pass. A further
+  provider process requires new exact authorization.
+- 2026-08-24: Wade authorized exactly one Stage 2 read-only process using the
+  diagnostic binary, without fresh OAuth or commissioning. It authenticated
+  from the stored token and reached the live-M1 subscription wait, where a
+  spot event failed local handling and was reported as
+  `ctrader_demo_live_m1_subscription_spot_before_ack`. No order was submitted.
+- 2026-08-24: Official cTrader flow documentation confirms that spot events
+  are asynchronous after the spot subscription and that bid and ask are
+  optional. Inspection showed that the adapter already accepts a valid spot
+  event while awaiting the live-M1 acknowledgement, but the subscription
+  wrapper overwrote any specific local spot-validation failure with the
+  ordering label. The wrapper now preserves fixed redacted envelope, account,
+  symbol, bid, ask, trendbar-period, trendbar, and market-state causes. Full
+  Demo and Demo sanitizer suites remain 21/21 green; no provider rerun was made.
+- 2026-08-24: Wade authorized exactly one diagnostic Stage 2 read-only rerun.
+  It stopped at `ctrader_demo_spot_trendbar_malformed`, proving the failure is
+  inside TradeBot's live-trendbar decoder rather than OAuth, account, quote
+  subscription, transport, or an explicit cTrader rejection. No order was sent.
+- 2026-08-24: The official schema marks live trendbar price-delta and timestamp
+  fields optional, while the shared historical decoder requires all of them.
+  Added exhaustive fixed redacted classifications for every decoder rejection
+  branch so no raw price, timestamp, or payload is logged and no incomplete
+  candle is synthesized. Full Demo and sanitizer suites remain 21/21 green.
+- 2026-08-24: Wade authorized exactly one final field-level Stage 2 read-only
+  diagnostic run. It stopped at
+  `ctrader_demo_spot_trendbar_close_missing`, proving that the provider omitted
+  the optional `deltaClose` field. No order was sent.
+- 2026-08-24: Corrected the decoder to use the Protobuf numeric default of zero
+  for absent optional open/close/high deltas, matching the official schema and
+  Spotware sample access pattern. Low and timestamp presence, arithmetic
+  overflow, and OHLC invariants remain fail-closed. Focused tests, full Demo,
+  Demo ASan/UBSan, policy, automation, shell syntax, and diff checks pass.
+- 2026-08-24: Wade authorized one Stage 2 read-only verification using the
+  corrected binary. The process blocked inside macOS `SecItemCopyMatching`
+  while reading the Keychain before TLS/provider startup. The eight-minute
+  startup boundary emitted redacted transport failure, but the synchronous
+  Security-framework call remained blocked during teardown, so the already
+  failed process was terminated with Ctrl-C. No cTrader connection or order
+  occurred; the decoder fix remains externally unverified.
+- 2026-08-24: Wade authorized one further corrected-binary Stage 2 read-only
+  verification and completed the visible Keychain prompt locally. The process
+  authenticated, accepted 100 completed historical XAUUSD M1 bars, completed
+  warmup, established live BBO/M1 ingestion, received completed live candles,
+  and armed signal observation. It continued applying the existing SMA and
+  mean-reversion ensemble without enabling execution. Wade then explicitly
+  accepted and locked Stage 2 complete and directed Codex to stop the process.
+  The operator interrupt occurred before a regime-qualified non-`NONE`
+  ensemble decision or read-only terminal event; this is an accepted evidence
+  deviation, not evidence of an order. No order was submitted.
+
+## Deviations
+
+- The planned transport-level fake cTrader server is not present. Full
+  long/short commissioning is covered through the normalized boundary with a
+  deterministic fake adapter, while framing, market state, OAuth/Keychain/HTTP,
+  endpoint, and provider parsing are tested separately. This remains an
+  explicit offline integration proof gap, not external success evidence.
+- Provider-private protocol behavior is contained behind one ordered
+  `CTraderSession` translation unit that reuses audited Gate 7 primitives.
+  The named service objects remain structural seams rather than separately
+  compiled implementations; file-level service extraction is deferred as the
+  lower-priority systematic-design follow-up.
+
+## Completion Evidence
+
+Offline candidate evidence from the uncommitted working tree based on exact
+`701afd4f53e094c16ac7ea5dc46b39cea4a2386a` on 2026-08-24:
+
+- Default-off configure/build and sequential CTest:
+  `build/mynyra-demo-default`, 18/18 passed.
+- DEMO-enabled configure/build and sequential CTest:
+  `build/mynyra-demo-optin`, 21/21 passed.
+- Default-off ASan/UBSan validation:
+  `build/mynyra-demo-deep-default`, 18/18 passed.
+- DEMO-enabled ASan/UBSan validation:
+  `build/mynyra-demo-deep-optin`, 21/21 passed.
+- `./scripts/ci_policy_checks.sh`,
+  `python3 scripts/validate_automation.py`, shell syntax validation, and
+  `git diff --check` passed.
+- Opt-in candidate binary SHA-256:
+  `b5737e117ee2aa748f52024681f51ccfed174fe85bae7779847ac30cb2ffd18f`.
+  Its strings contain no `live.ctraderapi.com`; the default binary contains no
+  cTrader endpoint or Keychain service string.
+- External Stage 1 process 1 used the prior candidate binary SHA-256
+  `cb5343e7ce59b2d777252444b3ed73129d49b202fa0a9f14f5dd68f5e80cb70f`
+  and stopped before token exchange at the OAuth callback timeout. Its ignored
+  NDJSON evidence is
+  `output/mynyra-demo/18cec527977e1ab0-d37e1ed4949b9df9.ndjson`, SHA-256
+  `d109995be160f1b8569cd09c25355aabcab19985c6c6cd4fb2f8b8bcafa4982d`.
+- Wade authorized exactly one retry. External Stage 1 process 2 used that same
+  prior binary, completed the fresh OAuth and Demo account-authentication
+  objective, atomically replaced the Keychain token envelope, then stopped at
+  the generic subscription boundary. Its ignored NDJSON evidence is
+  `output/mynyra-demo/18cec55c0840a900-4fc3418ad132c47c.ndjson`, SHA-256
+  `cb2a641bc19c089aa85612d14d7c6247191d6158847c1c957e67e3e9147890f1`.
+- Credential values and credential files were never read. Only environment and
+  Keychain-item presence plus token-item modification metadata were inspected.
+- External Stage 2 used prior diagnostic binary SHA-256
+  `29e0f9810bb7275e3491962d88651679a415ad514a1f72671c9e660c9dc77129`
+  without `--fresh-oauth` or `--commission-demo-order`. It stopped at the fixed
+  `ctrader_demo_live_m1_subscription_spot_before_ack` boundary. Its ignored
+  NDJSON evidence is
+  `output/mynyra-demo/18cec5f8fe8baae8-13a11b84eb2ee91.ndjson`, SHA-256
+  `96ab79ae81b5b5e5938360d45011237fccaee5875ae0f0a5fd753fba8076e24a`.
+- The one explicitly authorized Stage 2 diagnostic rerun used binary SHA-256
+  `e6a250f429a94e5177f0545d1c8d6bd33de1bd43b9b093239a4267472a5d8243`
+  and stopped at `ctrader_demo_spot_trendbar_malformed`. Its ignored NDJSON is
+  `output/mynyra-demo/18cec68ace31cbb0-cca04331e8ce7b.ndjson`, SHA-256
+  `9804badd7ca0a7041ee47eddb814fcb93422fba11afbf11abff841a60e521ff4`.
+- The final field-level Stage 2 diagnostic used binary SHA-256
+  `91f4f48bded308a18a8d83cb1d16c0b55ef17c01d8eb1b6212c4fe1ecbdb04f9`
+  and stopped at `ctrader_demo_spot_trendbar_close_missing`. Its ignored NDJSON
+  is `output/mynyra-demo/18cec7077efe2d18-a74da771aadcd997.ndjson`, SHA-256
+  `ff96b0dbf58336c42b6dec432ea0f9b2344aef16a9fb071496591a5f8f3f6ea1`.
+- The corrected-binary Stage 2 verification created no provider connection. It
+  blocked on the local Keychain read and emitted the redacted timeout evidence
+  `output/mynyra-demo/18cec75a61bb4300-3be1949ba963ad01.ndjson`, SHA-256
+  `1f333a0576f990f758ee867d3b2635619fb161c0b590f6d1eea5de359490f51a`.
+- The operator-accepted Stage 2 verification used binary SHA-256
+  `b5737e117ee2aa748f52024681f51ccfed174fe85bae7779847ac30cb2ffd18f`.
+  Its ignored NDJSON evidence is
+  `output/mynyra-demo/18cec8bc765ecdc8-f242fc2abf42bba4.ndjson`, SHA-256
+  `2db3ed63147fb81980b3b161b5ef5f047f00b898480604840cb652253fb43097`.
+  It records session start, authentication, historical warmup completion, and
+  signal-observation arming. The operator stopped it before its planned
+  read-only terminal event and explicitly accepted Stage 2 on that evidence.
+- External process count is seven; entry attempts are zero of one and close
+  attempts are zero of two. Stages 1 and 2 are complete; Stage 3 is unstarted.
+
+## Final Outcome
+
+Stages 1 and 2 are complete by operator acceptance; Stage 3 remains incomplete.
+The Demo phase has not begun and `mynyra_demo_m1_succeeded` has not been
+observed.
 
 # Plan: Repository Cohesion Remediation Program
 

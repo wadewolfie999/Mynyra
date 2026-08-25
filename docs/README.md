@@ -77,6 +77,11 @@ Financial safety and operator authority cannot be silently overridden by any doc
 - `CTRADER_PROVIDER_IMPLEMENTATION_PLAN.md`: the approved local, default-off
   first-tranche plan; it excludes provider processes, credentials, orders, and
   live use.
+- `decisions/0006-mynyra-demo-runtime-and-ledger.md`: Proposed architecture for
+  the default-off DEMO runtime, broker-mirrored CFD ledger, strategy pipeline,
+  native position close, and storage-neutral M1 evidence. Implementation and
+  external commissioning are governed by the active M1 plan; ADR acceptance
+  remains pending.
 - `RESIDUAL_GAPS_BACKLOG.md`: frozen diagnostic input cross-mapped into the
   remediation packages; it is not a competing queue and does not authorize
   OAuth execution, connectivity, credentials in use, account access, orders,

@@ -30,10 +30,16 @@ Tests are evidence, not ceremony. TradeBot is financial-sensitive, so tests must
   - `wp2_throughput_correctness`
   - `ctrader_gate5_1_tests`
   - `ctrader_provider_architecture_tests`
+  - `mynyra_demo_core_tests`
+  - `mynyra_demo_cli_containment`
 - The opt-in Gate 6 configuration additionally registers
   `ctrader_gate6_tests`; normal builds remain unchanged.
 - The opt-in Gate 7 configuration additionally registers
   `ctrader_gate7_tests`; normal builds remain unchanged.
+- The opt-in cTrader DEMO configuration additionally registers
+  `ctrader_demo_frame_decoder_tests`, `ctrader_demo_market_state_tests`, and
+  `ctrader_demo_provider_private_tests`; all use synthetic/local fakes and
+  perform no external traffic or Keychain read.
 - All test executables link against `tradebot_core_lib`.
 - Some tests create temporary files under `/tmp`.
 
@@ -64,8 +70,8 @@ Ordinary local/CI automation path:
 ```
 
 The helper validates repository automation, configures `RelWithDebInfo` with
-`BUILD_TESTING=ON`, forces the legacy LIVE runtime and both cTrader proof
-targets OFF, builds with a bounded job count, and runs the full default CTest
+`BUILD_TESTING=ON`, forces the legacy LIVE runtime, both cTrader proof targets,
+and cTrader DEMO OFF, builds with a bounded job count, and runs the full default CTest
 suite sequentially. Only after CTest passes does it write a build-local marker
 bound to the current full commit and configuration, including
 `live_runtime=OFF`; evidence packaging rejects a missing or mismatched marker.
@@ -77,7 +83,7 @@ Scheduled/manual deep offline path:
 ```
 
 The deep helper uses one isolated Debug build tree with ASan/UBSan, keeps the
-legacy LIVE runtime and both cTrader proof targets OFF, and runs the default
+legacy LIVE runtime, both cTrader proof targets, and cTrader DEMO OFF, and runs the default
 suite sequentially. It does not replace the separately authorized macOS Gate 7
 sanitizer procedure below.
 Leak detection remains enabled on Linux; the helper disables only that ASan
@@ -125,6 +131,45 @@ cmake --build build/gate7-sanitize --target ctrader_gate7_tests --parallel 4
 ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-failure
 ```
 
+Mynyra Demo M1 offline suite:
+
+```sh
+cmake -S . -B build/mynyra-demo \
+  -DTRADEBOT_ENABLE_CTRADER_DEMO=ON
+cmake --build build/mynyra-demo --parallel 2
+ctest --test-dir build/mynyra-demo --output-on-failure --parallel 1
+```
+
+Mynyra Demo M1 sanitizer suite:
+
+```sh
+cmake -S . -B build/mynyra-demo-sanitize \
+  -DTRADEBOT_ENABLE_CTRADER_DEMO=ON \
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_OBJCXX_FLAGS='-fsanitize=address,undefined -fno-omit-frame-pointer' \
+  -DCMAKE_EXE_LINKER_FLAGS='-fsanitize=address,undefined'
+cmake --build build/mynyra-demo-sanitize --parallel 2
+ASAN_OPTIONS='detect_leaks=0:halt_on_error=1' \
+UBSAN_OPTIONS='halt_on_error=1:print_stacktrace=1' \
+ctest --test-dir build/mynyra-demo-sanitize --output-on-failure --parallel 1
+```
+
+These commands are offline verification only. They do not invoke OAuth,
+Keychain, the Demo endpoint, or an order.
+
+`ctrader_demo_provider_private_tests` additionally asserts that subscription
+failures preserve their fixed transport/protocol classification and identify
+only the safe subscription leg (`spots` or `live_m1`). Raw provider errors,
+identifiers, and payloads are not surfaced by these diagnostics.
+It also verifies the fixed redacted categories used when an asynchronous spot
+event fails envelope, identity, quote, trendbar, or normalized market-state
+validation while another subscription response is pending.
+Trendbar fixtures cover Protobuf envelope, low, timestamp, arithmetic overflow,
+and OHLC invariants. They also prove that absent optional open/close/high
+deltas retain their Protobuf numeric default of zero, including the externally
+observed missing-close case.
+
 ## GitHub Actions Validation
 
 `.github/workflows/validation.yml` runs four independent offline jobs:
@@ -132,7 +177,7 @@ ctest --test-dir build/gate7-sanitize -R '^ctrader_gate7_tests$' --output-on-fai
 - `Automation and offline-policy governance` validates repository skills,
   workflow pins and boundaries, shell syntax, tracked credential-like paths,
   private-key material, provider-capable workflow steps, the `BACKTEST`
-  default, and default-disabled legacy LIVE, Gate 6, and Gate 7 options.
+  default, and default-disabled legacy LIVE, Gate 6, Gate 7, and cTrader DEMO options.
 - Required `validate` runs the default-off GCC build and complete sequential
   CTest suite while preserving the protected branch status context.
 - `C++20 clang` repeats the default-off build and complete sequential suite in
@@ -191,6 +236,33 @@ deployment, provider traffic, or live transition occurs.
   the normalized market-data contract, independent gateway acknowledgement and
   execution callback fan-out, and that the cTrader adapter skeleton remains
   disconnected, unsupported, and free of provider side effects.
+- Mynyra Demo core tests: `mynyra_demo_core_tests` covers long/short exact
+  intent risk decisions, direction-bound expected margin, direction-specific
+  BBO reference prices, margin/freshness/account/instrument gates,
+  risk-reducing close behavior, broker-mirror idempotency, explicit and
+  fill-implied acceptance, partial/final fills, transport-ambiguous and
+  confirmed-partial entry reconciliation without entry retry, native logical
+  close, local-fill/broker-quantity mismatch recovery, one exact residual close
+  after partial or zero-fill ambiguity, recovery-only handling when a locally
+  complete close leaves broker exposure, final flat success,
+  recovery-required outcomes, event redaction, and parity between extracted
+  `StrategyPipeline` decisions and the legacy SMA(12/26), BB20/RSI14, regime,
+  allocator path.
+- DEMO CLI tests: `mynyra_demo_cli_containment` proves the default build rejects
+  DEMO and the opt-in build rejects CSV, resume, endpoint/account/volume
+  overrides, unsupported symbols/timeframes/providers, and Demo-only flags in
+  other modes.
+- DEMO provider-private tests use fake Keychain/HTTP/browser services to cover
+  stored-token validation, one refresh, invalid grant, typed HTTP classes,
+  fresh OAuth bypass, persistence deferred until provider validation, scope
+  mismatch, Keychain failure, the clean OAuth completion response, immutable
+  Demo endpoint, and exact `brokerTitleShort=FIBO` plus `isLive=false`
+  selection.
+- DEMO framing and market-state tests cover partial/multiple/malformed frames,
+  terminal buffer clearing, bounded buffering, bid/ask independence,
+  conservative BBO freshness,
+  crossed quotes, historical ordering/deduplication/completion, live M1
+  rollover, out-of-order updates, and queue overflow.
 - Performance tests: benchmark executables, governed by `BENCHMARKING.md`, not substitutes for correctness tests.
 - WP-2 accounting tests: `wp2_accounting_tests` covers scale-8 conversion,
   rounding and overflow vectors; buy/add/reduce/close and reversal rejection;
@@ -272,6 +344,14 @@ and Wade acceptance are also required, and the next package remains NO-GO.
   normalized crossing, timestamp missing/stale/future/unit ambiguity, bounded
   heartbeat cadence, absolute deadlines, terminal clearing, and allocation
   failure.
+- Mynyra Demo changes: default-off/no-live containment, fake credential/token
+  services, strict framing/partial I/O, heartbeat/rate-limit bounds,
+  reconnect/reconcile behavior, historical/live market-data ordering, strategy
+  parity, warmup non-execution, direction-bound exact minimum-volume risk,
+  long/short lifecycle, fill-implied acceptance, duplicate/stale/overfill
+  rejection, native close, entry reconciliation mismatch, residual recovery,
+  final account-wide flat reconciliation, event redaction, and
+  failure-without-success markers.
 - Analytics/output changes: generated CSV path, schema, reproducibility, and no secret leakage.
 - Documentation-only changes: `git diff --check`, doc grep audit, and index review.
 
@@ -360,3 +440,6 @@ Do not summarize a failed test as passed. Do not hide compiler warnings.
 - Shared behavior change: build plus full CTest suite.
 - Performance claim: build, relevant tests, benchmark command, environment, input size, and comparative evidence.
 - Financial-sensitive change: full tests plus risk-specific tests and operator approval.
+- A Mynyra Demo M1 external success claim additionally requires the exact
+  three-stage acceptance evidence and the final
+  `mynyra_demo_m1_succeeded` marker. Offline suites cannot substitute for it.

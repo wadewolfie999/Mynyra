@@ -2,6 +2,7 @@
 
 #include "CTraderGate7OAuthDiagnostics.hpp"
 #include "CTraderGate7Proof.hpp"
+#include "providers/ctrader/CTraderFrameDecoder.hpp"
 #include "providers/ctrader/CTraderOAuthCorrelation.hpp"
 #include "OpenApiCommonMessages.pb.h"
 #include "OpenApiCommonModelMessages.pb.h"
@@ -47,6 +48,7 @@ namespace {
 using Clock = std::chrono::steady_clock;
 constexpr auto NETWORK_TIMEOUT = std::chrono::seconds(20);
 constexpr auto SPOT_TIMEOUT = std::chrono::seconds(60);
+constexpr auto OAUTH_COMPLETION_TIMEOUT = std::chrono::seconds(2);
 constexpr std::size_t MAX_PROTO_FRAME_BYTES = 4U * 1024U * 1024U;
 constexpr std::size_t MAX_HTTP_REQUEST_BYTES = 16U * 1024U;
 constexpr std::size_t MAX_TOKEN_RESPONSE_BYTES = 64U * 1024U;
@@ -167,6 +169,16 @@ void secureClear(std::int64_t& value) noexcept
 {
     volatile std::int64_t* target = &value;
     *target = 0;
+}
+
+void clearProtoEnvelope(ProtoMessage& envelope) noexcept
+{
+    if (envelope.has_payload()) secureClear(*envelope.mutable_payload());
+    if (envelope.has_clientmsgid()) {
+        secureClear(*envelope.mutable_clientmsgid());
+    }
+    envelope.set_payloadtype(0);
+    envelope.Clear();
 }
 
 bool constantTimeEqual(std::string_view left, std::string_view right) noexcept
@@ -815,6 +827,69 @@ std::optional<HttpRequest> parseHttpRequest(std::string_view raw) noexcept
                        host};
 }
 
+void serveOAuthCompletion(int listener) noexcept
+{
+    const auto deadline = Clock::now() + OAUTH_COMPLETION_TIMEOUT;
+    if (!waitForFd(listener, POLLIN, deadline)) return;
+
+    sockaddr_in remote{};
+    socklen_t remoteLength = sizeof(remote);
+    const int client = ::accept(
+        listener, reinterpret_cast<sockaddr*>(&remote), &remoteLength);
+    if (client < 0) return;
+    if (!setNonBlocking(client)) {
+        ::close(client);
+        return;
+    }
+
+    std::string rawRequest;
+    std::array<char, 2048> buffer{};
+    bool complete = false;
+    while (rawRequest.size() < MAX_HTTP_REQUEST_BYTES
+           && Clock::now() < deadline) {
+        if (!waitForFd(client, POLLIN, deadline)) break;
+        const ssize_t count = ::recv(client, buffer.data(), buffer.size(), 0);
+        if (count > 0) {
+            const Gate7OAuthFailure appendFailure =
+                appendGate7OAuthCallbackBytes(
+                    rawRequest,
+                    {buffer.data(), static_cast<std::size_t>(count)},
+                    MAX_HTTP_REQUEST_BYTES);
+            secureClearBytes(buffer.data(), static_cast<std::size_t>(count));
+            if (appendFailure != Gate7OAuthFailure::None) break;
+            if (rawRequest.find("\r\n\r\n") != std::string::npos) {
+                complete = true;
+                break;
+            }
+            continue;
+        }
+        if (count < 0 && errno == EINTR) continue;
+        break;
+    }
+
+    const auto request = complete
+        ? parseHttpRequest(rawRequest) : std::optional<HttpRequest>{};
+    if (request.has_value() && request->method == "GET"
+        && request->host == CTraderOAuthCorrelationGuard::CALLBACK_HOST
+        && request->path == "/ctrader/oauth/complete"
+        && request->query.empty()) {
+        (void)sendAll(client,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/plain; charset=utf-8\r\n"
+            "Cache-Control: no-store\r\n"
+            "Referrer-Policy: no-referrer\r\n"
+            "Connection: close\r\n"
+            "Content-Length: 43\r\n\r\n"
+            "Authorization received. Return to TradeBot.");
+    } else {
+        (void)sendAll(client,
+            "HTTP/1.1 400 Bad Request\r\nContent-Length: 0\r\n"
+            "Connection: close\r\n\r\n");
+    }
+    secureClear(rawRequest);
+    ::close(client);
+}
+
 std::optional<Sensitive> extractCode(std::string_view query) noexcept
 {
     std::size_t start = 0;
@@ -1008,6 +1083,7 @@ std::optional<Sensitive> authorizeInBrowser(
                         rawRequest,
                         {buffer.data(), static_cast<std::size_t>(count)},
                         MAX_HTTP_REQUEST_BYTES);
+                secureClearBytes(buffer.data(), static_cast<std::size_t>(count));
                 if (appendFailure != Gate7OAuthFailure::None) {
                     terminalFailure = appendFailure;
                     break;
@@ -1089,6 +1165,7 @@ std::optional<Sensitive> authorizeInBrowser(
     }
     secureClear(rawRequest);
     url.clear();
+    if (!code.empty()) serveOAuthCompletion(listener);
     ::close(listener);
     if (code.empty()) {
         failure = terminalFailure == Gate7OAuthFailure::None
@@ -1107,9 +1184,70 @@ void appendUint32(std::string& output, std::uint32_t value)
     output.push_back(static_cast<char>(value & 0xff));
 }
 
+bool demoOutboundPayloadAllowed(std::uint32_t payloadType) noexcept
+{
+    switch (payloadType) {
+        case HEARTBEAT_EVENT:
+        case PROTO_OA_APPLICATION_AUTH_REQ:
+        case PROTO_OA_ACCOUNT_AUTH_REQ:
+        case PROTO_OA_NEW_ORDER_REQ:
+        case PROTO_OA_CLOSE_POSITION_REQ:
+        case PROTO_OA_ASSET_LIST_REQ:
+        case PROTO_OA_SYMBOLS_LIST_REQ:
+        case PROTO_OA_SYMBOL_BY_ID_REQ:
+        case PROTO_OA_TRADER_REQ:
+        case PROTO_OA_RECONCILE_REQ:
+        case PROTO_OA_SUBSCRIBE_SPOTS_REQ:
+        case PROTO_OA_SUBSCRIBE_LIVE_TRENDBAR_REQ:
+        case PROTO_OA_GET_TRENDBARS_REQ:
+        case PROTO_OA_EXPECTED_MARGIN_REQ:
+        case PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_REQ:
+        case PROTO_OA_GET_POSITION_UNREALIZED_PNL_REQ:
+            return true;
+        default:
+            return false;
+    }
+}
+
+bool demoInboundPayloadAllowed(std::uint32_t payloadType) noexcept
+{
+    switch (payloadType) {
+        case HEARTBEAT_EVENT:
+        case ERROR_RES:
+        case PROTO_OA_APPLICATION_AUTH_RES:
+        case PROTO_OA_ACCOUNT_AUTH_RES:
+        case PROTO_OA_ASSET_LIST_RES:
+        case PROTO_OA_SYMBOLS_LIST_RES:
+        case PROTO_OA_SYMBOL_BY_ID_RES:
+        case PROTO_OA_TRADER_RES:
+        case PROTO_OA_TRADER_UPDATE_EVENT:
+        case PROTO_OA_RECONCILE_RES:
+        case PROTO_OA_EXECUTION_EVENT:
+        case PROTO_OA_SUBSCRIBE_SPOTS_RES:
+        case PROTO_OA_SPOT_EVENT:
+        case PROTO_OA_ORDER_ERROR_EVENT:
+        case PROTO_OA_GET_TRENDBARS_RES:
+        case PROTO_OA_EXPECTED_MARGIN_RES:
+        case PROTO_OA_MARGIN_CHANGED_EVENT:
+        case PROTO_OA_ERROR_RES:
+        case PROTO_OA_ACCOUNTS_TOKEN_INVALIDATED_EVENT:
+        case PROTO_OA_CLIENT_DISCONNECT_EVENT:
+        case PROTO_OA_GET_ACCOUNTS_BY_ACCESS_TOKEN_RES:
+        case PROTO_OA_ACCOUNT_DISCONNECT_EVENT:
+        case PROTO_OA_SUBSCRIBE_LIVE_TRENDBAR_RES:
+        case PROTO_OA_GET_POSITION_UNREALIZED_PNL_RES:
+            return true;
+        default:
+            return false;
+    }
+}
+
 class StrictTransport final {
 public:
-    StrictTransport() noexcept : generation_(++nextGeneration_) {}
+    explicit StrictTransport(bool demoExtended = false) noexcept
+        : generation_(++nextGeneration_)
+        , demoExtended_(demoExtended)
+    {}
     ~StrictTransport() { close(); }
     StrictTransport(const StrictTransport&) = delete;
     StrictTransport& operator=(const StrictTransport&) = delete;
@@ -1195,9 +1333,19 @@ public:
         return false;
     }
 
+    bool reconnectDemo() noexcept
+    {
+        close();
+        generation_ = ++nextGeneration_;
+        sequence_ = 0;
+        heartbeatCadence_ = Gate7HeartbeatCadence{};
+        return connectDemo();
+    }
+
     void close() noexcept
     {
         connected_ = false;
+        frameDecoder_.clear();
         if (ssl_ != nullptr) {
             (void)SSL_shutdown(ssl_);
             SSL_free(ssl_);
@@ -1228,7 +1376,8 @@ public:
         Clock::time_point absoluteDeadline = Clock::time_point{}) noexcept
     {
         if (!connected_) return Gate7SendOutcome::InactiveConnection;
-        if (!CTraderGate7Config::isAllowedOutboundPayload(payloadType)) {
+        if (!(demoExtended_ ? demoOutboundPayloadAllowed(payloadType)
+                            : CTraderGate7Config::isAllowedOutboundPayload(payloadType))) {
             return Gate7SendOutcome::PayloadRejected;
         }
         if (correlation.empty() || correlation.size() > 128) {
@@ -1252,12 +1401,12 @@ public:
             if (!envelope.IsInitialized()
                 || !envelope.SerializeToString(&encoded)) {
                 secureClear(encoded);
-                envelope.Clear();
+                clearProtoEnvelope(envelope);
                 return Gate7SendOutcome::SerializationFailed;
             }
             if (encoded.empty() || encoded.size() > MAX_PROTO_FRAME_BYTES) {
                 secureClear(encoded);
-                envelope.Clear();
+                clearProtoEnvelope(envelope);
                 return Gate7SendOutcome::FrameTooLarge;
             }
             frame.reserve(encoded.size() + 4);
@@ -1269,14 +1418,14 @@ public:
                 ? Clock::now() + NETWORK_TIMEOUT : absoluteDeadline;
             const Gate7SendOutcome result = writeExactDetailed(frame, deadline);
             secureClear(frame);
-            envelope.Clear();
+            clearProtoEnvelope(envelope);
             if (result == Gate7SendOutcome::Sent) {
                 heartbeatCadence_.markOutbound(Clock::now());
             }
             return result;
         } catch (...) {
             secureClear(payload); secureClear(encoded); secureClear(frame);
-            envelope.Clear();
+            clearProtoEnvelope(envelope);
             return Gate7SendOutcome::ResourceExhausted;
         }
     }
@@ -1382,6 +1531,35 @@ public:
         return Gate7TransportOutcome::Timeout;
     }
 
+    Gate7TransportOutcome receiveAnyDetailed(
+        std::uint32_t& type,
+        std::string& correlation,
+        std::string& payload,
+        Clock::time_point deadline,
+        Gate7ProviderErrorCategory& providerCategory) noexcept
+    {
+        providerCategory = Gate7ProviderErrorCategory::None;
+        while (Clock::now() < deadline) {
+            const Gate7TransportOutcome received = receiveOneDetailed(
+                type, correlation, payload, deadline);
+            if (received != Gate7TransportOutcome::Expected) return received;
+            if (type == HEARTBEAT_EVENT) {
+                secureClear(correlation);
+                secureClear(payload);
+                continue;
+            }
+            const Gate7TransportOutcome control = classifyControlPayload(
+                type, payload, providerCategory);
+            if (control != Gate7TransportOutcome::Expected) {
+                secureClear(correlation);
+                secureClear(payload);
+                return control;
+            }
+            return Gate7TransportOutcome::Expected;
+        }
+        return Gate7TransportOutcome::Timeout;
+    }
+
 private:
     Gate7SendOutcome writeExactDetailed(
         std::string_view bytes, Clock::time_point deadline) noexcept
@@ -1447,12 +1625,11 @@ private:
         }
     }
 
-    Gate7TransportOutcome readExactDetailed(
-        char* bytes, std::size_t size,
+    Gate7TransportOutcome readMoreDetailed(
         Clock::time_point deadline) noexcept
     {
-        std::size_t offset = 0;
-        while (offset < size && Clock::now() < deadline) {
+        std::array<char, 16U * 1024U> bytes{};
+        while (Clock::now() < deadline) {
             if (heartbeatCadence_.due(Clock::now())) {
                 const Gate7SendOutcome heartbeat = sendHeartbeat(deadline);
                 if (heartbeat == Gate7SendOutcome::ResourceExhausted) {
@@ -1467,12 +1644,19 @@ private:
             }
             const Clock::time_point waitDeadline =
                 heartbeatCadence_.boundedWaitDeadline(deadline, Clock::now());
-            const int count = SSL_read(ssl_, bytes + offset,
-                static_cast<int>(std::min<std::size_t>(
-                    size - offset, static_cast<std::size_t>(INT_MAX))));
+            const int count = SSL_read(
+                ssl_, bytes.data(), static_cast<int>(bytes.size()));
             if (count > 0) {
-                offset += static_cast<std::size_t>(count);
-                continue;
+                const auto appended = frameDecoder_.append(std::string_view(
+                    bytes.data(), static_cast<std::size_t>(count)));
+                std::fill_n(bytes.begin(), static_cast<std::size_t>(count), '\0');
+                if (appended == CTraderFrameDecoder::Result::Malformed) {
+                    return Gate7TransportOutcome::MalformedEnvelope;
+                }
+                if (appended == CTraderFrameDecoder::Result::ResourceExhausted) {
+                    return Gate7TransportOutcome::ResourceExhausted;
+                }
+                return Gate7TransportOutcome::Expected;
             }
             const int error = SSL_get_error(ssl_, count);
             if (error == SSL_ERROR_WANT_READ) {
@@ -1512,8 +1696,7 @@ private:
                 return Gate7TransportOutcome::TransportClosed;
             }
         }
-        return offset == size ? Gate7TransportOutcome::Expected
-                              : Gate7TransportOutcome::Timeout;
+        return Gate7TransportOutcome::Timeout;
     }
 
     Gate7TransportOutcome receiveOneDetailed(
@@ -1522,45 +1705,44 @@ private:
         std::string& payload,
         Clock::time_point deadline) noexcept
     {
-        std::array<unsigned char, 4> header{};
-        const Gate7TransportOutcome headerRead = readExactDetailed(
-            reinterpret_cast<char*>(header.data()), header.size(), deadline);
-        if (headerRead != Gate7TransportOutcome::Expected) return headerRead;
-        const std::uint32_t length = (static_cast<std::uint32_t>(header[0]) << 24)
-            | (static_cast<std::uint32_t>(header[1]) << 16)
-            | (static_cast<std::uint32_t>(header[2]) << 8)
-            | static_cast<std::uint32_t>(header[3]);
-        if (length == 0 || length > MAX_PROTO_FRAME_BYTES) {
-            return Gate7TransportOutcome::MalformedEnvelope;
-        }
         std::string frame;
-        try {
-            frame.resize(length, '\0');
-            const Gate7TransportOutcome frameRead = readExactDetailed(
-                frame.data(), frame.size(), deadline);
-            if (frameRead != Gate7TransportOutcome::Expected) {
-                secureClear(frame);
-                return frameRead;
+        for (;;) {
+            const auto decoded = frameDecoder_.next(frame);
+            if (decoded == CTraderFrameDecoder::Result::Malformed) {
+                return Gate7TransportOutcome::MalformedEnvelope;
             }
-            ProtoMessage envelope;
+            if (decoded == CTraderFrameDecoder::Result::ResourceExhausted) {
+                return Gate7TransportOutcome::ResourceExhausted;
+            }
+            if (decoded == CTraderFrameDecoder::Result::FrameReady) break;
+            if (Clock::now() >= deadline) {
+                return Gate7TransportOutcome::Timeout;
+            }
+            const Gate7TransportOutcome read = readMoreDetailed(deadline);
+            if (read != Gate7TransportOutcome::Expected) return read;
+        }
+        ProtoMessage envelope;
+        try {
             if (!envelope.ParseFromString(frame) || !envelope.IsInitialized()) {
                 secureClear(frame);
-                envelope.Clear();
+                clearProtoEnvelope(envelope);
                 return Gate7TransportOutcome::MalformedEnvelope;
             }
             type = envelope.payloadtype();
-            if (!CTraderGate7Config::isAllowedInboundPayload(type)) {
+            if (!(demoExtended_ ? demoInboundPayloadAllowed(type)
+                                : CTraderGate7Config::isAllowedInboundPayload(type))) {
                 secureClear(frame);
-                envelope.Clear();
+                clearProtoEnvelope(envelope);
                 return Gate7TransportOutcome::InboundTypeRejected;
             }
             if (envelope.has_clientmsgid()) correlation = envelope.clientmsgid();
             if (envelope.has_payload()) payload = envelope.payload();
             secureClear(frame);
-            envelope.Clear();
+            clearProtoEnvelope(envelope);
             return Gate7TransportOutcome::Expected;
         } catch (...) {
             secureClear(frame); secureClear(correlation); secureClear(payload);
+            clearProtoEnvelope(envelope);
             return Gate7TransportOutcome::ResourceExhausted;
         }
     }
@@ -1652,6 +1834,8 @@ private:
     SSL* ssl_{nullptr};
     bool connected_{false};
     Gate7HeartbeatCadence heartbeatCadence_;
+    CTraderFrameDecoder frameDecoder_{MAX_PROTO_FRAME_BYTES};
+    bool demoExtended_{false};
 };
 
 void clearApplicationRequest(ProtoOAApplicationAuthReq& request) noexcept

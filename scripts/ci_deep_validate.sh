@@ -24,6 +24,7 @@ cmake -S . -B "${build_dir}" \
     -DTRADEBOT_ENABLE_LIVE_RUNTIME=OFF \
     -DTRADEBOT_ENABLE_CTRADER_GATE6=OFF \
     -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF \
+    -DTRADEBOT_ENABLE_CTRADER_DEMO=OFF \
     -DCMAKE_CXX_FLAGS="${sanitizer_flags}" \
     -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
 cmake --build "${build_dir}" --parallel "${build_jobs}"

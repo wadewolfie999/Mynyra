@@ -73,6 +73,8 @@ public:
 
     void setSymbolAlias(std::string canonicalSymbol, std::string executionAlias);
     void setInstrumentSpec(const InstrumentSpec& spec);
+    std::optional<InstrumentSpec> instrumentSpec(
+        const std::string& canonicalSymbol) const;
     std::optional<NormalizedOrder> normalizeOrder(
         const OrderRequest& request,
         std::string* rejectionReason = nullptr) const;
@@ -80,6 +82,15 @@ public:
                                         const RiskDecision& finalRiskDecision);
     bool requestCancel(const CancelRequest& request);
     ReconciliationSnapshot reconciliationSnapshot(std::uint64_t timestampNs);
+    bool applyOrderReconciliation(std::uint64_t localOrderId,
+                                  OrderLifecycleState resolvedState,
+                                  Decimal64 cumulativeFilled,
+                                  Decimal64 remaining,
+                                  std::uint64_t timestampNs);
+    bool markOrderUnknown(std::uint64_t localOrderId,
+                          FailureCategory failure,
+                          const std::string& reason,
+                          std::uint64_t timestampNs);
 
     std::optional<OrderLifecycleRecord> orderLifecycle(
         std::uint64_t localOrderId) const noexcept;

@@ -28,7 +28,10 @@ EventLoop::EventLoop(std::vector<IStrategy*> strategies,
     , m_riskEngine(riskEngine)
     , m_executionEngine(executionEngine)
     , m_portfolio(portfolio)
-{}
+{
+    m_strategyPipeline = std::make_unique<StrategyPipeline>(
+        m_strategies, allocator, m_regimeDetector);
+}
 
 void EventLoop::setAnalyticsEngine(AnalyticsEngine* analytics) noexcept
 {
@@ -47,6 +50,14 @@ void EventLoop::setStateSerializer(StateSerializer* serializer,
 void EventLoop::setRegimeDetector(RegimeDetector* rd) noexcept
 {
     m_regimeDetector = rd;
+    if (m_allocator != nullptr && !m_strategies.empty()) {
+        try {
+            m_strategyPipeline = std::make_unique<StrategyPipeline>(
+                m_strategies, *m_allocator, rd);
+        } catch (...) {
+            m_strategyPipeline.reset();
+        }
+    }
 }
 
 // ── Private helpers ───────────────────────────────────────────────────────────
@@ -90,27 +101,19 @@ void EventLoop::processCandle(const MarketCandle& candle)
     m_executionEngine.processPendingOrders(candle);
 
     // ── Phase 11: update regime before ensembling ─────────────────────────
-    if (m_regimeDetector != nullptr) {
+    if (m_regimeDetector != nullptr && m_strategyPipeline == nullptr) {
         m_regimeDetector->update(candle.high, candle.low, candle.close);
     }
 
     // ── Signal generation ─────────────────────────────────────────────────
     if (m_allocator != nullptr && !m_strategies.empty()) {
-        std::vector<AlphaSignal> alphaSignals;
-        alphaSignals.reserve(m_strategies.size());
-
-        for (IStrategy* strat : m_strategies) {
-            AlphaSignal alpha = strat->generateSignal(candle);
-            alphaSignals.push_back(alpha);
+        if (m_strategyPipeline == nullptr) {
+            throw std::runtime_error("strategy pipeline is unavailable");
         }
-
-        const AllocationResult allocation = m_allocator->ensemble(alphaSignals);
-
-        const std::string attrId = !allocation.dominantStrategyId.empty()
-                                   ? allocation.dominantStrategyId
-                                   : "ENSEMBLE";
-
-        dispatchSignal(allocation.action, candle.close, candle.epochTimestamp, attrId);
+        const StrategyDecision decision = m_strategyPipeline->advance(candle, true);
+        dispatchSignal(decision.action, decision.referencePrice,
+                       decision.candleTimestamp,
+                       decision.strategyAttribution);
     } else if (m_singleStrategy != nullptr) {
         Signal signal = m_singleStrategy->onCandle(candle);
         if (signal != Signal::NONE) { ++m_totalSignals; }

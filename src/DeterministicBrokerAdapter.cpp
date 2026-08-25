@@ -201,6 +201,8 @@ bool DeterministicBrokerAdapter::submit(const NormalizedOrder& order)
             execution.sequence = order.request.sequence + 4;
             execution.eventKey = "fill-" + std::to_string(order.request.localOrderId)
                                + "-1";
+            execution.positionSide = order.request.positionSide;
+            execution.positionEffect = order.request.positionEffect;
 
             const auto normalizedPrice = Financial::price(
                 execution.fillPrice.toDouble(), Financial::Rounding::RejectUnaligned);

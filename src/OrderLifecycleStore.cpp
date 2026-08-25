@@ -118,6 +118,9 @@ LifecycleApplyResult OrderLifecycleStore::applyExecution(
     if (eventIsOlder(it->second, execution.timestampNs, execution.sequence)
         || !validQuantities(it->second, execution.cumulativeFilledQuantity,
                             execution.remainingQuantity)
+        || !execution.fillPrice.isPositive() || execution.fee.isNegative()
+        || execution.positionSide != it->second.request.positionSide
+        || execution.positionEffect != it->second.request.positionEffect
         || execution.cumulativeFilledQuantity.units
             < it->second.filledQuantity.units) {
         return LifecycleApplyResult::InvalidEvent;

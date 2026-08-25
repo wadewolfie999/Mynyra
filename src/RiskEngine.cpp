@@ -6,6 +6,65 @@
 #include <iostream>
 #include <numeric>
 #include <iterator>
+#include <limits>
+
+namespace {
+
+bool decimalEqual(Decimal64 left, Decimal64 right) noexcept
+{
+    while (left.scale < right.scale) {
+        if (left.units > std::numeric_limits<std::int64_t>::max() / 10
+            || left.units < std::numeric_limits<std::int64_t>::min() / 10) {
+            return false;
+        }
+        left.units *= 10;
+        ++left.scale;
+    }
+    while (right.scale < left.scale) {
+        if (right.units > std::numeric_limits<std::int64_t>::max() / 10
+            || right.units < std::numeric_limits<std::int64_t>::min() / 10) {
+            return false;
+        }
+        right.units *= 10;
+        ++right.scale;
+    }
+    return left.units == right.units;
+}
+
+bool quantityAligned(Decimal64 quantity, Decimal64 step) noexcept
+{
+    if (!quantity.isPositive() || !step.isPositive()) return false;
+    while (quantity.scale < step.scale) {
+        if (quantity.units > std::numeric_limits<std::int64_t>::max() / 10) {
+            return false;
+        }
+        quantity.units *= 10;
+        ++quantity.scale;
+    }
+    while (step.scale < quantity.scale) {
+        if (step.units > std::numeric_limits<std::int64_t>::max() / 10) {
+            return false;
+        }
+        step.units *= 10;
+        ++step.scale;
+    }
+    return step.units > 0 && quantity.units % step.units == 0;
+}
+
+RiskDecision rejectExact(std::string reason,
+                         RuleBreachAction action = RuleBreachAction::Halt,
+                         FailureCategory failure = FailureCategory::Validation)
+{
+    RiskDecision decision;
+    decision.allowed = false;
+    decision.riskIncreasing = true;
+    decision.failure = failure;
+    decision.action = action;
+    decision.reason = std::move(reason);
+    return decision;
+}
+
+} // namespace
 
 RiskEngine::RiskEngine(const PortfolioManager& portfolio,
                        std::size_t maxConcurrentPositions,
@@ -62,6 +121,167 @@ RiskDecision RiskEngine::evaluateOrder(OrderSide side) const noexcept
         decision.reason = "RiskEngine rejected new exposure";
     }
     return decision;
+}
+
+RiskDecision RiskEngine::evaluateOrder(
+    const OrderIntent& intent, const OrderRiskContext& context) const noexcept
+{
+    const bool opening = intent.effect == PositionEffect::Open;
+    const auto reject = [opening](std::string reason,
+                                  RuleBreachAction action = RuleBreachAction::Halt,
+                                  FailureCategory failure = FailureCategory::Validation) {
+        auto decision = rejectExact(std::move(reason), action, failure);
+        decision.riskIncreasing = opening;
+        return decision;
+    };
+
+    if (intent.canonicalSymbol.empty() || !intent.exactQuantity.isPositive()
+        || !intent.referencePrice.isPositive()) {
+        return reject("exact intent is malformed");
+    }
+    if (!context.account.complete || !context.instrument.complete
+        || !context.reconciliation.complete
+        || context.reconciliation.status != ReconciliationStatus::Matched
+        || !context.sameGeneration || context.connectionGeneration == 0
+        || context.reconciliation.connectionGeneration
+               != context.connectionGeneration
+        || context.instrumentVersion == 0
+        || context.instrument.version != context.instrumentVersion
+        || context.reconciliation.account.snapshotVersion
+               != context.account.snapshotVersion) {
+        return reject("risk evidence is incomplete or mixed-generation",
+                      RuleBreachAction::ReadOnly,
+                      FailureCategory::ReconciliationMismatch);
+    }
+    constexpr std::uint64_t maximumSnapshotAgeNs = 5'000'000'000ULL;
+    const auto freshAtEvaluation = [&context](std::uint64_t timestamp) {
+        return timestamp > 0
+            && context.evaluationTimestampNs >= timestamp
+            && context.evaluationTimestampNs - timestamp
+                   <= maximumSnapshotAgeNs;
+    };
+    if (context.evaluationTimestampNs == 0
+        || !freshAtEvaluation(context.account.sourceTimestampNs)
+        || !freshAtEvaluation(context.account.ingestionTimestampNs)
+        || !freshAtEvaluation(context.reconciliation.timestampNs)) {
+        return reject("account or reconciliation evidence is stale",
+                      RuleBreachAction::ReadOnly,
+                      FailureCategory::StaleData);
+    }
+    if (context.instrument.canonicalSymbol != intent.canonicalSymbol
+        || !context.instrument.tradingEnabled) {
+        return reject("instrument is not commissionable");
+    }
+
+    const double quantity = intent.exactQuantity.toDouble();
+    const double minimum = context.instrument.minimumQuantity.toDouble();
+    const double maximum = context.instrument.maximumQuantity.toDouble();
+    if (!std::isfinite(quantity) || !std::isfinite(maximum)
+        || quantity <= 0.0 || quantity > maximum) {
+        return reject("exact quantity violates the instrument maximum");
+    }
+
+    if (!opening) {
+        if (!intent.logicalPositionId.has_value()
+            || intent.logicalPositionId->empty()) {
+            return reject("risk-reducing intent lacks reconciled position identity",
+                          RuleBreachAction::CloseOnly);
+        }
+        const auto position = std::find_if(
+            context.reconciliation.positions.begin(),
+            context.reconciliation.positions.end(),
+            [&intent](const PositionSnapshot& candidate) {
+                return candidate.logicalPositionId == *intent.logicalPositionId;
+            });
+        if (position == context.reconciliation.positions.end()
+            || position->canonicalSymbol != intent.canonicalSymbol
+            || position->side != intent.side
+            || position->quantity.scale != intent.exactQuantity.scale
+            || position->quantity.units < intent.exactQuantity.units) {
+            return reject("risk-reducing quantity does not match reconciliation",
+                          RuleBreachAction::CloseOnly,
+                          FailureCategory::ReconciliationMismatch);
+        }
+        RiskDecision accepted;
+        accepted.allowed = true;
+        accepted.riskIncreasing = false;
+        accepted.action = RuleBreachAction::CloseOnly;
+        accepted.reason = "RiskEngine accepted reconciled exposure reduction";
+        return accepted;
+    }
+
+    if (!std::isfinite(minimum) || quantity < minimum
+        || !quantityAligned(intent.exactQuantity,
+                            context.instrument.quantityStep)) {
+        return reject("opening quantity violates instrument limits");
+    }
+
+    if ((intent.side == PositionSide::Long
+         && !context.instrument.supportsLong)
+        || (intent.side == PositionSide::Short
+            && !context.instrument.supportsShort)) {
+        return reject("instrument does not support the requested direction");
+    }
+    if (!decimalEqual(intent.exactQuantity,
+                      context.instrument.minimumQuantity)) {
+        return reject("DEMO commissioning requires exact minimum quantity");
+    }
+    const Decimal64 expectedReference = intent.side == PositionSide::Long
+        ? context.ask : context.bid;
+    if (!decimalEqual(intent.referencePrice, expectedReference)
+        || !context.expectedMarginSide.has_value()
+        || *context.expectedMarginSide != intent.side) {
+        return reject("price or expected-margin direction is not bound to intent");
+    }
+    if (!context.reconciliation.positions.empty()
+        || context.reconciliation.pendingOrderCount != 0
+        || !context.reconciliation.orderStates.empty()
+        || !context.grossExposure.isZero()) {
+        return reject("DEMO account is not empty", RuleBreachAction::ReadOnly,
+                      FailureCategory::ReconciliationMismatch);
+    }
+    constexpr std::uint64_t maximumBboAgeNs = 5'000'000'000ULL;
+    if (!context.bboComplete || !context.bid.isPositive()
+        || !context.ask.isPositive()
+        || context.ask.toDouble() <= context.bid.toDouble()
+        || context.bboSourceTimestampNs == 0
+        || context.evaluationTimestampNs < context.bboSourceTimestampNs
+        || context.evaluationTimestampNs - context.bboSourceTimestampNs
+               > maximumBboAgeNs) {
+        return reject("BBO is missing or stale", RuleBreachAction::ReadOnly,
+                      FailureCategory::StaleData);
+    }
+    const double expectedMargin = context.expectedMargin.toDouble();
+    const double freeMargin = context.account.freeMargin.toDouble();
+    if (!context.expectedMargin.isPositive() || !std::isfinite(expectedMargin)
+        || !std::isfinite(freeMargin) || freeMargin <= expectedMargin) {
+        return reject("expected margin is unavailable or exceeds free margin");
+    }
+    if (m_halted.load() || m_closeOnly.load()
+        || m_totalDrawdown >= MAX_TOTAL_DRAWDOWN
+        || m_dailyDrawdown >= MAX_DAILY_DRAWDOWN) {
+        return reject("normal risk halt or close-only gate rejected new exposure");
+    }
+    const std::size_t positionCap = m_effectiveMaxPositions > 0
+        ? m_effectiveMaxPositions : m_maxConcurrentPositions;
+    if (positionCap > 0
+        && context.reconciliation.positions.size() >= positionCap) {
+        return reject("position cap rejected new exposure");
+    }
+    const double varLimit = m_effectiveVarLimit > 0.0
+        ? m_effectiveVarLimit : m_varLimitFraction;
+    const double equity = context.account.equity.toDouble();
+    if (varLimit > 0.0 && m_currentVaR95 > 0.0 && equity > 0.0
+        && m_currentVaR95 > equity * varLimit) {
+        return reject("VaR gate rejected new exposure");
+    }
+
+    RiskDecision accepted;
+    accepted.allowed = true;
+    accepted.riskIncreasing = true;
+    accepted.action = RuleBreachAction::Warn;
+    accepted.reason = "RiskEngine accepted exact minimum-volume Demo exposure";
+    return accepted;
 }
 
 void RiskEngine::setTotalDrawdown(double drawdown) noexcept

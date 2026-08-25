@@ -41,6 +41,7 @@ for required_marker in \
     'live_runtime=OFF' \
     'ctrader_gate6=OFF' \
     'ctrader_gate7=OFF' \
+    'ctrader_demo=OFF' \
     'ctest=passed_sequentially'; do
     if ! grep -Fqx "${required_marker}" "${validation_marker}"; then
         echo "Validation marker does not match this exact build/ref: ${required_marker}" >&2
@@ -75,6 +76,7 @@ printf '%s\n' \
     'live_runtime=OFF' \
     'ctrader_gate6=OFF' \
     'ctrader_gate7=OFF' \
+    'ctrader_demo=OFF' \
     'ctest=passed_sequentially' \
     "cmake=${cmake_version}" \
     "compiler=${compiler_version}" \

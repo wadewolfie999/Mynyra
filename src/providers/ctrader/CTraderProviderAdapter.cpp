@@ -13,7 +13,7 @@ class CTraderMarketDataService {};
 class CTraderOrderService {};
 class CTraderSession {};
 
-CTraderProviderAdapter::CTraderProviderAdapter()
+CTraderProviderAdapter::CTraderProviderAdapter(bool freshOAuth)
     : m_transport(std::make_unique<CTraderTransport>())
     , m_codec(std::make_unique<CTraderCodec>())
     , m_auth(std::make_unique<CTraderAuthService>())
@@ -22,12 +22,42 @@ CTraderProviderAdapter::CTraderProviderAdapter()
     , m_marketData(std::make_unique<CTraderMarketDataService>())
     , m_orders(std::make_unique<CTraderOrderService>())
     , m_session(std::make_unique<CTraderSession>())
+    , m_freshOAuth(freshOAuth)
 {
     m_health.schemaVersion = 1;
     m_health.state = AdapterHealthState::Disconnected;
     m_health.failure = FailureCategory::Validation;
     m_health.reason = "cTrader provider module is default-disabled";
     m_health.eventKey = "ctrader-provider-disabled";
+}
+
+std::vector<MarketCandle> CTraderProviderAdapter::historicalCandles() const
+{
+    return {};
+}
+
+std::optional<MarketCandle> CTraderProviderAdapter::waitForCompletedCandle(
+    std::chrono::milliseconds timeout)
+{
+    (void)timeout;
+    return std::nullopt;
+}
+
+std::optional<OrderRiskContext> CTraderProviderAdapter::riskContext(
+    PositionSide direction)
+{
+    (void)direction;
+    return std::nullopt;
+}
+
+FailureCategory CTraderProviderAdapter::lastFailure() const noexcept
+{
+    return m_health.failure;
+}
+
+std::string CTraderProviderAdapter::lastDiagnostic() const
+{
+    return "ctrader_demo_provider_disabled";
 }
 
 CTraderProviderAdapter::~CTraderProviderAdapter() = default;

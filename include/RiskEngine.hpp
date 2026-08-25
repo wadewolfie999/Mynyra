@@ -90,6 +90,12 @@ public:
     // allowed while the engine is close-only or halted.
     RiskDecision evaluateOrder(OrderSide side) const noexcept;
 
+    // Quantity-aware broker risk boundary used by DEMO. The returned decision
+    // is authoritative for the exact intent and must be passed unchanged to
+    // BrokerGateway::dispatchOrder().
+    RiskDecision evaluateOrder(const OrderIntent& intent,
+                               const OrderRiskContext& context) const noexcept;
+
     // Update the current total drawdown (as a fraction, e.g. 0.05 == 5%).
     void setTotalDrawdown(double drawdown) noexcept;
 

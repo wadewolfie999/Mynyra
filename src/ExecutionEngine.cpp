@@ -143,6 +143,9 @@ void ExecutionEngine::drainOrderBus()
         request.localOrderId = node->event.orderLocalId;
         request.canonicalSymbol = fromFixed(node->event.symbol);
         request.side = node->event.isBuy ? OrderSide::Buy : OrderSide::Sell;
+        request.positionSide = PositionSide::Long;
+        request.positionEffect = node->event.isBuy
+            ? PositionEffect::Open : PositionEffect::Close;
         request.type = BrokerOrderType::Market;
         request.quantity = Decimal64::fromDouble(
             node->event.quantity, 8, DecimalRounding::TowardZero)
@@ -168,7 +171,7 @@ void ExecutionEngine::drainOrderBus()
             std::lock_guard<std::mutex> lock(m_fillMutex);
             m_gatewayOrderContexts.emplace(request.localOrderId,
                 GatewayOrderContext{*normalized, request.sourceId, Decimal64{},
-                                    {}, 0, 0});
+                                    {}, 0, 0, true});
         }
         const auto dispatch = m_gateway->dispatchOrder(*normalized,
                                                         node->event.riskDecision);
@@ -179,6 +182,78 @@ void ExecutionEngine::drainOrderBus()
         }
         releaseOrderNode(node);
     }
+}
+
+GatewayDispatchResult ExecutionEngine::executeIntent(
+    const OrderIntent& intent, const OrderRiskContext& context,
+    std::uint64_t reservedLocalOrderId)
+{
+    GatewayDispatchResult result;
+    if (!m_gateway || !m_gateway->isConnected()) {
+        result.failure = FailureCategory::Transport;
+        result.reason = "bound BrokerGateway is unavailable";
+        ++m_blockedCount;
+        return result;
+    }
+
+    const RiskDecision riskDecision = m_riskEngine.evaluateOrder(intent, context);
+    if (!riskDecision.allowed) {
+        result.failure = riskDecision.failure == FailureCategory::None
+            ? FailureCategory::Validation : riskDecision.failure;
+        result.reason = riskDecision.reason;
+        ++m_blockedCount;
+        return result;
+    }
+
+    OrderRequest request;
+    request.localOrderId = reservedLocalOrderId == 0
+        ? reserveBrokerOrderId() : reservedLocalOrderId;
+    request.canonicalSymbol = intent.canonicalSymbol;
+    request.positionSide = intent.side;
+    request.positionEffect = intent.effect;
+    request.side = intent.effect == PositionEffect::Open
+        ? (intent.side == PositionSide::Long ? OrderSide::Buy : OrderSide::Sell)
+        : (intent.side == PositionSide::Long ? OrderSide::Sell : OrderSide::Buy);
+    request.type = BrokerOrderType::Market;
+    request.quantity = intent.exactQuantity;
+    request.referencePrice = intent.referencePrice;
+    request.sourceId = intent.strategyAttribution;
+    request.logicalPositionId = intent.logicalPositionId;
+    request.timestampNs = intent.decisionTimestampNs;
+    request.sequence = 1;
+    request.idempotencyKey = "mynyra-demo-" + std::to_string(request.localOrderId);
+
+    m_gateway->setInstrumentSpec(context.instrument);
+    std::string rejection;
+    const auto normalized = m_gateway->normalizeOrder(request, &rejection);
+    if (!normalized.has_value()
+        || normalized->normalizedQuantity != intent.exactQuantity) {
+        result.localOrderId = request.localOrderId;
+        result.failure = FailureCategory::Validation;
+        result.reason = normalized.has_value()
+            ? "gateway changed exact commissioning quantity" : rejection;
+        ++m_blockedCount;
+        return result;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(m_fillMutex);
+        m_gatewayOrderContexts.emplace(request.localOrderId,
+            GatewayOrderContext{*normalized, request.sourceId, Decimal64{},
+                                {}, 0, 0, false});
+    }
+    result = m_gateway->dispatchOrder(*normalized, riskDecision);
+    if (!result.dispatched) {
+        std::lock_guard<std::mutex> lock(m_fillMutex);
+        m_gatewayOrderContexts.erase(request.localOrderId);
+        ++m_blockedCount;
+    }
+    return result;
+}
+
+std::uint64_t ExecutionEngine::reserveBrokerOrderId() noexcept
+{
+    return m_nextLocalOrderId.fetch_add(1);
 }
 
 bool ExecutionEngine::execute(Signal signal, double marketPrice, uint64_t timestamp,
@@ -446,6 +521,13 @@ double ExecutionEngine::pendingBrokerQuantity(uint64_t orderId) const noexcept
     return (it == m_pendingBrokerQty.end()) ? 0.0 : it->second;
 }
 
+void ExecutionEngine::markBrokerOrderInactive(std::uint64_t orderId) noexcept
+{
+    std::lock_guard<std::mutex> lock(m_fillMutex);
+    m_pendingBrokerQty.erase(orderId);
+    m_gatewayOrderContexts.erase(orderId);
+}
+
 void ExecutionEngine::onBrokerAcknowledgement(
     const OrderAcknowledgement& acknowledgement)
 {
@@ -517,11 +599,38 @@ void ExecutionEngine::onBrokerExecution(const ExecutionEvent& execution)
         return;
     }
 
+    if (execution.positionSide != request.positionSide
+        || execution.positionEffect != request.positionEffect) {
+        m_riskEngine.reportApiError();
+        return;
+    }
+
     const Decimal64 filledDelta{
         execution.cumulativeFilledQuantity.units - context.cumulativeFilled.units,
         quantityScale};
     if (!filledDelta.isPositive()) {
         m_riskEngine.reportApiError();
+        return;
+    }
+
+
+    if (!context.applyToLocalPortfolio) {
+        if (!execution.fillPrice.isPositive() || execution.fee.isNegative()) {
+            m_riskEngine.reportApiError();
+            return;
+        }
+        context.cumulativeFilled = execution.cumulativeFilledQuantity;
+        context.lastExecutionTimestamp = execution.timestampNs;
+        context.lastExecutionSequence = execution.sequence;
+        m_lastBrokerOrderId.store(execution.localOrderId);
+        ++m_filledCount;
+        if (!execution.remainingQuantity.isZero()) {
+            m_pendingBrokerQty[execution.localOrderId] =
+                execution.remainingQuantity.toDouble();
+        } else {
+            m_pendingBrokerQty.erase(execution.localOrderId);
+            m_gatewayOrderContexts.erase(contextIt);
+        }
         return;
     }
 

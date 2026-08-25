@@ -21,6 +21,11 @@ While any of WP-0 through WP-8 remains unaccepted:
 After all packages close, release readiness must be assessed separately from
 the final exact commit; program completion is not release approval.
 
+`PLAN-20260824-mynyra-demo-m1` is an operator-authorized exception for one
+cTrader Demo commissioning entry/close lifecycle only. It does not authorize
+staging, commit, push, PR, merge, executable distribution, release, deployment,
+or any live action; this release hold remains fully in force.
+
 ## Local Commit Gate
 
 Before a commit:

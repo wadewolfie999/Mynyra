@@ -89,6 +89,8 @@ struct Decimal64 {
 };
 
 enum class OrderSide : std::uint8_t { Buy, Sell };
+enum class PositionSide : std::uint8_t { Long, Short };
+enum class PositionEffect : std::uint8_t { Open, Reduce, Close };
 enum class BrokerOrderType : std::uint8_t { Market, Limit, Stop, Unknown };
 
 enum class OrderLifecycleState : std::uint8_t {
@@ -177,6 +179,24 @@ struct OrderRequest {
     std::uint64_t timestampNs{0};
     std::uint64_t sequence{0};
     std::string idempotencyKey;
+    PositionSide positionSide{PositionSide::Long};
+    PositionEffect positionEffect{PositionEffect::Open};
+    std::optional<std::string> logicalPositionId;
+};
+
+// Strategy-originated economic intent. The quantity is exact before the
+// authoritative risk decision is created; adapters may validate but may not
+// resize it. A Close intent must carry the reconciled logical position ID.
+struct OrderIntent {
+    std::uint32_t schemaVersion{1};
+    PositionSide side{PositionSide::Long};
+    PositionEffect effect{PositionEffect::Open};
+    Decimal64 exactQuantity;
+    Decimal64 referencePrice;
+    std::string canonicalSymbol;
+    std::string strategyAttribution;
+    std::optional<std::string> logicalPositionId;
+    std::uint64_t decisionTimestampNs{0};
 };
 
 struct NormalizedOrder {
@@ -212,6 +232,9 @@ struct ExecutionEvent {
     std::uint64_t timestampNs{0};
     std::uint64_t sequence{0};
     std::string eventKey;
+    PositionSide positionSide{PositionSide::Long};
+    PositionEffect positionEffect{PositionEffect::Open};
+    bool acceptanceImpliedByFill{false};
 };
 
 struct CancelRequest {
@@ -239,6 +262,7 @@ struct PositionSnapshot {
     Decimal64 quantity;
     Decimal64 averagePrice;
     std::string logicalPositionId;
+    PositionSide side{PositionSide::Long};
 };
 
 struct AccountSnapshot {
@@ -269,6 +293,9 @@ struct InstrumentSpec {
     Decimal64 quantityStep;
     std::uint64_t effectiveTimestampNs{0};
     bool complete{false};
+    bool tradingEnabled{false};
+    bool supportsLong{true};
+    bool supportsShort{false};
 };
 
 struct ReconciliationSnapshot {
@@ -279,6 +306,30 @@ struct ReconciliationSnapshot {
     std::vector<PositionSnapshot> positions;
     std::unordered_map<std::uint64_t, OrderLifecycleState> orderStates;
     ReconciliationStatus status{ReconciliationStatus::Unknown};
+    std::unordered_map<std::uint64_t, PositionEffect> orderEffects;
+    std::size_t pendingOrderCount{0};
+    std::uint64_t connectionGeneration{0};
+    bool complete{false};
+};
+
+// Coherent evidence used by RiskEngine for an exact intent. All timestamps
+// and versions must belong to the current provider connection generation.
+struct OrderRiskContext {
+    std::uint32_t schemaVersion{1};
+    AccountSnapshot account;
+    InstrumentSpec instrument;
+    ReconciliationSnapshot reconciliation;
+    Decimal64 expectedMargin;
+    std::optional<PositionSide> expectedMarginSide;
+    Decimal64 grossExposure;
+    Decimal64 bid;
+    Decimal64 ask;
+    std::uint64_t instrumentVersion{0};
+    std::uint64_t bboSourceTimestampNs{0};
+    std::uint64_t evaluationTimestampNs{0};
+    std::uint64_t connectionGeneration{0};
+    bool bboComplete{false};
+    bool sameGeneration{false};
 };
 
 struct AdapterHealthEvent {

@@ -64,6 +64,18 @@ for an explicit scope decision.
 Historical phase, workstream, ADR, and provider-gate records remain evidence
 only and do not pre-empt this queue.
 
+Current explicit exception: Wade authorized
+`PLAN-20260824-mynyra-demo-m1` on 2026-08-24 as one bounded WP-5-through-WP-8
+slice on branch `codex/mynyra-demo-m1`, based on
+`701afd4f53e094c16ac7ea5dc46b39cea4a2386a`. It permits a default-off cTrader
+Demo XAUUSD/M1 runtime, its three external acceptance stages, exactly one
+minimum-volume entry attempt, and only the controlled close operations needed
+to reconcile that commissioning position flat. It does not authorize live
+accounts/endpoints, another entry, arbitrary retries, risk-limit changes,
+commit, push, PR, merge, release, or deployment. The Demo phase remains
+unstarted until the runtime emits `mynyra_demo_m1_succeeded` after final
+account-wide flat reconciliation.
+
 No feature work, provider continuation, later gate, strategy research,
 optimization, deployment, or phase activation may proceed outside this focus
 without a new explicit operator directive. Completing any package does not
@@ -307,6 +319,9 @@ Verified code modes in `SystemConfig`:
 
 - `BACKTEST`: default deterministic CSV-driven path.
 - `PAPER`: local live-data-like adapter path with simulated broker behavior.
+- `DEMO`: compile-time default-off cTrader Demo-only XAUUSD/M1 path; read-only
+  unless the exact commissioning flag is supplied; no live endpoint/account
+  support.
 - `LIVE`: legacy live-capable market-data path; the default build rejects it
   before credential/network setup, and broker execution remains separately
   fail-closed.

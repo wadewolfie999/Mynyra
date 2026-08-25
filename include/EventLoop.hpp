@@ -6,8 +6,10 @@
 #include "MarketCandle.hpp"
 #include "ExecutionEngine.hpp"
 #include "PortfolioManager.hpp"
+#include "StrategyPipeline.hpp"
 #include <cstdint>
 #include <string>
+#include <memory>
 #include <vector>
 
 class AnalyticsEngine;
@@ -52,6 +54,7 @@ private:
     std::vector<IStrategy*> m_strategies;
     PortfolioAllocator*     m_allocator{nullptr};
     RegimeDetector*         m_regimeDetector{nullptr};
+    std::unique_ptr<StrategyPipeline> m_strategyPipeline;
 
     RiskEngine&        m_riskEngine;
     ExecutionEngine&   m_executionEngine;

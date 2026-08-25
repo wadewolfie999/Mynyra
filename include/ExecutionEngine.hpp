@@ -18,6 +18,7 @@
 class AnalyticsEngine;
 class SmaCrossStrategy;
 class BrokerGateway;
+struct GatewayDispatchResult;
 class TriggerOrderManager;
 class L2OrderBook;
 
@@ -60,6 +61,14 @@ public:
     bool execute(Signal signal, double marketPrice, uint64_t timestamp = 0,
                  const std::string& strategyId = "");
 
+    // Dispatch an exact broker intent without applying spot-cash accounting.
+    // Used by DEMO after the broker minimum quantity and complete risk context
+    // are known. The exact RiskEngine decision is passed unchanged.
+    std::uint64_t reserveBrokerOrderId() noexcept;
+    GatewayDispatchResult executeIntent(const OrderIntent& intent,
+                                        const OrderRiskContext& context,
+                                        std::uint64_t reservedLocalOrderId = 0);
+
     // Phase 9: Evaluate pending limit/stop orders against the current candle
     // and route any triggered fills through the RiskEngine before executing.
     // Returns the number of pending orders that were triggered and filled.
@@ -98,6 +107,7 @@ public:
     uint64_t getDroppedBusEvents() const noexcept;
     uint64_t lastBrokerOrderId() const noexcept;
     double pendingBrokerQuantity(uint64_t orderId) const noexcept;
+    void markBrokerOrderInactive(std::uint64_t orderId) noexcept;
 
 private:
     struct OrderBusEvent {
@@ -164,6 +174,7 @@ private:
         std::string externalOrderId;
         uint64_t lastExecutionTimestamp{0};
         uint64_t lastExecutionSequence{0};
+        bool applyToLocalPortfolio{true};
     };
 
     // Partial-fill tracking for normalized gateway lifecycle events.

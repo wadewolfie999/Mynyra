@@ -140,6 +140,18 @@ void BrokerGateway::setInstrumentSpec(const InstrumentSpec& spec)
     }
 }
 
+std::optional<InstrumentSpec> BrokerGateway::instrumentSpec(
+    const std::string& canonicalSymbol) const
+{
+    if (m_adapter && m_adapter->isConnected()) {
+        return m_adapter->instrumentSpec(canonicalSymbol);
+    }
+    std::lock_guard<std::mutex> lock(m_mutex);
+    const auto found = m_instrumentSpecs.find(canonicalSymbol);
+    return found == m_instrumentSpecs.end()
+        ? std::nullopt : std::optional<InstrumentSpec>(found->second);
+}
+
 std::optional<NormalizedOrder> BrokerGateway::normalizeOrder(
     const OrderRequest& request,
     std::string* rejectionReason) const
@@ -181,8 +193,14 @@ std::optional<NormalizedOrder> BrokerGateway::normalizeOrder(
     if (!spec.complete || !spec.quantityStep.isPositive()) {
         return reject("instrument metadata is incomplete");
     }
-    const auto normalizedQuantity = normalizeToStep(request.quantity,
-                                                    spec.quantityStep);
+    // Risk-reducing broker position operations must preserve the exact
+    // reconciled residual. A partial fill can leave a native position below
+    // the normal opening minimum or step; rounding it here could strand or
+    // enlarge exposure. Opening orders retain the instrument normalization.
+    const bool opening = request.positionEffect == PositionEffect::Open;
+    const auto normalizedQuantity = opening
+        ? normalizeToStep(request.quantity, spec.quantityStep)
+        : std::optional<Decimal64>(request.quantity);
     if (!normalizedQuantity.has_value() || !normalizedQuantity->isPositive()) {
         return reject("quantity normalizes to zero or is not representable");
     }
@@ -191,7 +209,7 @@ std::optional<NormalizedOrder> BrokerGateway::normalizeOrder(
     const auto maximum = rescaleTowardZero(spec.maximumQuantity,
                                            normalizedQuantity->scale);
     if (!minimum.has_value() || !maximum.has_value()
-        || normalizedQuantity->units < minimum->units
+        || (opening && normalizedQuantity->units < minimum->units)
         || normalizedQuantity->units > maximum->units) {
         return reject("normalized quantity violates instrument bounds");
     }
@@ -237,8 +255,8 @@ GatewayDispatchResult BrokerGateway::dispatchOrder(
     }
     if (!isConnected()) {
         result.failure = FailureCategory::Transport;
-        result.reason = m_config.isLiveMode()
-            ? "LIVE dispatch blocked: adapter not approved or connected"
+        result.reason = (m_config.isLiveMode() || m_config.isDemoMode())
+            ? "external dispatch blocked: adapter not approved or connected"
             : "adapter not connected";
         ++m_totalApiErrors;
         return result;
@@ -331,7 +349,7 @@ ReconciliationSnapshot BrokerGateway::reconciliationSnapshot(
         return unavailable;
     }
     auto snapshot = m_adapter->reconcile(timestampNs);
-    if (snapshot.account.complete) {
+    if (snapshot.account.complete && !m_config.isDemoMode()) {
         const double cashDelta = std::fabs(
             m_portfolio.getCashBalance() - snapshot.account.balance.toDouble());
         const double equityDelta = std::fabs(
@@ -343,6 +361,47 @@ ReconciliationSnapshot BrokerGateway::reconciliationSnapshot(
     std::lock_guard<std::mutex> lock(m_mutex);
     m_lastReconciliation = snapshot;
     return snapshot;
+}
+
+bool BrokerGateway::applyOrderReconciliation(
+    std::uint64_t localOrderId,
+    OrderLifecycleState resolvedState,
+    Decimal64 cumulativeFilled,
+    Decimal64 remaining,
+    std::uint64_t timestampNs)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    const auto* record = m_lifecycle.find(localOrderId);
+    if (!record || record->lastSequence
+        == std::numeric_limits<std::uint64_t>::max()) {
+        return false;
+    }
+    return m_lifecycle.applyReconciliation(
+        localOrderId, resolvedState, cumulativeFilled, remaining,
+        "gateway-reconcile-order-" + std::to_string(localOrderId)
+            + "-" + std::to_string(record->lastSequence + 1),
+        timestampNs, record->lastSequence + 1)
+        == LifecycleApplyResult::Applied;
+}
+
+bool BrokerGateway::markOrderUnknown(
+    std::uint64_t localOrderId,
+    FailureCategory failure,
+    const std::string& reason,
+    std::uint64_t timestampNs)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    const auto* record = m_lifecycle.find(localOrderId);
+    if (!record || record->lastSequence
+        == std::numeric_limits<std::uint64_t>::max()) {
+        return false;
+    }
+    return m_lifecycle.markUnknown(
+        localOrderId,
+        "gateway-unknown-order-" + std::to_string(localOrderId)
+            + "-" + std::to_string(record->lastSequence + 1),
+        failure, reason, timestampNs, record->lastSequence + 1)
+        == LifecycleApplyResult::Applied;
 }
 
 std::optional<OrderLifecycleRecord> BrokerGateway::orderLifecycle(
@@ -435,6 +494,9 @@ BrokerFill BrokerGateway::submitOrder(const std::string& symbol,
     request.localOrderId = orderId;
     request.canonicalSymbol = symbol;
     request.side = isBuy ? OrderSide::Buy : OrderSide::Sell;
+    request.positionSide = PositionSide::Long;
+    request.positionEffect = isBuy
+        ? PositionEffect::Open : PositionEffect::Close;
     request.type = BrokerOrderType::Market;
     request.quantity = *decimalQuantity;
     request.referencePrice = *decimalPrice;
@@ -584,6 +646,8 @@ void BrokerGateway::simulateFillConfirmation(const BrokerFill& fill)
         execution.sequence = record->lastSequence + 1;
         execution.eventKey = "simulated-fill-" + std::to_string(fill.orderId)
                            + "-" + std::to_string(execution.sequence);
+        execution.positionSide = record->request.positionSide;
+        execution.positionEffect = record->request.positionEffect;
     }
     handleExecution(execution);
 }
@@ -683,7 +747,8 @@ std::uint64_t BrokerGateway::reconnectLifecycleCount() const noexcept
 bool BrokerGateway::adapterAuthorized() const noexcept
 {
     return m_config.isPaperMode()
-        || (m_config.canEnterLiveRuntime()
+        || ((m_config.canEnterLiveRuntime()
+             || m_config.canEnterCTraderDemoRuntime())
             && m_liveAdapterApproved
             && deterministicAdapter() == nullptr);
 }
@@ -765,6 +830,7 @@ void BrokerGateway::handleAcknowledgement(
 
 void BrokerGateway::handleExecution(const ExecutionEvent& execution)
 {
+    ExecutionEvent normalizedExecution = execution;
     ExecutionCallback callback;
     std::vector<ExecutionCallback> callbacks;
     std::optional<BrokerFill> legacyFill;
@@ -775,8 +841,11 @@ void BrokerGateway::handleExecution(const ExecutionEvent& execution)
             ++m_totalApiErrors;
             return;
         }
+        if (before->state == OrderLifecycleState::Submitted) {
+            normalizedExecution.acceptanceImpliedByFill = true;
+        }
         const auto previousFilled = before->filledQuantity;
-        const auto applied = m_lifecycle.applyExecution(execution);
+        const auto applied = m_lifecycle.applyExecution(normalizedExecution);
         if (applied != LifecycleApplyResult::Applied) {
             if (applied != LifecycleApplyResult::Duplicate) {
                 ++m_totalApiErrors;
@@ -787,22 +856,22 @@ void BrokerGateway::handleExecution(const ExecutionEvent& execution)
         callback = m_executionCallback;
         callbacks = m_executionCallbacks;
 
-        const auto contextIt = m_legacyContexts.find(execution.localOrderId);
+        const auto contextIt = m_legacyContexts.find(normalizedExecution.localOrderId);
         if (contextIt != m_legacyContexts.end()) {
             const auto& context = contextIt->second;
             BrokerFill fill;
-            fill.orderId = execution.localOrderId;
+            fill.orderId = normalizedExecution.localOrderId;
             fill.symbol = context.symbol;
             fill.isBuy = context.isBuy;
             fill.requestedPrice = context.requestedPrice;
-            fill.fillPrice = execution.fillPrice.toDouble();
+            fill.fillPrice = normalizedExecution.fillPrice.toDouble();
             fill.quantity = context.requestedQuantity;
-            fill.filledQuantity = execution.cumulativeFilledQuantity.toDouble()
+            fill.filledQuantity = normalizedExecution.cumulativeFilledQuantity.toDouble()
                                 - previousFilled.toDouble();
-            fill.remainingQuantity = execution.remainingQuantity.toDouble();
-            fill.partialFill = !execution.remainingQuantity.isZero();
-            fill.feePaid = execution.fee.toDouble();
-            fill.fillTimestamp = execution.timestampNs;
+            fill.remainingQuantity = normalizedExecution.remainingQuantity.toDouble();
+            fill.partialFill = !normalizedExecution.remainingQuantity.isZero();
+            fill.feePaid = normalizedExecution.fee.toDouble();
+            fill.fillTimestamp = normalizedExecution.timestampNs;
             fill.strategyId = context.strategyId;
             fill.success = true;
             m_lastLegacyFills[fill.orderId] = fill;
@@ -810,11 +879,11 @@ void BrokerGateway::handleExecution(const ExecutionEvent& execution)
         }
     }
     if (callback) {
-        callback(execution);
+        callback(normalizedExecution);
     }
     for (const auto& additional : callbacks) {
         if (additional) {
-            additional(execution);
+            additional(normalizedExecution);
         }
     }
     if (legacyFill.has_value()) {

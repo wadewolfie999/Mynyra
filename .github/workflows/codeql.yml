@@ -44,7 +44,8 @@ jobs:
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DTRADEBOT_ENABLE_LIVE_RUNTIME=OFF \
             -DTRADEBOT_ENABLE_CTRADER_GATE6=OFF \
-            -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF
+            -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF \
+            -DTRADEBOT_ENABLE_CTRADER_DEMO=OFF
           cmake --build build/codeql --parallel 2
 
       - name: Analyze

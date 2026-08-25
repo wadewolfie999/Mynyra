@@ -12,13 +12,15 @@
 
 - `BACKTEST`: deterministic CSV replay; default.
 - `PAPER`: local live-like data simulation with deterministic broker execution.
+- `DEMO`: default-off cTrader Demo-only XAUUSD/M1 market-data and
+  commissioning runtime. Without `--commission-demo-order`, it is read-only.
 - `LIVE`: legacy live-capable market-data path; unavailable in the default
   build and still fail-closed at the broker boundary without a separately
   approved adapter.
 
-`parseModeFlag` accepts the lowercase or uppercase forms of `backtest`, `paper`,
-and `live`. Any other value is rejected; it is never silently downgraded to
-`BACKTEST`.
+`parseModeFlag` accepts the lowercase or uppercase forms of `backtest`,
+`paper`, `demo`, and `live`. Any other value is rejected; it is never silently
+downgraded to `BACKTEST`.
 
 ## Verified CLI Flags
 
@@ -30,8 +32,32 @@ build/tradebot_core --mode paper <csv-files>
 build/tradebot_core --resume data/results/snapshot.json <csv-files>
 ```
 
-The normal/default build rejects `--mode live` before opening input files,
-constructing engines, reading credentials, or starting network transport. The
+The cTrader Demo candidate is excluded unless explicitly compiled:
+
+```sh
+cmake -S . -B build/mynyra-demo -DTRADEBOT_ENABLE_CTRADER_DEMO=ON
+cmake --build build/mynyra-demo --target tradebot_core
+build/mynyra-demo/tradebot_core \
+  --mode demo \
+  --provider ctrader \
+  --symbol XAUUSD \
+  --timeframe M1
+```
+
+The command above is read-only. The separately authorized one-shot
+commissioning form adds `--commission-demo-order`; `--fresh-oauth` deliberately
+bypasses the stored token and starts the fixed trading-scope browser flow.
+Normal startup uses a valid stored token or exactly one refresh and never opens
+a browser silently.
+
+DEMO rejects CSV arguments, `--resume`, `--endpoint`, `--account`, `--volume`,
+unsupported providers/symbols/timeframes, and any cTrader account whose
+`isLive` value is absent or not explicitly false. Only `XAUUSD` and `M1` are
+accepted for M1. The provider endpoint, account predicate, and order volume
+cannot be overridden.
+
+The normal/default build rejects `--mode demo` and `--mode live` before
+opening input files, reading credentials, or starting network transport. The
 legacy live-capable path has two technical containment gates:
 
 ```sh
@@ -80,6 +106,28 @@ Gate 5/6 fixed values, which the opt-in proof rejects attempts to override:
 
 A live hostname and runtime endpoint or scope selection are not valid Gate 6
 configuration. The `trading` scope is fixed rather than configurable.
+
+### Mynyra Demo M1 Credential And Transport Configuration
+
+The M1 runtime reuses the same names without adding another credential source:
+
+- `TRADEBOT_CTRADER_CLIENT_ID` supplies only the public application identifier.
+- Keychain service `TradeBot.cTraderOpenApi.client-secret` supplies the client
+  secret.
+- Keychain service `TradeBot.cTraderOpenApi.tokens.trading` supplies and
+  receives the atomically replaced token envelope. A refreshed or freshly
+  authorized token is not persisted until cTrader application authentication,
+  token-owned account discovery, Demo account authentication, and full-access
+  trader validation succeed.
+
+The runtime never parses a credential `.env` file or a base64-encoded copy.
+There are no secret, token, endpoint, account, volume, or scope environment
+variables. Its only message endpoint is `demo.ctraderapi.com:5035`; the fixed
+loopback OAuth callback remains
+`http://127.0.0.1:18080/ctrader/oauth/callback` and the fixed scope is
+`trading`. After a correlated callback, the listener serves a bounded clean
+completion page at `/ctrader/oauth/complete` so the authorization code is not
+left in the visible browser URL.
 
 ### Gate 6 Opt-In Proof Target
 
@@ -146,12 +194,14 @@ Financial limit changes require operator approval.
 - Throughput report: `data/results/latency_report.csv`.
 - Phase 18 burn-in report: `data/results/phase18_burnin_latency.csv`.
 - Phase 18 default replay path: `data/historical/BTCUSDT-L2-1M.bin`.
+- Mynyra Demo evidence:
+  `output/mynyra-demo/<session-id>.ndjson`.
 
 Generated outputs are ignored by Git unless intentionally versioned.
 `--resume data/results/snapshot.json` accepts only the governed default path and
 a canonical version-13 BACKTEST snapshot. Financial fields use signed scale-8
 integer units. Other paths are rejected before file
-or runtime setup. PAPER and LIVE resume are rejected because external order
+or runtime setup. PAPER, DEMO, and LIVE resume are rejected because external order
 lifecycle and reconciliation state is not yet restart-safe. Snapshot version
 migration is explicit; earlier versions, including version 12, are not loaded
 automatically.

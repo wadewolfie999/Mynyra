@@ -24,7 +24,8 @@ No repository-configured formatter or static analyzer was verified. `clang-forma
 ## Naming
 
 - Preserve existing class names and subsystem vocabulary.
-- Use mode names exactly as verified in code: `BACKTEST`, `PAPER`, `LIVE`.
+- Use mode names exactly as verified in code: `BACKTEST`, `PAPER`, default-off
+  `DEMO`, and contained legacy `LIVE`.
 - Use `TradeBot` for repository identity and `TradeBot-AIIO-Core` only when referring to the CMake project name.
 
 ## Documentation Style

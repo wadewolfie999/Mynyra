@@ -17,7 +17,8 @@ cmake -S . -B "${build_dir}" \
     -DBUILD_TESTING=ON \
     -DTRADEBOT_ENABLE_LIVE_RUNTIME=OFF \
     -DTRADEBOT_ENABLE_CTRADER_GATE6=OFF \
-    -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF
+    -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF \
+    -DTRADEBOT_ENABLE_CTRADER_DEMO=OFF
 cmake --build "${build_dir}" --parallel "${build_jobs}"
 ctest --test-dir "${build_dir}" --output-on-failure --parallel 1
 
@@ -29,5 +30,6 @@ printf '%s\n' \
     'live_runtime=OFF' \
     'ctrader_gate6=OFF' \
     'ctrader_gate7=OFF' \
+    'ctrader_demo=OFF' \
     'ctest=passed_sequentially' \
     > "${build_dir}/tradebot-ci-validation-passed"

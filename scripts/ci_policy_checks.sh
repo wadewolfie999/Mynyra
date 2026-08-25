@@ -38,7 +38,8 @@ fi
 for option_name in \
     TRADEBOT_ENABLE_LIVE_RUNTIME \
     TRADEBOT_ENABLE_CTRADER_GATE6 \
-    TRADEBOT_ENABLE_CTRADER_GATE7
+    TRADEBOT_ENABLE_CTRADER_GATE7 \
+    TRADEBOT_ENABLE_CTRADER_DEMO
 do
     option_block=$(
         sed -n "/option(${option_name}/,/)/p" CMakeLists.txt
@@ -61,7 +62,7 @@ if grep -Eq \
 fi
 
 if grep -RIlE \
-    'pull_request_target|secrets\.|TRADEBOT_ENABLE_CTRADER_GATE[67]=ON|ctrader_gate[67]_proof' \
+    'pull_request_target|secrets\.|TRADEBOT_ENABLE_CTRADER_(GATE[67]|DEMO)=ON|ctrader_gate[67]_proof' \
     .github/workflows > "$policy_tmp_dir/workflow-findings.txt"; then
     sed -n '1,20p' "$policy_tmp_dir/workflow-findings.txt" >&2
     report_failure "workflow crosses the offline CI boundary"

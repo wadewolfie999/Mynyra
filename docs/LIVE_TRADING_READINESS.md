@@ -17,6 +17,14 @@ Offline verification, preflight, a commit, an exact binary hash, demo-provider
 evidence, or a prior bounded process does not authorize live use, orders,
 retry, reconnect, autonomous restart, or a later gate.
 
+`SystemMode::DEMO` and `TRADEBOT_ENABLE_CTRADER_DEMO=ON` are not a LIVE
+transition. The Mynyra M1 provider contains only
+`demo.ctraderapi.com:5035`, rejects every account whose `isLive` value is not
+explicitly false, and has no live-host fallback. The operator-authorized M1
+commissioning order is confined to cTrader Demo and does not satisfy or bypass
+this checklist. Even a successful `mynyra_demo_m1_succeeded` result authorizes
+no live code, account, credential, order, retry, release, or deployment.
+
 ## Current Program Block
 
 The nine-package Repository Remediation Program is the current prerequisite

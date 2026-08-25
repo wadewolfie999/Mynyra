@@ -63,6 +63,10 @@ Use `0000-template.md`.
 - `0005-canonical-financial-value-contract.md`: Proposed scale-8 internal
   financial-value, checked-arithmetic, accounting, and snapshot-v13 contract;
   WP-2 implementation authorization does not constitute ADR acceptance.
+- `0006-mynyra-demo-runtime-and-ledger.md`: Proposed default-off cTrader DEMO
+  runtime, broker-mirrored leveraged-CFD ledger, side-effect-free strategy
+  pipeline, native position close, and storage-neutral commissioning evidence;
+  external M1 acceptance and ADR acceptance remain pending.
 
 ## Conflict Handling
 

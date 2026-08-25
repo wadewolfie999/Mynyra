@@ -9,10 +9,11 @@
   `7f89c597d3874e5c8782a49a31d42335c8bf1e17`; the diagnosis is the baseline
   for the Repository Remediation Program, not proof of the current candidate
   tree after later edits.
-- Last CMake/CTest verification evidence: 2026-08-14 unstaged WP-2 working-tree
-  candidate based on `179817972cf469c67384f5f8c2245ecf09044621`; ordinary
-  default-off and ASan/UBSan suites passed 14/14 sequentially. This is not
-  exact-commit evidence.
+- Last CMake/CTest verification evidence: 2026-08-24 uncommitted Mynyra Demo
+  M1 working-tree candidate based on
+  `701afd4f53e094c16ac7ea5dc46b39cea4a2386a`; default-off suites passed 18/18
+  normally and under ASan/UBSan, while DEMO-enabled suites passed 21/21
+  normally and under ASan/UBSan. This is not exact-commit evidence.
 - Codex execution/evidence governance is centralized in
   `CODEX_EXECUTION_EVIDENCE.md`; skills carry durable domain procedure and must
   resolve volatile branch, phase, gate, provider, and approval state at use
@@ -29,6 +30,10 @@ This document represents current state only. Historical execution belongs in Git
   `.DS_Store`, `.env.example2` (not opened), `build/`, `data/`, `handoffs/`,
   `output/`, `src/.DS_Store`, and `tmp/`. Ignore status alone is not evidence
   that every generated filename is contained.
+- Current M1 implementation epoch: dirty working tree on
+  `codex/mynyra-demo-m1`, based on exact commit
+  `701afd4f53e094c16ac7ea5dc46b39cea4a2386a`. Inspect Git for the current diff;
+  no commit or publication is authorized.
 
 ## Current Repository Remediation Program
 
@@ -56,8 +61,16 @@ on 2026-08-14 under `PLAN-20260814-wp2-accounting-correctness`. A local
 working-tree candidate exists on `codex/wp2-accounting-correctness`; review,
 acceptance, and every Git publication action remain pending. WP-3 through WP-8
 remain Planned / NO-GO except for WP-7 evidence and WP-8 synchronization
-inside authorized package scope. No older phase, workstream, plan, ADR, or
-provider-gate action is the current next action.
+inside authorized package scope.
+
+On 2026-08-24 Wade explicitly authorized
+`PLAN-20260824-mynyra-demo-m1` as the bounded focus-lock exception across WP-5
+through WP-8. The current task is the default-off cTrader Demo XAUUSD/M1
+candidate and its three external acceptance stages. This exception authorizes
+exactly one minimum-volume Demo entry attempt and only the controlled close
+operations needed to flatten its confirmed position. It does not activate any
+other package, provider retry, live support, risk-limit change, publication,
+release, or deployment.
 
 WP-0 merged through PR #35. Its accepted boundary adds default-off
 compile/runtime containment, pre-startup LIVE rejection, explicit invalid-mode
@@ -102,22 +115,20 @@ Historical summary:
   demo-account selection/authentication, canonical XAUUSD resolution, and full
   metadata validation before stopping at the generic
   `gate7_subscription_failed` boundary. No subscription acceptance, BBO, or
-  timestamp proof was obtained. Gates 8–9 and live trading remain unauthorized.
+  timestamp proof was obtained. That Gate 7 record is historical. The newer
+  Mynyra Demo M1 plan now authorizes a separate default-off provider runtime;
+  its external acceptance has not yet run, and live trading remains
+  unauthorized.
 - Workstreams III–VII: parallel/future domains unless separately activated.
 - Phase 21: Complete — Approved; ADR 0003 is Accepted.
 - Phase 22: Broker-Neutral Execution Adapter Alignment and MT5/Prop-Account Readiness; Complete — Accepted under `PLAN-20260624-workstream-i-broker-neutral-completion`.
 - Phase 23: Complete — FIBO Group through cTrader selected by Wade.
-- Phase 24: Gate 1 and Gate 3 are revalidated; Gate 2 and Gate 5 were accepted
-  by Wade on 2026-08-07; Gate 5.1 is merged and accepted; PR #25 is merged;
-  and Gate 6 execution completed successfully and Wade accepted it on
-  2026-08-10. Gate 7 implementation and offline validation are complete, but
-  Gate 7 execution is incomplete at the latest evidenced
-  `gate7_subscription_failed` transition after complete XAUUSD metadata
-  validation. The subcause is unclassified; no accepted subscription, BBO, or
-  timestamp proof was produced. Residual diagnostics and complete-BBO handling
-  were corrected and reviewed offline under
-  `PLAN-20260813-ctrader-gate7-residual-diagnostics-and-proof`. Gates 8–9,
-  orders, and live use remain unauthorized.
+- Phase 24: historical Gates 1-7 remain preserved. The active bounded slice is
+  the operator-authorized Mynyra Demo M1 candidate on
+  `codex/mynyra-demo-m1`. Its offline implementation and current-tree
+  verification are complete; the Demo phase has not begun because no external
+  commissioning lifecycle has yet emitted `mynyra_demo_m1_succeeded`. All live
+  use remains unauthorized.
 - Phase 25: Not Started; no documentation platform is selected.
 - Phase 26: Blocked pending Phase 25 selection and operator-approved documentation architecture.
 - Live trading: disabled and unauthorized.
@@ -134,7 +145,9 @@ Historical summary:
   - ADR 0004: cTrader Open API is the sole integration path; implementation
     remains separately gated.
 - Accepted Phase 22 broker-neutral implementation under `PLAN-20260624-workstream-i-broker-neutral-completion`; broker-dependent connectivity remains unauthorized.
-- Runtime modes verified in `SystemConfig`: `BACKTEST`, `PAPER`, `LIVE`; default is `BACKTEST`.
+- Runtime modes verified in the candidate `SystemConfig`: `BACKTEST`, `PAPER`,
+  default-off cTrader `DEMO`, and contained legacy `LIVE`; default is
+  `BACKTEST`.
 - Credential loading verified through `AuthManager` and `SystemConfig` env names `AIIO_API_KEY` and `AIIO_API_SECRET`.
 - `PLAN-20260813-autonomous-skills-ci-delivery` is complete. PRs #30 and #29
   merged three bounded repository skills, offline-policy-governed GCC/Clang and
@@ -156,6 +169,17 @@ Historical summary:
   and Git actions are pending.
 - WP-3 through WP-8 remain Planned / NO-GO except for WP-7/WP-8 slices required
   to close authorized package work.
+- Mynyra Demo M1 is In Progress under its explicit WP-5-through-WP-8
+  exception. Source, tests, CMake, and documentation are uncommitted candidate
+  changes; ADR 0006 is Proposed. Current-tree default, DEMO, and both
+  sanitizer matrices pass; policy, automation, shell syntax, and diff checks
+  pass. Fresh OAuth and Demo account authentication completed in external
+  Stage 1. After diagnostic isolation and correction of the optional
+  live-trendbar delta handling, the final Stage 2 read-only process
+  authenticated, warmed up 100 completed XAUUSD M1 bars, established live BBO
+  and completed-M1 ingestion, and armed the existing strategy ensemble. Wade
+  explicitly accepted Stage 2 and stopped that still-read-only process before
+  its planned non-`NONE` terminal event. Stage 3 has not started.
 
 ## Blocked Or Constrained Work
 
@@ -163,17 +187,35 @@ Historical summary:
   `ABANDONED — NON-CONTROLLING — OUT OF SCOPE`; it is not an evidence source or
   fallback and is not to be investigated under Gate 5.
 - OANDA is permanently cancelled.
-- Gate 6 provider execution completed and Wade accepted its result. PR #25 is
-  merged. Gate 7's separate allowlist/validator implementation is reviewable.
-  Historical attempts stopped at Keychain access, generic OAuth failure, and a
-  later fixed OAuth callback timeout. The latest process passed OAuth and full
-  XAUUSD metadata validation but stopped at `gate7_subscription_failed`.
-  Accepted subscription response, XAUUSD quote/timestamp proof, reconnect proof,
-  every order operation, live accounts, and live trading remain Blocked /
-  NO-GO.
-- Prior Gate 7 residual plans and execution authority are historical and do not
-  remain in the current action queue. Any future provider integration must map
-  to WP-6, satisfy predecessor packages, and receive new exact authorization.
+- Gate 6/7 execution evidence remains historical. The active M1 runtime has now
+  externally proved Demo OAuth/account authentication plus XAUUSD historical
+  warmup, live BBO/completed-M1 ingestion, and strategy arming. It has not yet
+  proved any order lifecycle.
+- `TRADEBOT_CTRADER_CLIENT_ID` was present for the authorized external
+  processes. Fresh OAuth, Demo account authentication, full-access trader
+  validation, and Keychain token-envelope replacement completed without
+  reading a credential file or exposing a credential value. Stage 2 is closed;
+  no order was submitted.
+- The Stage 2 diagnostic binary reported
+  `ctrader_demo_live_m1_subscription_spot_before_ack`. The runtime accepts valid
+  asynchronous spot events while awaiting the live-M1 response, but its wrapper
+  had overwritten the more specific local spot-validation cause. Later
+  diagnostics preserved fixed redacted spot envelope, identity, quote,
+  trendbar, and market-state causes.
+- One later, explicitly authorized diagnostic read-only rerun stopped at
+  `ctrader_demo_spot_trendbar_malformed`. The official live-trendbar schema has
+  optional price-delta and timestamp fields; field-level diagnosis then isolated
+  the omitted optional close delta without exposing provider values.
+- The field-level diagnostic run proved that cTrader omitted optional
+  `deltaClose`. The corrected decoder applies the Protobuf zero default to
+  absent optional price deltas while retaining strict low, timestamp,
+  overflow, and OHLC validation. The final Stage 2 process externally exercised
+  that fix through historical warmup, live subscription, and completed-candle
+  strategy ingestion.
+- Live accounts, the live endpoint, more than one entry, automatic entry retry,
+  configurable sizing, persistent crash recovery, SQLite, multi-symbol
+  operation, commit/push/PR/merge, release, deployment, and live trading remain
+  blocked or out of scope.
 - Gates 1-3 now control protocol fit, numeric mapping, and pre-implementation
   baseline integrity. Homebrew Protobuf 35.1 is installed locally; the Gate 6
   opt-in build generates bindings only inside the build tree from SHA-256-
@@ -205,6 +247,8 @@ Historical summary:
 - Previous full compile output emitted existing warnings:
   - `src/AsyncNetworkClient.cpp`: unused `SSL_ERROR_NONE`.
   - `src/RiskEngine.cpp`: `totalPositioned` set but not used.
+  - `tests/execution_pipeline_correctness_tests.cpp`: the test-only
+    `#define private public` hides a keyword.
 - No failing tests were observed during local verification.
 - `data/.DS_Store` and `src/.DS_Store` exist as ignored local artifacts.
 
@@ -323,15 +367,17 @@ WP-2 candidate evidence on 2026-08-14, from the unstaged working tree based on
 
 ## Next Safe Action
 
-Complete the local WP-2 verification/review handoff and stop. Wade must
-separately decide package acceptance and any stage/commit/push/PR/merge action.
-WP-3, provider activity, credentials, orders, financial-limit changes,
-workflow dispatch, deployment, release, and live use remain prohibited.
+Make `TRADEBOT_CTRADER_CLIENT_ID` available to the Codex application process
+without opening, decoding, or sourcing either credential file. Then verify the
+visible Wade/Wolfski Chrome profile and run the three authorized cTrader Demo
+stages sequentially with the exact one-entry/no-entry-retry budget. Stop on
+any fail-closed condition; do not claim the Demo phase until the final-flat
+success marker exists.
 
 ## Next Professional Halting Point
 
-The review-ready unstaged WP-2 candidate and this WP-8 authority closeout are
-the current professional transition point. Workflow dispatch, credential
-access, provider execution, reconnect, orders, risk-limit changes, deployment,
-release, WP-3 and later packages, and live use remain prohibited. WP-2
-acceptance and Git actions require separate Wade decisions.
+The next professional transition point is either verified
+`mynyra_demo_m1_succeeded` plus final-flat evidence, or the first redacted
+external stop condition with no unresolved exposure. Commit, push, PR, merge,
+release, deployment, live-account use, a second entry, and risk-limit changes
+remain prohibited.

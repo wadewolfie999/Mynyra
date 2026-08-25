@@ -35,7 +35,9 @@ Verified credential env names:
 
 ## Log Redaction
 
-- Logs must not contain secret values, raw auth headers, private keys, account IDs, or private balances.
+- Logs must not contain secret values, raw auth headers, private keys, account
+  IDs, provider order/position IDs, raw provider errors, authorization URLs,
+  or private balances.
 - Use redacted representations such as first/last characters only when necessary.
 - Generated logs under `build/` or `data/results/` must be reviewed before sharing.
 
@@ -151,6 +153,65 @@ area and must not contain environment or Keychain output, secrets, tokens,
 codes, callback data, account/login identifiers, symbol IDs, raw provider
 payloads/descriptions, balances, positions, or orders.
 
+## Mynyra Demo M1
+
+The M1 provider follows a narrower credential-source contract than the generic
+runtime:
+
+- Read only the client identifier from `TRADEBOT_CTRADER_CLIENT_ID`.
+- Read the client secret and trading-scope token envelope only through macOS
+  Keychain services `TradeBot.cTraderOpenApi.client-secret` and
+  `TradeBot.cTraderOpenApi.tokens.trading`.
+- Never open, parse, source, decode, copy, or modify a credential `.env` file
+  or any base64-encoded copy. There is no secret/token file fallback.
+- Normal startup validates the stored token or performs exactly one refresh.
+  Refresh failure is terminal and must not silently launch a browser.
+- `--fresh-oauth` deliberately skips the stored token, uses the fixed
+  loopback/trading-scope flow, then proves application authentication,
+  token-owned account discovery, Demo account authentication, and full-access
+  trader status before it atomically replaces the Keychain envelope. The
+  callback redirects once to a bounded clean local completion page with no
+  query. The browser
+  profile/account is an operator-controlled prerequisite and is not encoded in
+  TradeBot.
+
+OAuth and refresh failures leave the module only as fixed categories:
+transport, HTTP status class, invalid grant, malformed response, scope
+mismatch, Keychain failure, or the existing bounded callback categories. Raw
+provider status text, URLs, queries, identifiers, and payloads remain private
+and are cleared with other sensitive copies.
+
+Console and NDJSON events may contain only local session sequence, timestamps,
+mode, canonical symbol, strategy attribution, local order/logical-position
+correlation, normalized lifecycle state, acceptance-evidence kind, and fixed
+failure category. Native account/order/position/symbol IDs, token material,
+balances, raw quotes, raw provider errors, and authorization URLs never enter
+the event schema. NDJSON is written only under the ignored
+`output/mynyra-demo/` directory and flushed at lifecycle boundaries.
+
+The provider module has one immutable message endpoint,
+`demo.ctraderapi.com:5035`, and no live host or fallback. Account discovery
+requires explicitly present `isLive=false` and exact
+`brokerTitleShort=FIBO`; missing or non-exact metadata is a security failure,
+not a Demo assumption. Persistent provider identifiers and account-derived
+state are cleared when the session stops.
+
+Demo subscription diagnostics identify only the fixed safe leg (`spots` or
+`live_m1`) and a fixed failure class derived from the existing redacted
+provider boundary. They never forward raw provider status text, payloads, or
+identifiers.
+Spot-event validation similarly exposes only fixed envelope, identity, quote,
+trendbar, or normalized-state categories; it never logs the rejected values.
+Trendbar field diagnostics reveal only which schema component failed local
+validation, never its price, timestamp, volume, identifier, or encoded payload.
+Absent optional price deltas use only their schema-defined numeric default;
+provider values are never inferred from previous events or local state.
+
+A rebuilt local binary may trigger macOS Keychain access authorization. The
+operator must complete any password entry locally and must never send it to an
+agent or log. A blocked Keychain read is not evidence of provider traffic or
+authentication success.
+
 ## Source-Control Exclusions
 
 `.gitignore` excludes:
@@ -199,7 +260,7 @@ See `DEPENDENCY_POLICY.md`.
 - Pull-request workflows do not read repository secrets.
 - The tracked policy checker rejects credential-like tracked paths,
   private-key material, provider-capable workflow steps, an enabled legacy LIVE
-  runtime or Gate 6/Gate 7 proof target, and a non-`BACKTEST` default.
+  runtime or Gate 6/Gate 7/DEMO target, and a non-`BACKTEST` default.
 - Normal CI and evidence packaging must remain provider-free: no
   OAuth, browser flow, Keychain access, account access, market-data request,
   reconnect, order, or live endpoint operation.
@@ -229,7 +290,7 @@ See `DEPENDENCY_POLICY.md`.
 - Do not use `pull_request_target`, self-hosted runners, repository or
   environment secrets, credential stores, provider endpoints, or write-scoped
   tokens in ordinary validation or candidate delivery.
-- Force the legacy LIVE runtime plus Gate 6 and Gate 7 OFF in repository
+- Force the legacy LIVE runtime plus Gate 6, Gate 7, and cTrader DEMO OFF in repository
   automation. Workflow summaries and artifact manifests must state that
   release, deployment, provider, order, and live authority are absent.
 - Validate workflow guardrails and repository skill metadata with
@@ -299,6 +360,7 @@ Security review is required for changes to:
 - `AsyncNetworkClient`.
 - `LiveDataAdapter`.
 - `BrokerGateway`.
+- cTrader Demo OAuth, transport, Keychain, event-sink, or provider code.
 - TLS/cert handling.
 - `.gitignore` secret exclusions.
 - Dependency manifests or build scripts.

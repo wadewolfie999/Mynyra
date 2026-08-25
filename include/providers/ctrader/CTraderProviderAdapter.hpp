@@ -1,8 +1,11 @@
 #pragma once
 
 #include "IBrokerAdapter.hpp"
+#include "MarketCandle.hpp"
 
+#include <chrono>
 #include <memory>
+#include <vector>
 
 namespace tradebot::ctrader {
 
@@ -20,7 +23,7 @@ class CTraderOrderService;
 class CTraderProviderAdapter final : public IBrokerAdapter,
                                      public IMarketDataSource {
 public:
-    CTraderProviderAdapter();
+    explicit CTraderProviderAdapter(bool freshOAuth = false);
     ~CTraderProviderAdapter() override;
 
     CTraderProviderAdapter(const CTraderProviderAdapter&) = delete;
@@ -44,6 +47,14 @@ public:
     std::optional<InstrumentSpec> instrumentSpec(
         const std::string& canonicalSymbol) const override;
 
+    // Provider-specific read side used only by the contained Demo runtime.
+    std::vector<MarketCandle> historicalCandles() const;
+    std::optional<MarketCandle> waitForCompletedCandle(
+        std::chrono::milliseconds timeout);
+    std::optional<OrderRiskContext> riskContext(PositionSide direction);
+    FailureCategory lastFailure() const noexcept;
+    std::string lastDiagnostic() const;
+
 private:
     void publishDisabledHealth() noexcept;
 
@@ -61,6 +72,7 @@ private:
     HealthCallback m_healthCallback;
     MarketDataCallback m_marketDataCallback;
     AdapterHealthEvent m_health;
+    [[maybe_unused]] bool m_freshOAuth{false};
 };
 
 } // namespace tradebot::ctrader

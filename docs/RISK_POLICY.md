@@ -8,7 +8,10 @@
 
 ## Default Mode
 
-TradeBot defaults to `BACKTEST`, dry-run, simulation, or paper behavior. Live trading is not permitted by default.
+TradeBot defaults to `BACKTEST`, dry-run, simulation, or paper behavior. The
+default build excludes cTrader `DEMO`; enabling that build option still leaves
+commissioning read-only unless the explicit order flag is present. Live
+trading is not permitted by default.
 
 ## Current Remediation Safety Hold
 
@@ -30,6 +33,13 @@ supports a narrower conclusion.
 - WP-4 must establish a single confirmed order lifecycle before provider work.
 - WP-6 base approval is offline only; every provider process remains separate.
 - Completion of all packages still does not authorize live trading.
+
+Wade's 2026-08-24 directive authorizes exactly the Mynyra Demo M1 exception in
+`PLAN-20260824-mynyra-demo-m1`, mapped to WP-5 through WP-8. It permits one
+minimum-volume entry attempt in exactly one empty FIBO cTrader Demo account and
+only the close operations needed to flatten that confirmed commissioning
+position. It does not widen any financial limit or authorize live accounts,
+another entry, arbitrary retries, release, or deployment.
 
 ## Live Trading Unlock Requirements
 
@@ -114,7 +124,8 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 
 ## Mode Confusion
 
-- `BACKTEST`, `PAPER`, and `LIVE` are verified code modes.
+- `BACKTEST`, `PAPER`, default-off `DEMO`, and contained legacy `LIVE` are
+  verified code modes.
 - Sandbox is a governance concept, not a verified code mode.
 - Documentation must distinguish dry-run, paper, sandbox, and live behavior.
 - The default build rejects `LIVE` before credential lookup and network startup.
@@ -125,6 +136,10 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 - The legacy `LiveDataAdapter` must not load credentials or construct provider-
   specific REST requests; provider credential use belongs to a separately
   approved provider adapter.
+- The default build also rejects `DEMO`. A
+  `TRADEBOT_ENABLE_CTRADER_DEMO=ON` build is read-only without
+  `--commission-demo-order`; it accepts no endpoint, account, volume, symbol,
+  or timeframe override for M1.
 
 ## Credential Exposure
 
@@ -143,6 +158,41 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 
 - Official cTrader Open API is the sole integration path; the Algo Bridge is
   abandoned, non-controlling, and out of scope.
+- The Mynyra Demo M1 candidate may connect only to
+  `demo.ctraderapi.com:5035`, select exactly one authenticated FIBO account
+  with explicitly present `isLive=false`, and reject any non-empty account,
+  pending order, SPREAD_BETTING account, limited-risk account, ambiguous
+  account, or live/unknown environment.
+- Commissioning may arm only after 100 distinct completed historical M1 bars,
+  one completed live M1 bar, a complete and current XAUUSD instrument, both BBO
+  sides no older than five seconds, and complete same-generation account-wide
+  reconciliation.
+- The first eligible BUY or SELL intent uses exactly the provider minimum
+  volume aligned to its step. `RiskEngine` makes the authoritative decision
+  only after that quantity, direction-bound expected margin, the
+  direction-specific ask or bid reference price, free margin, exposure,
+  instrument direction support, data freshness, and empty-account evidence are
+  coherent. DEMO has a one-position cap. No downstream component may resize
+  the order.
+- The entry has no automatic retry. A direct fill may supply explicit
+  `acceptance_implied_by_fill` evidence but must never be relabeled as an
+  observed acceptance. Duplicate, stale, out-of-order, overfill,
+  unknown-identity, malformed-price, and mismatched-quantity events must not
+  mutate economic state.
+- A confirmed entry position is closed with cTrader's native position-close
+  operation, not an opposite market order. One residual close is permitted
+  only after authoritative reconciliation proves the exact residual and no
+  pending close. A broker quantity that disagrees with the local entry fill, or
+  residual broker exposure after a locally complete close, is recovery-only.
+  Ambiguous, mismatched, or non-flat state emits recovery-required and can
+  never emit success.
+- Demo phase entry requires entry acceptance/fill evidence, entry
+  reconciliation, close acceptance/fill evidence, zero account-wide positions
+  and pending orders, zero local and broker quantity, and no duplicate
+  application. Only then may `mynyra_demo_m1_succeeded` be emitted.
+- The M1 provider does not contain a live host or fallback. This authorization
+  does not apply to the legacy `LIVE` runtime or supersede the live-readiness
+  gate.
 - Wade explicitly authorized `trading` scope for the demo-only Gate 6 account
   proof on 2026-08-10. This permission does not authorize any trading message:
   the immutable Gate 6 allowlist remains limited to application auth, account
@@ -193,10 +243,9 @@ Any live-capable path must support operator-controlled halt behavior that stops 
   event containing both positive sides and a valid timestamp. Heartbeats must
   use the existing allowlist, monotonic cadence, and original deadline without
   reconnect or retry.
-- The next provider process is NO-GO until the residual plan, diff, full offline
-  and sanitizer matrix, diagnostic redaction, persistent sanitized evidence
-  template, local clock health, port/process preconditions, exact binary/commit,
-  and a separate one-process Wade approval are all reviewed.
+- Historical Gate 7 restrictions remain evidence for that proof executable.
+  They do not override the newer, exact M1 plan and do not authorize an M1
+  process outside its stated three-stage attempt budget.
 
 ## External API And Network Risk
 
@@ -209,6 +258,10 @@ Any live-capable path must support operator-controlled halt behavior that stops 
 - Partial fills must be tracked and reconciled.
 - Local portfolio state must not be assumed correct after disconnect or API failure.
 - Reconciliation differences must be logged and reviewed before continuing live-capable operation.
+- DEMO uses `BrokerPortfolioMirror`, not `PortfolioManager`, so leveraged CFD
+  fills are derived from validated lifecycle events and then replaced or
+  confirmed by authoritative reconciliation. Process-crash recovery is
+  deferred; a subsequent non-empty-account startup must refuse another entry.
 
 ## Malformed Inputs
 

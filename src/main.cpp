@@ -27,6 +27,9 @@
 #include "AnalyticsEngine.hpp"
 #include "StateSerializer.hpp"
 #include "RegimeDetector.hpp"
+#if TRADEBOT_ENABLE_CTRADER_DEMO
+#include "providers/ctrader/CTraderDemoRuntime.hpp"
+#endif
 
 // ─── Metrics helpers ─────────────────────────────────────────────────────────
 
@@ -117,6 +120,10 @@ int main(int argc, char* argv[])
     SystemConfig sysCfg;  // defaults to BACKTEST
     std::string resumeFile;
     bool        doResume = false;
+    std::string provider;
+    std::string requestedSymbol;
+    std::string requestedTimeframe;
+    bool sawDemoOption = false;
 
     struct StreamSpec {
         std::string filepath;
@@ -126,8 +133,7 @@ int main(int argc, char* argv[])
     std::vector<StreamSpec> specs;
 
     if (argc >= 2) {
-        int i = 1;
-        for (; i < argc; ++i) {
+        for (int i = 1; i < argc; ++i) {
             if (std::strcmp(argv[i], "--resume") == 0) {
                 if (i + 1 >= argc) {
                     std::cerr << "[Error] --resume requires a snapshot file argument.\n";
@@ -146,31 +152,58 @@ int main(int argc, char* argv[])
                 ++i;
             } else if (std::strcmp(argv[i], "--mode") == 0) {
                 if (i + 1 >= argc) {
-                    std::cerr << "[Error] --mode requires an argument: backtest|paper|live\n";
+                    std::cerr << "[Error] --mode requires an argument: backtest|paper|demo|live\n";
                     return EXIT_FAILURE;
                 }
                 const auto requestedMode = parseModeFlag(argv[i + 1]);
                 if (!requestedMode.has_value()) {
                     std::cerr << "[Error] invalid --mode value: " << argv[i + 1]
-                              << "; expected backtest|paper|live\n";
+                              << "; expected backtest|paper|demo|live\n";
                     return EXIT_FAILURE;
                 }
                 sysCfg.mode = *requestedMode;
                 ++i;
             } else if (std::strcmp(argv[i], "--unlock-live-runtime") == 0) {
                 sysCfg.liveRuntimeUnlocked = true;
+            } else if (std::strcmp(argv[i], "--provider") == 0) {
+                if (i + 1 >= argc) {
+                    std::cerr << "[Error] --provider requires ctrader.\n";
+                    return EXIT_FAILURE;
+                }
+                provider = argv[++i];
+                sawDemoOption = true;
+            } else if (std::strcmp(argv[i], "--symbol") == 0) {
+                if (i + 1 >= argc) {
+                    std::cerr << "[Error] --symbol requires XAUUSD.\n";
+                    return EXIT_FAILURE;
+                }
+                requestedSymbol = argv[++i];
+                sawDemoOption = true;
+            } else if (std::strcmp(argv[i], "--timeframe") == 0) {
+                if (i + 1 >= argc) {
+                    std::cerr << "[Error] --timeframe requires M1.\n";
+                    return EXIT_FAILURE;
+                }
+                requestedTimeframe = argv[++i];
+                sawDemoOption = true;
+            } else if (std::strcmp(argv[i], "--commission-demo-order") == 0) {
+                sysCfg.commissionDemoOrder = true;
+                sawDemoOption = true;
+            } else if (std::strcmp(argv[i], "--fresh-oauth") == 0) {
+                sysCfg.freshOAuth = true;
+                sawDemoOption = true;
+            } else if (std::strncmp(argv[i], "--", 2) == 0) {
+                std::cerr << "[Error] unsupported option: " << argv[i] << "\n";
+                return EXIT_FAILURE;
             } else {
-                break;
+                std::string path = argv[i];
+                std::string stem = path;
+                const auto slash = stem.find_last_of("/\\");
+                if (slash != std::string::npos) { stem = stem.substr(slash + 1); }
+                const auto dot = stem.rfind('.');
+                if (dot != std::string::npos) { stem = stem.substr(0, dot); }
+                specs.push_back({path, stem});
             }
-        }
-        for (; i < argc; ++i) {
-            std::string path = argv[i];
-            std::string stem = path;
-            const auto slash = stem.find_last_of("/\\");
-            if (slash != std::string::npos) { stem = stem.substr(slash + 1); }
-            const auto dot = stem.rfind('.');
-            if (dot != std::string::npos) { stem = stem.substr(0, dot); }
-            specs.push_back({path, stem});
         }
     } else {
         specs.push_back({"data/BTCUSDT-15.csv", "BTCUSDT-15"});
@@ -180,7 +213,7 @@ int main(int argc, char* argv[])
     // network startup. Build enablement and this runtime flag are technical
     // containment gates; they do not constitute live-trading authorization.
     if (doResume && !sysCfg.isBacktest()) {
-        std::cerr << "[Error] --resume is BACKTEST-only: PAPER/LIVE broker "
+        std::cerr << "[Error] --resume is BACKTEST-only: PAPER/DEMO/LIVE broker "
                      "lifecycle and reconciliation state is not restart-safe.\n";
         return EXIT_FAILURE;
     }
@@ -193,6 +226,32 @@ int main(int argc, char* argv[])
                      "TRADEBOT_ENABLE_LIVE_RUNTIME=ON and pass "
                      "--unlock-live-runtime; operator authorization remains separate.\n";
         return EXIT_FAILURE;
+    }
+    if (!sysCfg.isDemoMode() && sawDemoOption) {
+        std::cerr << "[Error] cTrader Demo options require --mode demo.\n";
+        return EXIT_FAILURE;
+    }
+    if (sysCfg.isDemoMode()) {
+        if (sysCfg.liveRuntimeUnlocked || doResume || !specs.empty()) {
+            std::cerr << "[Error] DEMO rejects --resume, live unlocks, and CSV inputs.\n";
+            return EXIT_FAILURE;
+        }
+        if (provider != "ctrader" || requestedSymbol != "XAUUSD"
+            || requestedTimeframe != "M1") {
+            std::cerr << "[Error] DEMO is fixed to --provider ctrader "
+                         "--symbol XAUUSD --timeframe M1.\n";
+            return EXIT_FAILURE;
+        }
+        if (!sysCfg.canEnterCTraderDemoRuntime()) {
+            std::cerr << "[Error] cTrader DEMO runtime is contained: build with "
+                         "TRADEBOT_ENABLE_CTRADER_DEMO=ON.\n";
+            return EXIT_FAILURE;
+        }
+#if TRADEBOT_ENABLE_CTRADER_DEMO
+        return tradebot::ctrader::runCTraderDemoRuntime(sysCfg);
+#else
+        return EXIT_FAILURE;
+#endif
     }
 
     // If no file specs were collected (e.g. only --mode / --resume flags were
