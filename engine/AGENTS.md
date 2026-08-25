@@ -1,4 +1,4 @@
-# TradeBot Agent Operating Contract
+# Mynyra Engine Agent Operating Contract
 
 ## Purpose And Authority
 
@@ -9,15 +9,41 @@
 
 ## Repository Identity
 
-- Project name: TradeBot.
-- Repository root: `~/TradeBot`.
-- Verified local root: `/Users/vaheedgorgeen/TradeBot`.
+- Product-facing name: Mynyra Engine (imported TradeBot lineage).
+- Repository root: `<Mynyra-Trade>/engine`.
+- Current local root: `/Users/vaheedgorgeen/Mynyra-Trade/engine`.
 - CMake project name: `TradeBot-AIIO-Core`.
 - Current implementation core: C++20.
 - Current build system: CMake 3.14 minimum, verified locally with CMake 4.4.0, Unix Makefiles, Apple clang 21.0.0.
 - Financial-sensitive classification: this repository contains live-capable trading-system code and must be treated as financial, credential, and operational-risk sensitive even when a task is documentation-only.
 
-TradeBot is a trading-system research and engineering repository with a deterministic C++ core for market-data replay, strategy execution, portfolio and risk accounting, L2 order-book handling, trigger orders, analytics, metrics, broker/data adapters, tests, and benchmarks. It defaults to non-live operation.
+Mynyra Engine is a trading-system research and engineering source lineage with
+a deterministic C++ core for market-data replay, strategy execution, portfolio
+and risk accounting, L2 order-book handling, trigger orders, analytics,
+metrics, broker/data adapters, tests, and benchmarks. It defaults to non-live
+operation.
+
+## Mynyra Cutover Overlay
+
+The current controlling work is the Mynyra consolidation and ASUS cutover. The
+preceding remediation, provider-gate, pull-request, and GitHub records below
+are historical lineage only unless the current cutover plan explicitly reuses
+them. The present implementation authorization is limited to the provider-free
+contracts in `docs/MYNYRA_OFFLINE_REPLAY.md` and their local verification.
+
+- The imported source must retain the `ExecutionEngine -> RiskEngine ->
+  BrokerGateway` authority chain; infrastructure is not an order bus or risk
+  authority.
+- `RunManifestV1`, `EvidenceEnvelopeV1`, `CapabilityReportV1`, and
+  `OfflineRunResultV1` are engine-owned, in-process contracts. They have no
+  Node Control dependency or remote orchestration authority.
+- Only `BACKTEST`, local hash-pinned input/configuration, and both provider and
+  order permissions false are accepted by the first runner.
+- Stage 2 is operator-accepted historical Demo evidence. Stage 3 remains
+  unstarted and is outside this cutover; do not start a provider process,
+  request OAuth, or invoke `--commission-demo-order`.
+- Radicle is the only collaboration forge. Read `RADICLE.md` before any forge
+  operation. No `.github/` directory may exist in the current engine tree.
 
 Verified major subsystems:
 
@@ -191,12 +217,10 @@ Codex and other repository-side agents must not:
   is tracked under `scripts/`.
 - Julia components: none tracked at the time this contract was created.
 - Scripts/tooling: tracked local wrappers, offline CI/sanitizer helpers, an
-  offline policy checker, skill/workflow guardrails, and non-executable
-  exact-build evidence packaging exist under `scripts/`, with
-  `.githooks/pre-push` and four GitHub Actions workflows under
-  `.github/workflows/`. Validation and evidence delivery retain read-only
-  repository permissions; CodeQL adds only `security-events: write`. CMake
-  remains the underlying build and test entrypoint.
+  offline policy checker, skill/local-guardrail validation, and non-executable
+  exact-build evidence packaging exist under `scripts/`. CMake remains the
+  underlying build and test entrypoint; Radicle patch review is the only forge
+  procedure.
 
 ## Verified Commands
 

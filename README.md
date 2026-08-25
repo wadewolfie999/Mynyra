@@ -1,10 +1,17 @@
 # Mynyra Trade Control Room
 
-Mynyra Trade is an **offline, non-trading product foundation** for a future software-level control room. It is being prepared as the future product home around TradeBot, but it does not migrate, attach to, or execute the existing TradeBot codebase.
+Mynyra Trade is an **offline, non-trading product foundation** with a static
+control room and an imported Mynyra Engine source lineage. The engine is the
+frozen TradeBot M1 candidate, preserved under `engine/` with its complete Git
+history; it remains default-off and may run only hash-pinned local `BACKTEST`
+replays during this cutover.
 
 ## What this repository contains
 
-The current implementation is a static React interface with local display state only, bundled with a small Node static-serving compatibility layer. It provides a control-room information architecture, explicit boundary messaging, a visual evidence register, and a documented continuation point for a later Codex pass. It has no product backend.
+The current implementation is a static React interface with local display state
+only, bundled with a small Node static-serving compatibility layer. It has no
+product backend. `engine/` is an in-process C++ source tree, not a UI API or a
+deployed service.
 
 The website source was created by Manus AI and imported as a local snapshot. That provenance does not make Manus a runtime dependency, deployment target, or authority over future Mynyra behavior.
 
@@ -16,10 +23,10 @@ The website source was created by Manus AI and imported as a local snapshot. Tha
 | Credentials or secrets | Not present and must not be added without explicit authorization |
 | Accounts, balances, positions, quotes, or performance data | Not represented |
 | Order or execution workflow | Prohibited / absent |
-| TradeBot source migration | Not started |
+| Mynyra Engine source lineage | Imported under `engine/`; no provider runtime enabled |
 | Deployment, publication, commit, or push | Not performed |
 | Product backend on `asus-node` | Future target only; not implemented or deployed |
-| TradeBot engine ingestion | Future work; requires a dedicated reviewed migration plan |
+| Engine-to-UI evidence integration | Future work; UI remains static |
 | Software forge | Radicle only |
 
 ## Run locally
@@ -54,6 +61,8 @@ pnpm build
 | `ARCHITECTURE.md` | Static-only architecture and deliberate extension seams. |
 | `RADICLE.md` | Sole-forge policy, Codex/Radicle workflow, Manus provenance, and `asus-node` backend boundary. |
 | `HANDOFF.md` | Exact continuation instructions, verification, and blocked adjacent actions. |
+| `engine/` | History-preserving Mynyra Engine import and its local verification. |
+| `engine/docs/MYNYRA_OFFLINE_REPLAY.md` | Hash-pinned, provider-free first ASUS engine proof contract. |
 | `client/src/pages/Home.tsx` | Current control-room UI composition and local interaction state. |
 | `client/src/index.css` | Design tokens, layout, and responsive presentation. |
 
@@ -61,7 +70,9 @@ pnpm build
 
 > Observe the system. Do not infer the market.
 
-Any later provider connection, account data, order flow, risk control, or TradeBot source migration needs a separate reviewed plan and an exact authorization boundary.
+Any later provider connection, account data, order flow, risk control, engine
+evidence API, or Linux provider port needs a separate reviewed plan and an
+exact authorization boundary.
 
 ## Codex and Radicle
 

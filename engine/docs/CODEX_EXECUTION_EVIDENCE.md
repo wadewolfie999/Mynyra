@@ -44,11 +44,11 @@ Keep these evidence epochs separate:
 6. External or provider process using the reviewed artifact.
 7. Post-process handoff and acceptance.
 
-An uploaded GitHub Actions validation-evidence bundle is another delivery
-record for its exact workflow revision; it deliberately excludes the
-live-capable executable and does not collapse the release, deployment,
-provider, order, risk, or live-authorization boundaries. Record the workflow
-run and retention alongside the committed artifact hash.
+A locally prepared validation-evidence bundle is another delivery record for
+its exact revision; it deliberately excludes the live-capable executable and
+does not collapse the release, deployment, provider, order, risk, or
+live-authorization boundaries. Record its local location and retention plan
+alongside the committed artifact hash.
 
 Evidence supports only the epoch and artifact that produced it. A source, test, build-definition, fixture, dependency, or relevant documentation change invalidates later claims based on an earlier candidate until affected checks are rerun.
 

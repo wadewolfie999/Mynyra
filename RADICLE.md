@@ -45,6 +45,16 @@ Some imported files retain Manus-oriented development helpers and managed-asset 
 
 ## Future architecture boundaries
 
-TradeBot may later provide the Mynyra engine, but no TradeBot source, credential-like material, runtime artifact, account identifier, or provider trace may enter this repository without a dedicated migration plan. That plan must name the exact source paths, ownership and license review, interface boundary, verification, rollback, and authorization.
+The frozen TradeBot M1 source lineage is imported under `engine/` by the
+authorized cutover plan. No credential-like material, runtime artifact, account
+identifier, provider trace, ignored output, or `.github/` automation entered
+the current imported tree. Further imports remain forbidden unless a reviewed
+scope names the files, verification, rollback, and authority.
 
-If a product backend is later approved, `asus-node` is the target runtime node. Before any node change, obtain a reviewed deployment plan that identifies the service owner, source revision from Radicle, network exposure, configuration/secrets boundary, persistence, observability, health checks, rollback, and operator authorization. This document authorizes none of those changes.
+`asus-node` is the target primary runtime node. Its first engine proof is a
+release-built, immutable, hash-pinned offline replay. Provider traffic, Linux
+credential custody, OAuth, engine services, UI evidence APIs, and operational
+controls remain separately gated. Before any node change, identify the service
+owner, source revision from Radicle, network exposure, configuration/secrets
+boundary, persistence, observability, health checks, rollback, and operator
+authorization.

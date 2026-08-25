@@ -1,6 +1,6 @@
 ---
 name: tradebot-ci-failure-recovery
-description: Diagnose and recover failing TradeBot GitHub Actions or equivalent local CI checks using preserved logs, exact revision context, bounded reproduction, root-cause classification, minimal fixes, and fresh verification. Use when a workflow, build, test, sanitizer, governance, or artifact-delivery check fails or becomes flaky.
+description: Diagnose and recover failing Mynyra Engine local validation checks using preserved logs, exact revision context, bounded reproduction, root-cause classification, minimal fixes, and fresh verification. Use when a build, test, sanitizer, governance, or artifact-delivery check fails or becomes flaky.
 ---
 
 # TradeBot CI Failure Recovery
@@ -20,32 +20,32 @@ environmental/blocking diagnosis without blind reruns.
 
 ## Required Inputs
 
-- Capture the workflow/job/step, run URL or log artifact, event, runner OS,
+- Capture the command, local log artifact, operating-system/toolchain context,
   exact commit SHA, and first failing command.
 - Capture whether the failure occurred in governance, configure, compile,
-  link, test, sanitizer, packaging, upload, or GitHub infrastructure.
+  link, test, sanitizer, packaging, local evidence retention, or peer access.
 - Identify whether the failing revision is still the current candidate.
 
 ## Recovery Budget
 
 - Inspect once, reproduce once, and permit at most two scoped fix-and-verify
   cycles for the same failure mechanism.
-- Do not rerun an external workflow merely to seek a passing result.
-- Triggering or rerunning GitHub Actions is an external mutation and requires
-  separate operator authorization.
+- Do not rerun an unchanged local command merely to seek a passing result.
+- Radicle publication, seeding, or synchronization is an external mutation and
+  requires separate operator authorization.
 
 ## Procedure
 
 1. Preserve the first failure, relevant logs, exact revision, runner image, and
    timestamps. Redact sensitive values without erasing the error category.
-2. Compare the failed workflow commands with `.github/workflows/`, `scripts/`,
-   `docs/TESTING.md`, and the exact commit diff.
+2. Compare the failed local command with `scripts/`, `docs/TESTING.md`, and the
+   exact commit diff.
 3. Classify the cause:
    - deterministic repository defect;
-   - workflow/configuration defect;
+   - local-script/configuration defect;
    - runner/toolchain difference;
    - shared-resource contention;
-   - intermittent GitHub service failure;
+   - unavailable Radicle peer or local environment;
    - stale or superseded evidence;
    - safety/authorization stop.
 4. Reproduce the narrowest equivalent command locally when safe. Use the same
@@ -64,8 +64,8 @@ environmental/blocking diagnosis without blind reruns.
 - Do not disable tests, sanitizers, warnings, permission restrictions, secret
   scanning, or default-off live/provider gates to make CI green.
 - Do not add retries around deterministic failures.
-- Do not use `pull_request_target`, write permissions, repository secrets,
-  self-hosted runners, live endpoints, OAuth, broker access, or orders.
+- Do not add a centralized workflow, repository secrets, live endpoints, OAuth,
+  broker access, or orders.
 - Do not force-push, amend, merge, release, or deploy without exact approval.
 
 ## Stop Conditions
@@ -77,7 +77,7 @@ would widen safety or runtime behavior.
 
 ## Expected Output
 
-- Exact failing revision, workflow/job/step, and first failure.
+- Exact failing revision, local command, and first failure.
 - Root-cause classification and evidence.
 - Local reproduction and correction commands.
 - Files changed, initial result, fresh result, and evidence epoch.

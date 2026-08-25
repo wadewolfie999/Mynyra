@@ -86,8 +86,9 @@ workflow.
 
 - Use `tradebot-ci-failure-recovery` to preserve the exact revision, runner,
   first failing command, and relevant redacted diagnostics.
-- Classify deterministic repository defects separately from workflow defects,
-  toolchain differences, resource contention, and GitHub infrastructure.
+- Classify deterministic repository defects separately from local-script
+  defects, toolchain differences, resource contention, and Radicle peer
+  availability.
 - Reproduce the narrowest equivalent check locally before correcting it.
 - Never weaken tests, sanitizers, permissions, redaction, or default-off gates
   merely to obtain a green run. Triggering an external rerun is a separate

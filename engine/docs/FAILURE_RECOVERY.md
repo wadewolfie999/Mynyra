@@ -32,11 +32,11 @@ listeners, local certificate authorities, fixed temporary paths, processes,
 caches, and generated outputs as possible shared resources. Stop parallel
 activity and rerun sequentially only after preserving the initial failure.
 
-For GitHub Actions failures, use `tradebot-ci-failure-recovery`: preserve the
-exact revision, workflow/job/step, runner, and first failing command; reproduce
-the narrowest offline equivalent; and allow at most two evidence-backed local
-correction cycles. Do not trigger an external rerun without separate operator
-authorization.
+For local validation failures, use `tradebot-ci-failure-recovery`: preserve the
+exact revision, command, environment, and first failing output; reproduce the
+narrowest offline equivalent; and allow at most two evidence-backed local
+correction cycles. Do not publish or trigger a remote action without separate
+operator authorization.
 
 ## Documentation Audit Failure
 

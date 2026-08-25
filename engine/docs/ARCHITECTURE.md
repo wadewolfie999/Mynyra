@@ -1,4 +1,4 @@
-# TradeBot Architecture
+# Mynyra Engine Architecture
 
 ## Purpose And Authority
 
@@ -8,7 +8,7 @@
 
 ## System Purpose
 
-TradeBot is a C++20 trading-system research and engineering repository with a deterministic core for market-data replay, L2 order book logic, strategy execution, portfolio/risk accounting, trigger orders, analytics, metrics, state serialization, tests, and benchmarks. It has live-capable adapter classes, but live trading is prohibited unless explicitly authorized through the risk and live-readiness gates.
+Mynyra Engine is an imported C++20 trading-system source lineage with a deterministic core for market-data replay, L2 order book logic, strategy execution, portfolio/risk accounting, trigger orders, analytics, metrics, state serialization, tests, and benchmarks. It has live-capable adapter classes, but the current cutover permits only the provider-free offline replay described in `MYNYRA_OFFLINE_REPLAY.md`.
 
 ## Project Workstream Map
 
@@ -53,6 +53,7 @@ external process reaches final flat reconciliation and emits
 | Area | Verified files | Responsibility |
 | --- | --- | --- |
 | Runtime config | `include/SystemConfig.hpp` | `BACKTEST`, `PAPER`, default-off cTrader `DEMO`, and contained legacy `LIVE` modes; endpoints; credential env names; circuit-breaker thresholds |
+| Offline common ground | `include/MynyraOfflineRun.hpp`, `src/MynyraOfflineRun.cpp` | Hash-pinned `BACKTEST` manifest, redacted evidence, separate capability report, in-process replay limits, deterministic result, and no provider/order authority |
 | Financial values | `FinancialMath` | Canonical scale-8 price, quantity, money, rate, checked arithmetic, and rounding contract |
 | CSV input | `CsvReader` | Candle input for deterministic backtest path |
 | Local replay | `LocalDataReplayAdapter` | CSV/binary replay ticks, pacing, generated binary replay writes |
@@ -202,6 +203,12 @@ Security framework waits for operator authorization, the outer startup future
 can report its bounded timeout but cannot cancel or join that blocked call.
 This is a known local teardown limitation until the authorization prompt is
 completed or the Keychain boundary gains an explicit noninteractive contract.
+
+## Mynyra Offline Replay Boundary
+
+`MynyraOfflineRunnerV1` is the first deployment-independent engine proof. It receives bytes and a `RunManifestV1` from its caller; it does not open a path or own persistence or transport. It verifies artifact, input, and configuration SHA-256 values; rejects every non-`BACKTEST`, provider-enabled, or order-enabled manifest; advances `StrategyPipeline` with execution ineligible; and returns a redacted `EvidenceEnvelopeV1` plus an explicit `CapabilityReportV1`.
+
+The runner may call `IEventSink`, but a failing sink produces `EvidenceIncomplete`, never a successful result. Node Control, SSH, containers, networking, credentials, broker transport, order dispatch, and risk authority are intentionally outside this interface.
 
 ## Exchange And Broker Boundary
 
@@ -378,6 +385,7 @@ CTest registers phase tests:
 - `ctrader_provider_architecture_tests`
 - `mynyra_demo_core_tests`
 - `mynyra_demo_cli_containment`
+- `mynyra_offline_run_tests`
 
 The DEMO-enabled build additionally registers frame-decoder, market-state, and
 provider-private tests. All are synthetic and perform no provider traffic.

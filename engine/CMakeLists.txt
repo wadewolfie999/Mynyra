@@ -235,6 +235,7 @@ set(CORE_SOURCES
     src/StrategyPipeline.cpp
     src/MynyraEventSink.cpp
     src/MynyraDemoCommissioning.cpp
+    src/MynyraOfflineRun.cpp
 )
 
 add_library(tradebot_core_lib ${CORE_SOURCES})
@@ -460,6 +461,10 @@ if (BUILD_TESTING)
         tests/mynyra_demo_core_tests.cpp)
     target_link_libraries(mynyra_demo_core_tests PRIVATE tradebot_core_lib)
     add_test(NAME mynyra_demo_core_tests COMMAND mynyra_demo_core_tests)
+
+    add_executable(mynyra_offline_run_tests tests/mynyra_offline_run_tests.cpp)
+    target_link_libraries(mynyra_offline_run_tests PRIVATE tradebot_core_lib)
+    add_test(NAME mynyra_offline_run_tests COMMAND mynyra_offline_run_tests)
 
     add_test(
         NAME mynyra_demo_cli_containment

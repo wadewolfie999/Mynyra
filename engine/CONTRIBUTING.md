@@ -24,7 +24,7 @@ release, deployment, or live trading.
 
 Verified local environment:
 
-- macOS workspace at `~/TradeBot`.
+- macOS workspace at `<Mynyra-Trade>/engine`.
 - CMake 4.4.0.
 - Apple clang 21.0.0.
 - CMake generator: Unix Makefiles.
@@ -34,12 +34,12 @@ Expected but not verified here:
 
 - Ubuntu or other Linux compute node with a C++20 compiler, CMake, and pthread support.
 
-Do not assume package-manager, registry, or GitHub access is available. The project currently documents intermittent global connectivity and offline-first development.
+Do not assume package-manager, registry, or forge-peer access is available. The project uses offline-first local verification and Radicle patch review.
 
 ## Repository Setup
 
 ```sh
-cd ~/TradeBot
+cd <Mynyra-Trade>/engine
 git status --short
 git branch --show-current
 cmake -S . -B build
@@ -106,24 +106,17 @@ build/apply_bbo_microbench 10000
 
 `throughput_bench` and `phase18_burnin` write generated CSVs under `data/results/`.
 
-## Automated Validation
+## Local Validation And Radicle Review
 
-Pull requests and pushes to `main` run:
+Run repository-local guardrails and the relevant default-disabled CMake/CTest
+matrix before proposing a Radicle patch. The scripts do not enable Gate 6,
+Gate 7, or DEMO targets; they do not access secrets, contact provider endpoints,
+perform OAuth, or execute orders.
 
-- repository and workflow boundary checks;
-- the default-disabled C++ build and full CTest suite with GCC and Clang;
-- the default core under ASan and UBSan;
-- CodeQL C++ security analysis.
-
-The workflows use non-persisted checkout credentials and least-privilege
-permissions; only CodeQL can write security-analysis results. They do not
-enable Gate 6 or Gate 7 proof targets, access repository secrets, contact
-provider endpoints, perform OAuth, or execute orders.
-
-`Offline Artifact Delivery` is manually dispatched and uploads only a CTest
-log, license, manifest, and checksums. It deliberately excludes the
-live-capable executable and does not create a release, deploy software, enable
-a runtime mode, or authorize external/provider execution.
+`scripts/package_offline_artifact.sh` creates only a local CTest log, license,
+manifest, and checksums from a clean exact-commit tree. It deliberately excludes
+the live-capable executable and does not create a release, deploy software,
+enable a runtime mode, or authorize external/provider execution.
 
 ## Formatting And Linting
 

@@ -170,29 +170,20 @@ and OHLC invariants. They also prove that absent optional open/close/high
 deltas retain their Protobuf numeric default of zero, including the externally
 observed missing-close case.
 
-## GitHub Actions Validation
+## Local Validation
 
-`.github/workflows/validation.yml` runs four independent offline jobs:
+`scripts/ci_policy_checks.sh` validates tracked sensitive-looking paths,
+private-key material, the `BACKTEST` default, default-disabled legacy LIVE,
+Gate 6, Gate 7, and cTrader DEMO options, and the absence of retired `.github/`
+automation. `python3 scripts/validate_automation.py` validates skill metadata
+and the required local guardrail scripts.
 
-- `Automation and offline-policy governance` validates repository skills,
-  workflow pins and boundaries, shell syntax, tracked credential-like paths,
-  private-key material, provider-capable workflow steps, the `BACKTEST`
-  default, and default-disabled legacy LIVE, Gate 6, Gate 7, and cTrader DEMO options.
-- Required `validate` runs the default-off GCC build and complete sequential
-  CTest suite while preserving the protected branch status context.
-- `C++20 clang` repeats the default-off build and complete sequential suite in
-  an isolated Clang build tree.
-- `ASan and UBSan` builds and tests the default core with address and
-  undefined-behavior sanitizers.
-
-`.github/workflows/codeql.yml` performs scheduled and change-triggered C++
-security analysis using the default-off build. None of these workflows accesses
-credentials or starts a cTrader proof process.
-
-`.github/workflows/offline-artifact-delivery.yml` is manual. It repeats
-governance, default build, and full tests before uploading only non-executable
-CTest, license, manifest, and checksum evidence for 14 days. No release,
-deployment, provider traffic, or live transition occurs.
+`scripts/ci_validate.sh` runs the default-off configure/build/sequential CTest
+path; `scripts/ci_deep_validate.sh` runs its ASan/UBSan matrix. They do not
+access credentials or start a cTrader proof process. The local
+`scripts/package_offline_artifact.sh` command retains only non-executable
+CTest, license, manifest, and checksum evidence. No release, deployment,
+provider traffic, or live transition occurs.
 
 ## Test Layers
 
@@ -275,21 +266,15 @@ deployment, provider traffic, or live transition occurs.
   rejected-acknowledgement cleanup, partial/final sells, and transactional
   over-close rejection without portfolio or execution-context mutation.
 
-## GitHub Actions Evidence
+## Local Evidence
 
-- `.github/workflows/validation.yml` runs automation governance plus the
-  default offline configure/build/full-test path on pushes, pull requests, and
-  manual dispatches.
-- `.github/workflows/deep-validation.yml` runs the default ASan/UBSan path on a
-  weekly schedule or manual dispatch.
-- `.github/workflows/offline-artifact-delivery.yml` is manual only. It repeats
-  default offline validation, packages a CTest log and exact-revision SHA-256
-  provenance, verifies the checksum list, and uploads 14-day evidence. It does
-  not include the live-capable executable.
-- All workflows use read-only repository permission, GitHub-hosted Ubuntu,
-  no repository secrets, default-off provider proof targets, and sequential
-  CTest execution.
-- A workflow pass or uploaded artifact is evidence for that workflow revision
+- `scripts/ci_validate.sh` and `scripts/ci_deep_validate.sh` are invoked
+  explicitly from a reviewed local tree and retain default-off provider targets
+  and sequential CTest execution.
+- `scripts/package_offline_artifact.sh` packages a CTest log and exact-revision
+  SHA-256 provenance, verifies the checksum list, and excludes the
+  live-capable executable.
+- A local test pass or retained artifact is evidence for that exact revision
   only. It is not release, deployment, provider, order, or live authorization.
 
 ## Required Coverage By Change Type

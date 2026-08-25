@@ -62,21 +62,21 @@ Before release:
 
 ## Offline Validation Evidence Gate
 
-The manually dispatched offline artifact workflow delivers non-executable
-review evidence, not a release or deployment:
+The local offline artifact command delivers non-executable review evidence, not
+a release or deployment:
 
-- The operator selects one reviewed ref and initiates one workflow dispatch.
-- Repository permissions remain read-only; no repository secrets, provider
-  targets, deployment environments, or live-capable options are used.
+- The operator selects one reviewed clean ref and runs the local command.
+- No repository secrets, provider targets, deployment environments, or
+  live-capable options are used.
 - Governance, default configure/build, and the full sequential CTest suite must
   pass before packaging.
 - The evidence bundle records the full commit, toolchain, disabled legacy LIVE
   runtime and provider targets, test status, and built-binary SHA-256, but
-  deliberately excludes the live-capable executable. It expires from GitHub
-  Actions after 14 days.
-- Dispatch authority covers that evidence upload only. It does not authorize
-  a tag, GitHub Release, package/container publication, deployment, provider
-  process, order, risk change, or live transition.
+  deliberately excludes the live-capable executable. Retention is operator
+  controlled and must be recorded with the evidence location.
+- Local evidence authority does not authorize a tag, publication,
+  package/container release, deployment, provider process, order, risk change,
+  or live transition.
 - A separate operator decision and release artifact are required for any
   promotion or release.
 

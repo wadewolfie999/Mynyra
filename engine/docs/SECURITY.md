@@ -253,22 +253,18 @@ New dependencies must be reviewed for:
 
 See `DEPENDENCY_POLICY.md`.
 
-## GitHub Actions
+## Local Automation
 
-- CI uses least-privilege workflow permissions and read-only checkout
-  credentials.
-- Pull-request workflows do not read repository secrets.
-- The tracked policy checker rejects credential-like tracked paths,
-  private-key material, provider-capable workflow steps, an enabled legacy LIVE
-  runtime or Gate 6/Gate 7/DEMO target, and a non-`BACKTEST` default.
-- Normal CI and evidence packaging must remain provider-free: no
-  OAuth, browser flow, Keychain access, account access, market-data request,
-  reconnect, order, or live endpoint operation.
-- CodeQL may write security-analysis results only; it has no repository-content
-  write permission.
-- Workflow evidence must exclude hidden files and contain only the declared
-  CTest log, license, manifest, and checksum list; the live-capable executable
-  must not be uploaded.
+- `.github/` is retired and prohibited in the current engine tree.
+- The tracked policy checker rejects credential-like tracked paths, private-key
+  material, an enabled legacy LIVE runtime or Gate 6/Gate 7/DEMO target, and a
+  non-`BACKTEST` default.
+- Local validation and evidence packaging must remain provider-free: no OAuth,
+  browser flow, Keychain access, account access, market-data request, reconnect,
+  order, or live endpoint operation.
+- Local evidence must exclude hidden files and contain only the declared CTest
+  log, license, manifest, and checksum list; the live-capable executable must
+  not be packaged.
 - The legacy `LiveDataAdapter` is a market-data boundary only. CI policy rejects
   credential loading or provider-specific REST construction in that adapter.
 
@@ -281,25 +277,19 @@ See `DEPENDENCY_POLICY.md`.
 - Avoid printing environment variables that may contain secrets.
 - Prefer explicit paths and quoted variables when scripts are introduced.
 
-## GitHub Actions Safety
+## Local Automation Safety
 
-- Keep repository permissions explicitly read-only and use GitHub-hosted
-  runners for the offline validation/delivery workflows. Disable persisted Git
-  credentials on every checkout step and pin every third-party action to a
-  reviewed full commit SHA.
-- Do not use `pull_request_target`, self-hosted runners, repository or
-  environment secrets, credential stores, provider endpoints, or write-scoped
-  tokens in ordinary validation or candidate delivery.
-- Force the legacy LIVE runtime plus Gate 6, Gate 7, and cTrader DEMO OFF in repository
-  automation. Workflow summaries and artifact manifests must state that
-  release, deployment, provider, order, and live authority are absent.
-- Validate workflow guardrails and repository skill metadata with
+- Do not add a centralized workflow, credential store, provider endpoint, or
+  write-scoped token to ordinary validation or candidate delivery.
+- Force the legacy LIVE runtime plus Gate 6, Gate 7, and cTrader DEMO OFF in
+  local automation. Local manifests must state that release, deployment,
+  provider, order, and live authority are absent.
+- Validate local guardrails and repository skill metadata with
   `python3 scripts/validate_automation.py`.
-- Upload failure diagnostics and validation evidence only from offline
-  build/test locations and retain them briefly. Do not upload the live-capable
-  executable, environment dumps, credential-like files, provider payloads,
-  account identifiers, or ignored handoffs. Enforce the evidence bundle's
-  exact entry allowlist again in the workflow before upload.
+- Retain diagnostics and validation evidence only from offline build/test
+  locations. Do not retain the live-capable executable, environment dumps,
+  credential-like files, provider payloads, account identifiers, or ignored
+  handoffs. Enforce the evidence bundle's exact entry allowlist before sharing.
 
 ## Network Services
 

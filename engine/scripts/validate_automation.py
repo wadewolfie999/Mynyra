@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate repository-owned skills and offline GitHub Actions guardrails."""
+"""Validate repository-owned skills and local offline guardrails."""
 
 from __future__ import annotations
 
@@ -10,11 +10,14 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILLS_ROOT = ROOT / ".agents" / "skills"
-WORKFLOWS_ROOT = ROOT / ".github" / "workflows"
 NAME_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 QUOTED_FIELD_RE = re.compile(r'^\s{2}(display_name|short_description|default_prompt): "(.+)"$')
-ACTION_USE_RE = re.compile(r"(?m)^\s+-?\s*uses:\s+([^@\s]+)@([^\s#]+)")
-FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+LOCAL_GUARDRAILS = (
+    "ci_validate.sh",
+    "ci_deep_validate.sh",
+    "ci_policy_checks.sh",
+    "package_offline_artifact.sh",
+)
 
 
 def fail(errors: list[str], message: str) -> None:
@@ -76,78 +79,43 @@ def validate_skills(errors: list[str]) -> int:
     return count
 
 
-def validate_workflows(errors: list[str]) -> int:
-    required = {
-        "validation.yml",
-        "deep-validation.yml",
-        "offline-artifact-delivery.yml",
-    }
-    present = {path.name for path in WORKFLOWS_ROOT.glob("*.y*ml")}
-    missing = required - present
-    if missing:
-        fail(errors, f"missing required workflows: {', '.join(sorted(missing))}")
+def validate_local_guardrails(errors: list[str]) -> int:
+    if (ROOT / ".github").exists():
+        fail(errors, ".github must not exist in the current Mynyra Engine tree")
 
-    forbidden = {
-        "pull_request_target": "privileged pull-request trigger",
-        "permissions: write": "write-all permissions",
-        "contents: write": "repository-content write permission",
-        "secrets.": "repository/environment secret reference",
-        "self-hosted": "self-hosted runner",
-        "TRADEBOT_ENABLE_CTRADER_GATE6=ON": "Gate 6 enablement",
-        "TRADEBOT_ENABLE_CTRADER_GATE7=ON": "Gate 7 enablement",
-        "TRADEBOT_ENABLE_LIVE_RUNTIME=ON": "legacy LIVE runtime enablement",
-        "gh release": "GitHub Release publication",
-        "actions/create-release": "GitHub Release publication",
-    }
+    for script_name in LOCAL_GUARDRAILS:
+        script_path = ROOT / "scripts" / script_name
+        if not script_path.is_file():
+            fail(errors, f"scripts/{script_name}: missing local guardrail")
+            continue
+        if not script_path.stat().st_mode & 0o111:
+            fail(errors, f"scripts/{script_name}: local guardrail is not executable")
 
-    count = 0
-    for workflow in sorted(WORKFLOWS_ROOT.glob("*.y*ml")):
-        count += 1
-        text = workflow.read_text(encoding="utf-8")
-        relative = workflow.relative_to(ROOT)
-        if not re.search(r"(?m)^permissions:\n\s+contents: read\s*$", text):
-            fail(errors, f"{relative}: missing top-level read-only contents permission")
-        checkout_count = text.count("uses: actions/checkout@")
-        if text.count("persist-credentials: false") != checkout_count:
-            fail(errors, f"{relative}: every checkout must disable persisted credentials")
-        for action, action_ref in ACTION_USE_RE.findall(text):
-            if not FULL_SHA_RE.fullmatch(action_ref):
-                fail(errors, f"{relative}: {action} must be pinned to a full commit SHA")
-        for token, reason in forbidden.items():
-            if token in text:
-                fail(errors, f"{relative}: forbidden {reason}: {token}")
-
-    delivery = WORKFLOWS_ROOT / "offline-artifact-delivery.yml"
-    if delivery.is_file():
-        text = delivery.read_text(encoding="utf-8")
-        trigger_section = text.split("permissions:", 1)[0]
-        if "workflow_dispatch:" not in trigger_section:
-            fail(errors, f"{delivery.relative_to(ROOT)}: delivery must be manually dispatched")
-        for trigger in ("push:", "pull_request:", "schedule:", "release:"):
-            if trigger in trigger_section:
-                fail(errors, f"{delivery.relative_to(ROOT)}: delivery cannot use {trigger.rstrip(':')} trigger")
+    policy_path = ROOT / "scripts" / "ci_policy_checks.sh"
+    if policy_path.is_file():
+        policy_text = policy_path.read_text(encoding="utf-8")
         for required_token in (
-            "test ! -e tradebot_core",
-            "artifact_class=offline_validation_evidence",
-            "packaged_executable=false",
-            "release_authorized=false",
-            "deployment_authorized=false",
-            "live_trading_authorized=false",
+            "TRADEBOT_ENABLE_LIVE_RUNTIME",
+            "TRADEBOT_ENABLE_CTRADER_GATE6",
+            "TRADEBOT_ENABLE_CTRADER_GATE7",
+            "TRADEBOT_ENABLE_CTRADER_DEMO",
+            "SystemMode::BACKTEST",
+            "retired GitHub automation",
         ):
-            if required_token not in text:
-                fail(errors, f"{delivery.relative_to(ROOT)}: missing evidence guard: {required_token}")
-    return count
+            if required_token not in policy_text:
+                fail(errors, f"scripts/ci_policy_checks.sh: missing local safety guard: {required_token}")
+    return len(LOCAL_GUARDRAILS)
 
 
 def main() -> int:
     errors: list[str] = []
     skill_count = validate_skills(errors)
-    workflow_count = validate_workflows(errors)
+    guardrail_count = validate_local_guardrails(errors)
     if errors:
         for error in errors:
             print(f"ERROR: {error}", file=sys.stderr)
         return 1
-    print(f"Validated {skill_count} skills and {workflow_count} offline workflows.")
+    print(f"Validated {skill_count} skills and {guardrail_count} local offline guardrails.")
     return 0
 
 

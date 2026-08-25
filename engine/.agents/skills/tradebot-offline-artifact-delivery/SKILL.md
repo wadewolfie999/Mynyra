@@ -1,6 +1,6 @@
 ---
 name: tradebot-offline-artifact-delivery
-description: Prepare, verify, identify, and hand off non-executable TradeBot build/test evidence with exact commit provenance, default-off provider options, full offline tests, SHA-256 manifests, and explicit release/deployment gates. Use for manual GitHub Actions evidence delivery, checksum verification, or exact-commit rebuild review without distributing the live-capable executable.
+description: Prepare, verify, identify, and hand off non-executable Mynyra Engine build/test evidence with exact commit provenance, default-off provider options, full offline tests, SHA-256 manifests, and explicit release/deployment gates. Use for local evidence delivery, checksum verification, or exact-commit rebuild review without distributing the live-capable executable.
 ---
 
 # TradeBot Offline Artifact Delivery
@@ -42,17 +42,17 @@ provider, order, or live authorization.
    checksum list. The manifest may identify the built binary by SHA-256 but the
    executable must not be included.
 6. Record the full commit, binary hash, manifest hash, build/test result,
-   workflow run identity when applicable, and artifact retention period.
-7. Treat the GitHub Actions upload as ephemeral candidate delivery. Require a
-   separate operator release decision after review.
+   local evidence location, and retention period.
+7. Treat the local evidence package as review material. Require a separate
+   operator release decision after review.
 
-## GitHub Actions Boundary
+## Local Evidence Boundary
 
-- Use only the manually dispatched offline artifact workflow.
-- Keep repository permissions read-only and use no repository/environment
-  secrets, provider endpoints, self-hosted runners, or deployment environment.
-- Upload evidence only after governance, configure, build, and full CTest pass.
-- Do not create a GitHub Release, tag, package, container, deployment, or
+- Use only the tracked local artifact command from a clean exact-commit tree.
+- Use no repository/environment secrets, provider endpoints, or deployment
+  environment.
+- Retain evidence only after governance, configure, build, and full CTest pass.
+- Do not create a tag, publication, package, container, deployment, or
   automatic promotion.
 
 ## Prohibited Claims And Actions
@@ -71,7 +71,7 @@ provider, order, or live authorization.
 Stop if the ref is ambiguous, the tracked/index tree is dirty for an
 exact-commit request, tests fail, the package contains an executable or other
 unexpected file,
-checksums differ, the workflow requests secrets/write permissions, or upload,
+checksums differ, the evidence destination is not approved, or publication,
 release, deployment, provider, order, or live authority is absent.
 
 ## Expected Output
@@ -79,7 +79,7 @@ release, deployment, provider, order, or live authority is absent.
 - Full commit and tracked/index state.
 - Build configuration, toolchain, commands, and sequential test result.
 - Evidence paths, file allowlist, SHA-256 values, and evidence epoch.
-- Upload/run identity and retention when separately authorized.
+- Evidence location and retention when separately authorized.
 - Release/deployment/live status, residual risk, and rollback/expiry guidance.
 
 ## Authority Documents

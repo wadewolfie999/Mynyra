@@ -1,5 +1,21 @@
 # Codex Handoff — Mynyra Trade Control Room Foundation
 
+## 2026-08-25 Mynyra Engine consolidation (active)
+
+- Branch: `codex/mynyra-engine-cutover`.
+- The history-preserving import commit is `6d07a04b30a7e260d8d40ee65750a0b505d3748c`; its parents are the frozen Mynyra baseline `268a2548379b54742c7315fac0bec23f108e0f71` and frozen TradeBot M1 candidate `4d715d53953836d99bb1d69cafa23ca3252fd4d7`.
+- `engine/` exactly matched the frozen TradeBot tree before cutover edits. The current migration removes `engine/.github/`, retains local CMake/CTest guardrails, and documents Radicle patch review. Historical forge records remain reachable through the imported parent history.
+- The new engine-owned `RunManifestV1`, `EvidenceEnvelopeV1`, `CapabilityReportV1`, and `OfflineRunResultV1` implement only hash-pinned local `BACKTEST` replay. The runner accepts neither provider nor order permission, has no SSH/shell/container/network authority, returns redacted memory evidence, and fails closed for cancellation, timeout, malformed input, resource exhaustion, and incomplete evidence.
+- Current candidate verification passed: `./scripts/ci_validate.sh ../build/mynyra-engine-validation` (19/19) and `./scripts/ci_deep_validate.sh ../build/mynyra-engine-deep-validation` (19/19, ASan/UBSan). Existing warnings are unchanged: unused `SSL_ERROR_NONE`, unused `totalPositioned`, and the test-only `private` macro.
+- No provider process, OAuth flow, Keychain access, account access, market-data request, order attempt, commissioning flag, deployment, publication, or Radicle network action occurred during this source work. Stage 2 remains operator-accepted historical evidence; Stage 3 is unstarted and excluded.
+- ASUS is not yet changed. The prior `asus-remote` route must be repaired under a separate Node Control envelope before the immutable offline release and loopback-only control-room service can be installed.
+
+## Next exact action
+
+Commit the reviewed local source transition, create its recovery bundle and
+exact-commit verification record, then diagnose the existing `asus-remote`
+reverse-tunnel owner without modifying protected workloads.
+
 ## Scope completed
 
 An offline, non-trading static control-room website foundation was created for the empty future Mynyra-Trade product repository. The implementation emphasizes visible boundaries, product ownership transition, evidence classification, and a clear handoff surface for future work.

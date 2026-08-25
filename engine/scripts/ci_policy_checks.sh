@@ -61,11 +61,8 @@ if grep -Eq \
     report_failure "legacy LiveDataAdapter crossed the credential/provider boundary"
 fi
 
-if grep -RIlE \
-    'pull_request_target|secrets\.|TRADEBOT_ENABLE_CTRADER_(GATE[67]|DEMO)=ON|ctrader_gate[67]_proof' \
-    .github/workflows > "$policy_tmp_dir/workflow-findings.txt"; then
-    sed -n '1,20p' "$policy_tmp_dir/workflow-findings.txt" >&2
-    report_failure "workflow crosses the offline CI boundary"
+if [[ -e .github ]]; then
+    report_failure "retired GitHub automation is present in the current tree"
 fi
 
 for generated_path in \

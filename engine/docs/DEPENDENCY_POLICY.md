@@ -21,14 +21,10 @@
   their license at pinned upstream revision
   `3fd8bddfbe0cfc2ecfda079623dc4e498af11e66`; configure-time SHA-256 checks
   fail closed before binding generation.
-- GitHub-hosted workflows use official `actions/checkout` v6.0.2 and
-  `actions/upload-artifact` v7.0.1 and `github/codeql-action` v4.37.6 pinned to
-  reviewed full commit SHAs. Checkout never persists credentials. Validation
-  and evidence delivery retain read-only repository permissions; CodeQL adds
-  only the security-event upload permission required for its analysis result.
-  Dependabot proposes monthly GitHub Actions pin updates for review and never
-  merges them. Action upgrades require the same source, runtime, permission,
-  and rollback review as other tooling dependencies.
+- Local verification uses the tracked `scripts/` wrappers and CMake/CTest;
+  `.github/` automation is retired. Any future verification dependency requires
+  the same source, runtime, permission, and rollback review as other tooling
+  dependencies and must not create a centralized forge dependency by default.
 
 ## Addition Rules
 
@@ -49,7 +45,9 @@ Review must cover:
 
 ## Offline-First Handling
 
-Development may operate under intermittent global connectivity. Dependency downloads should be grouped into planned connectivity windows. Do not assume package registry or GitHub access.
+Development may operate under intermittent global connectivity. Dependency
+downloads should be grouped into planned connectivity windows. Do not assume
+package registry or forge-peer access.
 
 ## Tooling Dependencies
 
