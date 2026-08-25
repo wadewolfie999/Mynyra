@@ -29,7 +29,7 @@ If that skill is not available in a future environment, use the local `rad` CLI 
 4. Use `rad issue` and `rad patch` only when the requested collaboration record is in scope. Review the target and resulting persistent record before reporting it.
 5. Treat `git commit`, `git push`, `rad publish`, `rad sync`, `rad seed`, and follow-policy changes as state-changing forge/network operations. They require explicit authorization after their exact target and consequence are reported.
 
-The Radicle project is currently public in local storage, while its current project description exceeds this repository's offline, non-trading authority. Treat that as a metadata-alignment gap; do not edit the project identity or infer a deployed/active engine without a separately authorized update.
+The Radicle project is currently public in local storage, while its current project description exceeds this repository's offline, non-trading authority. Treat that as a metadata-alignment gap; do not edit the project identity or infer a deployed/active engine without a separately authorized update. For the two-delegate cutover, accept the identity proposal before updating the canonical `rad` Git remote and use bounded `rad sync --announce`; `rad publish` is not valid for a multi-delegate project in Radicle 1.10.1.
 
 ## Explicit exclusions
 

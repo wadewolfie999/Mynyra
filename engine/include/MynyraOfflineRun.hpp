@@ -14,6 +14,7 @@
 
 struct RequestedResourceLimitsV1 {
     std::size_t maxInputBytes{0};
+    std::size_t maxConfigBytes{0};
     std::size_t maxRecords{0};
     std::uint64_t maxRuntimeMilliseconds{0};
 };

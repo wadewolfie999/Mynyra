@@ -53,7 +53,7 @@ RunManifestV1 validManifest()
     manifest.artifactSha256 = sha256HexV1("frozen-artifact");
     manifest.inputSha256 = sha256HexV1(kInput);
     manifest.configSha256 = sha256HexV1(kConfig);
-    manifest.requestedResources = RequestedResourceLimitsV1{1024, 8, 100};
+    manifest.requestedResources = RequestedResourceLimitsV1{1024, 1024, 8, 100};
     return manifest;
 }
 
@@ -127,6 +127,13 @@ void testManifestAndInputRejection()
         malformedManifest, malformedInput, kConfig, observer);
     require(malformedResult.terminalResult == OfflineTerminalResultV1::InputRejected,
             "malformed replay record was accepted");
+
+    auto oversizedConfigManifest = validManifest();
+    oversizedConfigManifest.requestedResources.maxConfigBytes = 1;
+    const auto oversizedConfigResult = runner.run(
+        oversizedConfigManifest, kInput, kConfig, observer);
+    require(oversizedConfigResult.terminalResult == OfflineTerminalResultV1::InputRejected,
+            "configuration resource limit was not enforced");
 }
 
 void testCancellationTimeoutAndResourceFailures()

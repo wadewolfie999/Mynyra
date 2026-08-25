@@ -1,12 +1,14 @@
 import express from "express";
 import { createServer } from "http";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function startServer() {
+export const CONTROL_ROOM_HOST = "127.0.0.1";
+
+export function createControlRoomServer() {
   const app = express();
   const server = createServer(app);
 
@@ -23,11 +25,27 @@ async function startServer() {
     res.sendFile(path.join(staticPath, "index.html"));
   });
 
-  const port = process.env.PORT || 3000;
-
-  server.listen(port, () => {
-    console.log(`Server running on http://localhost:${port}/`);
-  });
+  return server;
 }
 
-startServer().catch(console.error);
+export async function startServer() {
+  const server = createControlRoomServer();
+  const port = Number(process.env.PORT || 3000);
+
+  await new Promise<void>((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(port, CONTROL_ROOM_HOST, () => {
+      server.off("error", reject);
+      resolve();
+    });
+  });
+  console.log(`Server running on http://${CONTROL_ROOM_HOST}:${port}/`);
+  return server;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startServer().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

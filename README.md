@@ -24,7 +24,7 @@ The website source was created by Manus AI and imported as a local snapshot. Tha
 | Accounts, balances, positions, quotes, or performance data | Not represented |
 | Order or execution workflow | Prohibited / absent |
 | Mynyra Engine source lineage | Imported under `engine/`; no provider runtime enabled |
-| Deployment, publication, commit, or push | Not performed |
+| Active deployment or provider process | Not present |
 | Product backend on `asus-node` | Future target only; not implemented or deployed |
 | Engine-to-UI evidence integration | Future work; UI remains static |
 | Software forge | Radicle only |

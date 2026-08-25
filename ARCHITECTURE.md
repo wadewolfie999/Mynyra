@@ -46,7 +46,8 @@ Radicle is the repository's sole software forge. The local Git repository is use
 The future primary runtime node is `asus-node`. No Mynyra backend is yet
 implemented, configured, or deployed there. The first ASUS proof must be the
 immutable offline replay described in `engine/docs/MYNYRA_OFFLINE_REPLAY.md`,
-not cTrader.
+not cTrader. The static Control Room service is installed only after that proof
+is accepted.
 
 The enabling plan must define the service boundary, Radicle source revision, configuration/secrets ownership, private network exposure, persistence, observability, health checks, deployment process, rollback, and the authorization for each live operation. It must also preserve the current ban on provider traffic, credentials, accounts, orders, and risk-limit changes until those capabilities receive their own explicit authority.
 

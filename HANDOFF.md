@@ -1,5 +1,33 @@
 # Codex Handoff — Mynyra Trade Control Room Foundation
 
+## 2026-08-26 provider-free release surface (active)
+
+- `MYNYRA_OFFLINE_ONLY=ON` is a structural CMake boundary. The
+  `mynyra-offline-release` and `mynyra-offline-asan` presets expose only
+  `tradebot_core_lib`, `mynyra_offline_replay`, and offline tests; they reject
+  all live/cTrader enablement and do not declare cTrader OAuth/provider targets
+  or `tradebot_core`.
+- `mynyra_offline_replay` is the release-only CLI. It self-hashes its resolved
+  executable, accepts only strict hash-pinned BACKTEST manifest/input/config
+  paths, enforces input and configuration limits, and atomically persists a
+  redacted deterministic result. It has no provider, broker, credential,
+  shell, process-launch, SSH, or network option.
+- Offline preset verification passed: release `2/2`; ASan/UBSan `2/2`. The
+  release binary SHA-256 was
+  `cab4c2dfa0cdbe90ca2de9a2e312ab79ff91dcb0934a79a3620e87bd7e5cdf02`.
+  Its only observed dynamic dependencies were macOS system C++/System libraries;
+  no cTrader/OAuth strings were present.
+- Full default validation passed `20/20`; full ASan/UBSan validation passed
+  `20/20`. `pnpm check` and the new loopback server test passed. Existing
+  warnings remain limited to unused `SSL_ERROR_NONE`, unused `totalPositioned`,
+  and the test-only `private` macro.
+- `server/index.ts` now binds only to `127.0.0.1`. The repository includes an
+  ASUS APPLY envelope at `ops/asus-cutover-apply.md`; it does not itself alter
+  ASUS, Node Control, Radicle, or any provider state.
+- No identity update, publication, sync, seed, ASUS filesystem change, service
+  installation, provider traffic, credential access, market-data request, or
+  order attempt has occurred in this source step.
+
 ## 2026-08-25 Mynyra Engine consolidation (active)
 
 - Branch: `codex/mynyra-engine-cutover`.

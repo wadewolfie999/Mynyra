@@ -295,6 +295,7 @@ OfflineRunResultV1 MynyraOfflineRunnerV1::run(
             && isLowerHexSha256(manifest.configSha256)
             && manifest.mode == SystemMode::BACKTEST
             && manifest.requestedResources.maxInputBytes > 0
+            && manifest.requestedResources.maxConfigBytes > 0
             && manifest.requestedResources.maxRecords > 0
             && manifest.requestedResources.maxRuntimeMilliseconds > 0
             && !manifest.providerAllowed && !manifest.ordersAllowed;
@@ -305,6 +306,7 @@ OfflineRunResultV1 MynyraOfflineRunnerV1::run(
             return finish(std::move(result), OfflineTerminalResultV1::EvidenceIncomplete, nullptr);
         }
         if (input.size() > manifest.requestedResources.maxInputBytes
+            || config.size() > manifest.requestedResources.maxConfigBytes
             || sha256HexV1(input) != manifest.inputSha256
             || sha256HexV1(config) != manifest.configSha256) {
             return finish(std::move(result), OfflineTerminalResultV1::InputRejected, eventSink);

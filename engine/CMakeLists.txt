@@ -22,6 +22,29 @@ option(TRADEBOT_ENABLE_LIVE_RUNTIME
 option(TRADEBOT_ENABLE_CTRADER_DEMO
     "Build the contained cTrader Demo-only Mynyra M1 runtime" OFF)
 
+option(TRADEBOT_ENABLE_CTRADER_GATE6
+    "Build the authorized local-only cTrader Gate 6 proof target" OFF)
+
+option(TRADEBOT_ENABLE_CTRADER_GATE7
+    "Build the authorized local-only cTrader Gate 7 market-data proof target" OFF)
+
+option(MYNYRA_OFFLINE_ONLY
+    "Build only the provider-free Mynyra offline replay release surface" OFF)
+
+if (MYNYRA_OFFLINE_ONLY)
+    foreach(MYNYRA_FORBIDDEN_OPTION
+            TRADEBOT_ENABLE_LIVE_RUNTIME
+            TRADEBOT_ENABLE_CTRADER_DEMO
+            TRADEBOT_ENABLE_CTRADER_GATE6
+            TRADEBOT_ENABLE_CTRADER_GATE7)
+        if (${MYNYRA_FORBIDDEN_OPTION})
+            message(FATAL_ERROR
+                "MYNYRA_OFFLINE_ONLY forbids ${MYNYRA_FORBIDDEN_OPTION}=ON")
+        endif()
+    endforeach()
+endif()
+
+if (NOT MYNYRA_OFFLINE_ONLY)
 # Provider-owned offline support remains separate from the core library. This
 # target contains no transport or runtime activation; it is shared only by
 # synthetic proof targets and the opt-in proof runtimes below.
@@ -31,8 +54,6 @@ target_include_directories(tradebot_ctrader_oauth PUBLIC include)
 
 # Gate 6 proof-only provider bindings. The exact compiler/runtime and pinned
 # schema hashes are part of the accepted Gate 1 provenance contract.
-option(TRADEBOT_ENABLE_CTRADER_GATE6
-    "Build the authorized local-only cTrader Gate 6 proof target" OFF)
 if (TRADEBOT_ENABLE_CTRADER_GATE6)
     if (NOT APPLE)
         message(FATAL_ERROR
@@ -120,8 +141,6 @@ endif()
 
 # Gate 7 is a separate, default-disabled provider proof. It intentionally has
 # its own targets so Gate 6 remains reproducible at its accepted boundary.
-option(TRADEBOT_ENABLE_CTRADER_GATE7
-    "Build the authorized local-only cTrader Gate 7 market-data proof target" OFF)
 if (TRADEBOT_ENABLE_CTRADER_GATE7)
     if (NOT APPLE)
         message(FATAL_ERROR
@@ -206,6 +225,7 @@ if (TRADEBOT_ENABLE_CTRADER_GATE7)
     add_executable(ctrader_gate7_proof src/ctrader_gate7_main.cpp)
     target_link_libraries(ctrader_gate7_proof PRIVATE ctrader_gate7_runtime)
 endif()
+endif()
 
 set(CORE_SOURCES
     src/FinancialMath.cpp
@@ -246,6 +266,27 @@ target_compile_definitions(tradebot_core_lib PUBLIC
     TRADEBOT_ENABLE_CTRADER_DEMO=$<BOOL:${TRADEBOT_ENABLE_CTRADER_DEMO}>)
 if (DL_LIB)
     target_link_libraries(tradebot_core_lib PUBLIC ${DL_LIB})
+endif()
+
+add_executable(mynyra_offline_replay src/mynyra_offline_replay_main.cpp)
+target_link_libraries(mynyra_offline_replay PRIVATE tradebot_core_lib)
+
+include(CTest)
+if (BUILD_TESTING)
+    add_executable(mynyra_offline_run_tests tests/mynyra_offline_run_tests.cpp)
+    target_link_libraries(mynyra_offline_run_tests PRIVATE tradebot_core_lib)
+    add_test(NAME mynyra_offline_run_tests COMMAND mynyra_offline_run_tests)
+
+    add_test(
+        NAME mynyra_offline_replay_cli
+        COMMAND ${CMAKE_COMMAND}
+            -DREPLAY_EXECUTABLE=$<TARGET_FILE:mynyra_offline_replay>
+            -DREPLAY_TEST_ROOT=${CMAKE_CURRENT_BINARY_DIR}/mynyra-offline-cli-test
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tests/mynyra_offline_replay_cli.cmake)
+endif()
+
+if (MYNYRA_OFFLINE_ONLY)
+    return()
 endif()
 
 # The provider seam depends on normalized core contracts, while core targets
@@ -379,7 +420,6 @@ elseif (MSVC)
     target_compile_options(apply_bbo_microbench PRIVATE /O2 /DNDEBUG)
 endif()
 
-include(CTest)
 if (BUILD_TESTING)
     add_executable(phase13_tests tests/phase13_tests.cpp)
     target_link_libraries(phase13_tests PRIVATE tradebot_core_lib)
@@ -461,10 +501,6 @@ if (BUILD_TESTING)
         tests/mynyra_demo_core_tests.cpp)
     target_link_libraries(mynyra_demo_core_tests PRIVATE tradebot_core_lib)
     add_test(NAME mynyra_demo_core_tests COMMAND mynyra_demo_core_tests)
-
-    add_executable(mynyra_offline_run_tests tests/mynyra_offline_run_tests.cpp)
-    target_link_libraries(mynyra_offline_run_tests PRIVATE tradebot_core_lib)
-    add_test(NAME mynyra_offline_run_tests COMMAND mynyra_offline_run_tests)
 
     add_test(
         NAME mynyra_demo_cli_containment
