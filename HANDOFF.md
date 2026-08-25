@@ -67,6 +67,28 @@
 - No ASUS filesystem/workload/service change, provider action, credential
   access, market-data request, or order attempt has occurred.
 
+## 2026-08-26 ASUS clone boundary (blocked)
+
+- Mac Radicle is running outbound-only and local canonical `main` was
+  advanced to `ba7be18481880a5d66b34c6557c836b5ebdc7e6b`; a bounded
+  `rad sync --announce --replicas 1 --timeout 30s` recorded an announcement
+  but produced no in-sync replica confirmation.
+- ASUS preflight confirmed 35 GiB free, pinned Node `v24.19.0`, pnpm `10.4.1`,
+  Radicle `1.10.1`, no listener on port `3100`, and intact reverse tunnels and
+  containerd. `tracker.service` was observed inactive; it was not repaired or
+  otherwise changed.
+- The unrelated clean ASUS checkout was atomically preserved at
+  `/home/wade/Mynyra-Trade-asus-rid-z2egmTZp-recovery-20260826`, retaining
+  HEAD `1b89945f1b5873d3fda16994e7a5c1f3c51368b1` and passing `git fsck`.
+  Rollback before a later clone is the inverse rename.
+- Fresh `rad clone` of `rad:z8UbC7ndwYy51BLeGuB5zBRWUuqW` into the freed
+  canonical path failed closed: four candidate seeds were found, but none
+  completed the required fetch. No partial checkout exists. ASUS consequently
+  still sees the prior identity and cannot attest the pending metadata
+  proposal. Do not add a listener, tunnel, second forge, or alternate source
+  transfer; resume only after a reachable Radicle replica is independently
+  verified.
+
 ## 2026-08-25 Mynyra Engine consolidation (active)
 
 - Branch: `codex/mynyra-engine-cutover`.
