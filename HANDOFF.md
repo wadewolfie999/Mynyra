@@ -21,6 +21,13 @@
   `20/20`. `pnpm check` and the new loopback server test passed. Existing
   warnings remain limited to unused `SSL_ERROR_NONE`, unused `totalPositioned`,
   and the test-only `private` macro.
+- Source revision: `2774c121025d9e8ccbc82e8d6aaec1be3a477dff`; source-tree
+  SHA-256: `6c42adc35521bdba6a34d8fad961f55377865e3f`. The offline CLI test
+  covers repeatability, manifest/input tampering, malformed fields, resource
+  exhaustion, and refusal to overwrite an output location. Cancellation,
+  timeout, and incomplete-event-evidence are exercised through the engine
+  contract test because the release CLI intentionally exposes no test or
+  event-injection interface.
 - `server/index.ts` now binds only to `127.0.0.1`. The repository includes an
   ASUS APPLY envelope at `ops/asus-cutover-apply.md`; it does not itself alter
   ASUS, Node Control, Radicle, or any provider state.
