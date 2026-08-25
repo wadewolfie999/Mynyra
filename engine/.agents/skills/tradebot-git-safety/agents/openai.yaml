@@ -1,0 +1,4 @@
+interface:
+  display_name: "TradeBot Git Safety"
+  short_description: "Safe Git and artifact-evidence governance for TradeBot"
+  default_prompt: "Use $tradebot-git-safety to inspect TradeBot Git state, authorization, staged scope, and evidence epoch before edits, commits, exact-artifact verification, or handoff."

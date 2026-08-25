@@ -1,0 +1,219 @@
+# TradeBot Configuration
+
+## Purpose And Authority
+
+- Purpose: document verified runtime configuration, modes, flags, env vars, and output paths.
+- Authority level: configuration reference below architecture and risk policy.
+- Audience: operator, Codex, maintainers, testers, and contributors.
+
+## Verified Runtime Modes
+
+`SystemConfig` defines:
+
+- `BACKTEST`: deterministic CSV replay; default.
+- `PAPER`: local live-like data simulation with deterministic broker execution.
+- `DEMO`: default-off cTrader Demo-only XAUUSD/M1 market-data and
+  commissioning runtime. Without `--commission-demo-order`, it is read-only.
+- `LIVE`: legacy live-capable market-data path; unavailable in the default
+  build and still fail-closed at the broker boundary without a separately
+  approved adapter.
+
+`parseModeFlag` accepts the lowercase or uppercase forms of `backtest`,
+`paper`, `demo`, and `live`. Any other value is rejected; it is never silently
+downgraded to `BACKTEST`.
+
+## Verified CLI Flags
+
+`src/main.cpp` handles:
+
+```sh
+build/tradebot_core --mode backtest <csv-files>
+build/tradebot_core --mode paper <csv-files>
+build/tradebot_core --resume data/results/snapshot.json <csv-files>
+```
+
+The cTrader Demo candidate is excluded unless explicitly compiled:
+
+```sh
+cmake -S . -B build/mynyra-demo -DTRADEBOT_ENABLE_CTRADER_DEMO=ON
+cmake --build build/mynyra-demo --target tradebot_core
+build/mynyra-demo/tradebot_core \
+  --mode demo \
+  --provider ctrader \
+  --symbol XAUUSD \
+  --timeframe M1
+```
+
+The command above is read-only. The separately authorized one-shot
+commissioning form adds `--commission-demo-order`; `--fresh-oauth` deliberately
+bypasses the stored token and starts the fixed trading-scope browser flow.
+Normal startup uses a valid stored token or exactly one refresh and never opens
+a browser silently.
+
+DEMO rejects CSV arguments, `--resume`, `--endpoint`, `--account`, `--volume`,
+unsupported providers/symbols/timeframes, and any cTrader account whose
+`isLive` value is absent or not explicitly false. Only `XAUUSD` and `M1` are
+accepted for M1. The provider endpoint, account predicate, and order volume
+cannot be overridden.
+
+The normal/default build rejects `--mode demo` and `--mode live` before
+opening input files, reading credentials, or starting network transport. The
+legacy live-capable path has two technical containment gates:
+
+```sh
+cmake -S . -B build/live-contained -DTRADEBOT_ENABLE_LIVE_RUNTIME=ON
+cmake --build build/live-contained --target tradebot_core
+build/live-contained/tradebot_core --mode live --unlock-live-runtime <csv-files>
+```
+
+These commands document the mechanism; they are not authorized operational
+instructions. The build option and CLI flag must both be present, and neither
+is provider, credential, order, deployment, or live-trading authorization.
+
+If no file arguments are supplied, the program falls back to `data/BTCUSDT-15.csv`. That file was not present in the verified tracked tree.
+
+## Credential Configuration
+
+`SystemConfig` defaults:
+
+- API key env name: `AIIO_API_KEY`
+- API secret env name: `AIIO_API_SECRET`
+
+Credentials may also be held in `SystemConfig` fields for explicit consumers.
+The WP-0 `LiveDataAdapter` no longer consumes those fields or constructs signed
+or provider-specific REST requests. Do not hardcode or document values.
+
+### cTrader Open API Gate 5 Names
+
+- Client ID name: `TRADEBOT_CTRADER_CLIENT_ID` (identifier, not a secret).
+- Client secret: macOS Keychain service
+  `TradeBot.cTraderOpenApi.client-secret`.
+- Gate 6 `trading` token envelope: macOS Keychain service
+  `TradeBot.cTraderOpenApi.tokens.trading`.
+
+There are no client-secret, authorization-code, access-token, refresh-token,
+account-ID, endpoint, port, or scope environment variables. `.env.example`
+contains one clearly invalid client-ID placeholder only.
+
+Gate 5/6 fixed values, which the opt-in proof rejects attempts to override:
+
+- Redirect URI: `http://127.0.0.1:18080/ctrader/oauth/callback`.
+- OAuth scope: `trading`, explicitly authorized by Wade for Gate 6 on
+  2026-08-10. The fixed outbound message allowlist still excludes every
+  trading, order, position, symbol, and market-data request.
+- Open API host: `demo.ctraderapi.com`.
+- Open API port/transport: `5035`, Protobuf over strict TLS/TCP.
+
+A live hostname and runtime endpoint or scope selection are not valid Gate 6
+configuration. The `trading` scope is fixed rather than configurable.
+
+### Mynyra Demo M1 Credential And Transport Configuration
+
+The M1 runtime reuses the same names without adding another credential source:
+
+- `TRADEBOT_CTRADER_CLIENT_ID` supplies only the public application identifier.
+- Keychain service `TradeBot.cTraderOpenApi.client-secret` supplies the client
+  secret.
+- Keychain service `TradeBot.cTraderOpenApi.tokens.trading` supplies and
+  receives the atomically replaced token envelope. A refreshed or freshly
+  authorized token is not persisted until cTrader application authentication,
+  token-owned account discovery, Demo account authentication, and full-access
+  trader validation succeed.
+
+The runtime never parses a credential `.env` file or a base64-encoded copy.
+There are no secret, token, endpoint, account, volume, or scope environment
+variables. Its only message endpoint is `demo.ctraderapi.com:5035`; the fixed
+loopback OAuth callback remains
+`http://127.0.0.1:18080/ctrader/oauth/callback` and the fixed scope is
+`trading`. After a correlated callback, the listener serves a bounded clean
+completion page at `/ctrader/oauth/complete` so the authorization code is not
+left in the visible browser URL.
+
+### Gate 6 Opt-In Proof Target
+
+The Gate 6 proof is excluded from normal builds unless explicitly enabled:
+
+```sh
+cmake -S . -B build/gate6 -DTRADEBOT_ENABLE_CTRADER_GATE6=ON
+cmake --build build/gate6 --target ctrader_gate6_proof
+```
+
+`ctrader_gate6_proof --preflight-only` checks only that the client-ID name and
+Keychain client-secret item are available, emits fixed categories, and exits
+before opening a browser or contacting a provider. It accepts no endpoint,
+scope, account, credential, token, or identifier argument. The normal proof
+target is authorized only under the active Gate 6 directive and must not be run
+until the credential and redirect prerequisites are remediated.
+
+### Gate 7 Opt-In Proof Target
+
+The Gate 7 target is separate from Gate 6, default-disabled, macOS-only, and
+detached from `SystemConfig`, `BACKTEST`, `PAPER`, `LIVE`, `BrokerGateway`,
+`LiveDataAdapter`, `ExecutionEngine`, and `RiskEngine`:
+
+```sh
+cmake -S . -B build/gate7 -DTRADEBOT_ENABLE_CTRADER_GATE7=ON
+cmake --build build/gate7 --target ctrader_gate7_proof
+build/gate7/ctrader_gate7_proof --preflight
+```
+
+It represents only the fixed demo endpoint `demo.ctraderapi.com:5035`, the
+fixed loopback callback, and the `trading` scope. The outbound allowlist is
+limited to heartbeat, application authentication, fresh account discovery,
+account authentication, non-archived symbol discovery, full-symbol lookup,
+one-symbol spot subscription/unsubscription, and required fixed error flows.
+It cannot construct order, position, depth, trendbar, historical-data, or
+reconnect payloads. `--preflight` is presence-only and must exit before browser
+or provider traffic.
+
+## Network Defaults
+
+`SystemConfig` contains default endpoint strings:
+
+- WSS endpoint: `wss://stream.example.com/ws`
+- REST endpoint: `https://api.example.com`
+
+These defaults are not live authorization.
+
+## Risk Configuration
+
+Verified defaults include:
+
+- `latencyMaxMs`: `500`
+- `errorRateThresh`: `5`
+- `atrScaleUpThreshold`: `1.5`
+- `varScaleLowVolFactor`: `1.0`
+- `varScaleHighVolFactor`: `0.5`
+
+Financial limit changes require operator approval.
+
+## Output Paths
+
+- Analytics default: `data/results`.
+- Snapshot default: `data/results/snapshot.json`.
+- Throughput report: `data/results/latency_report.csv`.
+- Phase 18 burn-in report: `data/results/phase18_burnin_latency.csv`.
+- Phase 18 default replay path: `data/historical/BTCUSDT-L2-1M.bin`.
+- Mynyra Demo evidence:
+  `output/mynyra-demo/<session-id>.ndjson`.
+
+Generated outputs are ignored by Git unless intentionally versioned.
+`--resume data/results/snapshot.json` accepts only the governed default path and
+a canonical version-13 BACKTEST snapshot. Financial fields use signed scale-8
+integer units. Other paths are rejected before file
+or runtime setup. PAPER, DEMO, and LIVE resume are rejected because external order
+lifecycle and reconciliation state is not yet restart-safe. Snapshot version
+migration is explicit; earlier versions, including version 12, are not loaded
+automatically.
+
+## Configuration Change Rules
+
+Configuration changes require documentation updates when they affect:
+
+- Runtime modes.
+- CLI flags.
+- Env var names.
+- Output paths.
+- Risk thresholds.
+- Credential behavior.
+- Live-capable network behavior.

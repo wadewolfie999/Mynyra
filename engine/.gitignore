@@ -1,0 +1,54 @@
+# macOS
+.DS_Store
+
+# Build directories
+build/
+cmake-build-*/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+compile_commands.json
+
+# Compiled binaries/libraries
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.exe
+
+# Logs
+*.log
+
+# Local credentials and secret-bearing configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+config/local/
+
+# Testing
+Testing/
+
+# Generated state, market-data caches, reports, and operator evidence.
+# Intentional fixtures elsewhere (for example data/samples/*.csv) remain
+# visible to source control.
+data/results/
+data/archive/
+data/historical/
+output/
+handoff/
+handoffs/
+artifacts/
+
+# IDE/editor
+.vscode/
+.idea/
+
+# Temporary
+tmp/

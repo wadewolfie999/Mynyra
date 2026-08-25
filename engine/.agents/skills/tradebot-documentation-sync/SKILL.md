@@ -1,0 +1,122 @@
+---
+name: tradebot-documentation-sync
+description: Keep TradeBot documentation synchronized with source behavior, architecture, risk policy, tests, roadmap, and skills. Use after behavior, architecture, risk, test command, data schema, skill, or governance edits.
+---
+# tradebot-documentation-sync
+
+## Purpose
+
+Keep TradeBot documentation synchronized with source behavior, architecture, risk policy, tests, roadmap, and skills.
+
+## Shared Operating Contract
+
+- Follow `AGENTS.md` and `docs/CODEX_EXECUTION_EVIDENCE.md`.
+- Resolve volatile branch, phase, gate, provider, and approval facts from Git,
+  the active plan, `PROJECT_STATE.md`, and `ROADMAP.md`.
+- Keep authorization and evidence epochs separate and stop at the exact
+  operator-approved boundary.
+
+## Activation Conditions
+
+Use after behavior changes, architecture changes, risk changes, test command changes, data/schema changes, new skills, or governance edits.
+
+## Invocation Order
+
+Run `tradebot-authority-state-audit` first when current phase, ADR status, branch/commit state, approval state, or roadmap state may be stale or uncertain.
+
+## Must Not Be Used
+
+Do not use to invent facts, hide uncertainty, or replace ADRs with ordinary documentation.
+
+## Required Inputs
+
+- Changed behavior or docs.
+- Affected authority documents.
+- Verification evidence.
+
+## Required Repository Inspection
+
+Read:
+
+- `AGENTS.md`
+- `docs/README.md`
+- `docs/PROJECT_STATE.md`
+- `docs/ARCHITECTURE.md`
+- `docs/RISK_POLICY.md`
+- Relevant ADRs and affected skills.
+
+Run:
+
+```sh
+find docs -maxdepth 3 -type f -print | sort
+find .agents/skills -name SKILL.md -print | sort
+```
+
+## Procedure
+
+1. Identify authoritative source for each fact. If current-state evidence is uncertain, stop and run `tradebot-authority-state-audit` before editing.
+2. Update only documents whose authority boundary is affected.
+3. Update `docs/README.md` when documents are added or removed.
+4. Update `PROJECT_STATE.md` only for current state.
+5. Keep historical process detail in plans, commits, PRs, and handoffs; do not
+   copy it into current-state or skill procedure as volatile authority.
+6. Update `docs/CODEX_EXECUTION_EVIDENCE.md` only for reusable procedure, not a
+   task-specific branch, hash, gate result, or approval snapshot.
+7. Create or update ADRs for durable decisions.
+8. Validate every changed skill and scan skills for stale phase/gate assertions.
+9. Run documentation audit commands.
+
+## Related Skills
+
+- Use `tradebot-adr-review` before ADR status or ADR index changes.
+- Use `tradebot-phase-gate-audit` before phase/gate or provider/broker-dependent status changes.
+- Use `tradebot-pr-readiness-review` after documentation sync when preparing PR handoff.
+
+## Allowed Mutations
+
+Markdown docs, ADR templates/indexes, and skill docs within assigned scope.
+
+## Prohibited Mutations
+
+No source edits, generated-output edits, credential edits, live behavior, commits, or pushes.
+
+## Verification Commands
+
+```sh
+git diff --check
+find docs -maxdepth 3 -type f -print | sort
+find .agents/skills -name SKILL.md -print | sort
+grep -RInE 'TO''DO|TB''D|FIX''ME|PLACE''HOLDER|example ''only' AGENTS.md PLANS.md CONTRIBUTING.md docs .agents 2>/dev/null || true
+grep -RInE 'live trading|live-trading|real order|API key|credential|secret' AGENTS.md PLANS.md CONTRIBUTING.md docs .agents 2>/dev/null || true
+```
+
+Also run the installed `skill-creator/scripts/quick_validate.py` once for each
+changed skill directory and record the resolved validator path.
+
+## Expected Outputs
+
+- Docs updated.
+- Authority conflicts resolved or reported.
+- Audit command results.
+- Remaining uncertainty.
+- Skill validation and stale-state scan results.
+
+## Failure Behavior
+
+If documents conflict on a safety-sensitive fact, stop and escalate instead of choosing silently.
+
+## Reporting Format
+
+```markdown
+## Documentation Sync
+- Documents changed:
+- Authority conflicts:
+- Audit results:
+- Remaining uncertainty:
+```
+
+## Authority Documents
+
+- `docs/README.md`
+- `docs/decisions/README.md`
+- `docs/WORKFLOW.md`

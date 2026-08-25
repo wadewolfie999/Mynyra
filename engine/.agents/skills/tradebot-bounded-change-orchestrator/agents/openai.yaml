@@ -1,0 +1,4 @@
+interface:
+  display_name: "TradeBot Bounded Change Orchestrator"
+  short_description: "Run bounded offline TradeBot changes safely"
+  default_prompt: "Use $tradebot-bounded-change-orchestrator to implement and verify this scoped offline TradeBot change."

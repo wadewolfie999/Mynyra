@@ -1,0 +1,106 @@
+name: TradeBot Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  governance:
+    name: Automation and offline-policy governance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate skills and workflow guardrails
+        run: python3 scripts/validate_automation.py
+
+      - name: Validate shell syntax
+        run: bash -n scripts/*.sh .githooks/pre-push
+
+      - name: Enforce offline policy
+        run: ./scripts/ci_policy_checks.sh
+
+  validate:
+    name: validate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CC: gcc
+      CXX: g++
+      TRADEBOT_BUILD_JOBS: "2"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure, build, and test with GCC
+        run: ./scripts/ci_validate.sh build/ci-validation
+
+      - name: Upload failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: validation-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/ci-validation/CMakeFiles/CMakeConfigureLog.yaml
+            build/ci-validation/Testing/Temporary/LastTest.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Summarize offline boundary
+        if: always()
+        run: |
+          {
+            echo "### TradeBot required GCC validation"
+            echo "- Provider proof targets: disabled"
+            echo "- Credentials and repository secrets: unused"
+            echo "- CTest execution: sequential"
+            echo "- This result does not authorize release, deployment, orders, or live trading."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  clang:
+    name: C++20 clang
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CC: clang
+      CXX: clang++
+      TRADEBOT_BUILD_JOBS: "2"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure, build, and test with Clang
+        run: ./scripts/ci_validate.sh build/ci-clang
+
+  sanitizers:
+    name: ASan and UBSan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      TRADEBOT_BUILD_JOBS: "2"
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Configure, build, and test with sanitizers
+        run: ./scripts/ci_deep_validate.sh build/ci-sanitizers
