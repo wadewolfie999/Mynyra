@@ -28,6 +28,13 @@
   timeout, and incomplete-event-evidence are exercised through the engine
   contract test because the release CLI intentionally exposes no test or
   event-injection interface.
+- Recovery bundle for the verified source boundary:
+  `/Users/vaheedgorgeen/Archives/Mynyra-Trade/mynyra-engine-cutover-7d1fea9.bundle`
+  (SHA-256 `de896461fe1c8e1711f30cec5f8faa947690c9d821c0d0ea6043f89a4f3b1e7e`).
+  `git bundle verify` confirmed complete history and a fresh bundle clone
+  resolved `refs/remotes/origin/codex/mynyra-engine-cutover` to
+  `7d1fea9c6ce0c6b3aee7f0e8b4b4cea885c5e1ed`; `git fsck --no-dangling`
+  passed.
 - `server/index.ts` now binds only to `127.0.0.1`. The repository includes an
   ASUS APPLY envelope at `ops/asus-cutover-apply.md`; it does not itself alter
   ASUS, Node Control, Radicle, or any provider state.
