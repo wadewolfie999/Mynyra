@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -58,8 +59,17 @@ struct Decimal64 {
                 break;
             case DecimalRounding::RejectUnaligned:
                 rounded = std::round(scaled);
-                if (std::fabs(scaled - rounded) > 1e-9L) {
-                    return std::nullopt;
+                {
+                    const long double representationTolerance = std::max(
+                        1e-7L,
+                        std::fabs(scaled)
+                            * static_cast<long double>(
+                                std::numeric_limits<double>::epsilon())
+                            * 2.0L);
+                    if (std::fabs(scaled - rounded)
+                        > representationTolerance) {
+                        return std::nullopt;
+                    }
                 }
                 break;
             case DecimalRounding::NearestTiesAwayFromZero:

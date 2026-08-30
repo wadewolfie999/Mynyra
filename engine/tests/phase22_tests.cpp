@@ -65,6 +65,14 @@ void testDecimal64()
     require(std::fabs(value->toDouble() - 12.35) < 1e-12,
             "Decimal64 roundtrip mismatch");
 
+    const Decimal64 portfolioQuantity{99'990'001'000, 8};
+    const auto recoveredQuantity = Decimal64::fromDouble(
+        portfolioQuantity.toDouble(), portfolioQuantity.scale,
+        DecimalRounding::RejectUnaligned);
+    require(recoveredQuantity.has_value()
+                && *recoveredQuantity == portfolioQuantity,
+            "valid scale-8 fixed-point roundtrip should recover exact units");
+
     require(!Decimal64::fromDouble(12.345, 2,
                                    DecimalRounding::RejectUnaligned).has_value(),
             "unaligned decimal should be rejected");
