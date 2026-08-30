@@ -40,12 +40,14 @@ jobs:
 
       - name: Build default-off core
         run: |
-          cmake -S . -B build/codeql \
+          engine_root="."
+          if [[ -f engine/CMakeLists.txt ]]; then engine_root="engine"; fi
+          cmake -S "$engine_root" -B "$engine_root/build/codeql" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
             -DTRADEBOT_ENABLE_LIVE_RUNTIME=OFF \
             -DTRADEBOT_ENABLE_CTRADER_GATE6=OFF \
             -DTRADEBOT_ENABLE_CTRADER_GATE7=OFF
-          cmake --build build/codeql --parallel 2
+          cmake --build "$engine_root/build/codeql" --parallel 2
 
       - name: Analyze
         uses: github/codeql-action/analyze@5595ccaf912efad79be6eef63a5619ff05969be3 # v4.37.6
