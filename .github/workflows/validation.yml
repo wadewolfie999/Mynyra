@@ -1,4 +1,4 @@
-name: TradeBot Validation
+name: Mynyra Validation
 
 on:
   push:
@@ -26,13 +26,22 @@ jobs:
           persist-credentials: false
 
       - name: Validate skills and workflow guardrails
-        run: python3 scripts/validate_automation.py
+        run: |
+          engine_root="."
+          if [[ -f engine/CMakeLists.txt ]]; then engine_root="engine"; fi
+          python3 "$engine_root/scripts/validate_automation.py"
 
       - name: Validate shell syntax
-        run: bash -n scripts/*.sh .githooks/pre-push
+        run: |
+          engine_root="."
+          if [[ -f engine/CMakeLists.txt ]]; then engine_root="engine"; fi
+          bash -n "$engine_root"/scripts/*.sh "$engine_root"/.githooks/pre-push
 
       - name: Enforce offline policy
-        run: ./scripts/ci_policy_checks.sh
+        run: |
+          engine_root="."
+          if [[ -f engine/CMakeLists.txt ]]; then engine_root="engine"; fi
+          (cd "$engine_root" && ./scripts/ci_policy_checks.sh)
 
   validate:
     name: validate
@@ -49,7 +58,10 @@ jobs:
           persist-credentials: false
 
       - name: Configure, build, and test with GCC
-        run: ./scripts/ci_validate.sh build/ci-validation
+        run: |
+          engine_root="."
+          if [[ -f engine/CMakeLists.txt ]]; then engine_root="engine"; fi
+          (cd "$engine_root" && ./scripts/ci_validate.sh build/ci-validation)
 
       - name: Upload failure diagnostics
         if: failure()
@@ -59,6 +71,8 @@ jobs:
           path: |
             build/ci-validation/CMakeFiles/CMakeConfigureLog.yaml
             build/ci-validation/Testing/Temporary/LastTest.log
+            engine/build/ci-validation/CMakeFiles/CMakeConfigureLog.yaml
+            engine/build/ci-validation/Testing/Temporary/LastTest.log
           if-no-files-found: ignore
           retention-days: 7
 
@@ -66,7 +80,7 @@ jobs:
         if: always()
         run: |
           {
-            echo "### TradeBot required GCC validation"
+            echo "### Mynyra required GCC validation"
             echo "- Provider proof targets: disabled"
             echo "- Credentials and repository secrets: unused"
             echo "- CTest execution: sequential"
@@ -88,7 +102,10 @@ jobs:
           persist-credentials: false
 
       - name: Configure, build, and test with Clang
-        run: ./scripts/ci_validate.sh build/ci-clang
+        run: |
+          engine_root="."
+          if [[ -f engine/CMakeLists.txt ]]; then engine_root="engine"; fi
+          (cd "$engine_root" && ./scripts/ci_validate.sh build/ci-clang)
 
   sanitizers:
     name: ASan and UBSan
@@ -103,4 +120,49 @@ jobs:
           persist-credentials: false
 
       - name: Configure, build, and test with sanitizers
-        run: ./scripts/ci_deep_validate.sh build/ci-sanitizers
+        run: |
+          engine_root="."
+          if [[ -f engine/CMakeLists.txt ]]; then engine_root="engine"; fi
+          (cd "$engine_root" && ./scripts/ci_deep_validate.sh build/ci-sanitizers)
+
+  frontend:
+    name: Frontend type, build, and server checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Detect frontend workspace
+        id: frontend
+        run: |
+          if [[ -f package.json ]]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.frontend.outputs.enabled == 'true'
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable repository package manager
+        if: steps.frontend.outputs.enabled == 'true'
+        run: corepack enable
+
+      - name: Install locked dependencies
+        if: steps.frontend.outputs.enabled == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check frontend
+        if: steps.frontend.outputs.enabled == 'true'
+        run: pnpm check
+
+      - name: Build and test loopback server
+        if: steps.frontend.outputs.enabled == 'true'
+        run: pnpm test:server
