@@ -11,8 +11,13 @@ provider authority.
 | P1 | Bigi's GitHub identity mapping is not confirmed in repository governance | Wade confirms whether `mehdibeigiii` is Bigi and assigns the first bounded task. |
 | P1 | UI has no read-only engine evidence integration | Approved evidence model/API with provenance, epoch, unavailable state, authentication, deployment, tests, and rollback. |
 | P1 | Process-crash recovery and persistent Demo ledger qualification remain outside M1 | Reviewed persistence/recovery design and failure-path tests before any further commissioning. |
-| P2 | Two legacy compiler warnings remain in default builds | Remove unused `SSL_ERROR_NONE` and `totalPositioned` after focused behavior review. |
+| P2 | `SSL_ERROR_NONE` remains source-proven unused, but the ASUS deployment revision is unverified | Recover the canonical Node Control inventory, identify the deployed source/binary revision, then remove the declaration after confirming the current TLS success path. |
 | P2 | Historical terminology remains in archived and gate documents | Leave archives immutable in meaning; update only active references when they cause operational ambiguity. |
 
 The frozen pre-cleanup backlog is preserved under
 `archive/state/RESIDUAL_GAPS_BACKLOG-through-2026-08-30.md`.
+
+The unused `totalPositioned` accumulator was removed without changing the
+current total-equity normalization behavior. Its possible invested-capital
+normalization semantics are retained only as a dormant historical proposal in
+`archive/design-notes/2026-08-31-invested-capital-var-normalization.md`.

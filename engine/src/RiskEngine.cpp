@@ -516,11 +516,9 @@ void RiskEngine::updateDiversifiedVaR(double totalEquity) noexcept
 
     // Build weight vector w_i = positionValue_i / totalEquity.
     std::vector<double> w(N, 0.0);
-    double totalPositioned = 0.0;
     for (std::size_t i = 0; i < N; ++i) {
         const double pv = m_assetStates.at(m_assetOrder[i]).positionValue;
         w[i]            = pv;
-        totalPositioned += pv;
     }
     // Normalise weights against total equity (includes cash).
     for (std::size_t i = 0; i < N; ++i) {
