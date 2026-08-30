@@ -1,0 +1,715 @@
+#include "RiskEngine.hpp"
+#include "PortfolioManager.hpp"
+#include "SystemConfig.hpp"
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <numeric>
+#include <iterator>
+#include <limits>
+
+namespace {
+
+bool decimalEqual(Decimal64 left, Decimal64 right) noexcept
+{
+    while (left.scale < right.scale) {
+        if (left.units > std::numeric_limits<std::int64_t>::max() / 10
+            || left.units < std::numeric_limits<std::int64_t>::min() / 10) {
+            return false;
+        }
+        left.units *= 10;
+        ++left.scale;
+    }
+    while (right.scale < left.scale) {
+        if (right.units > std::numeric_limits<std::int64_t>::max() / 10
+            || right.units < std::numeric_limits<std::int64_t>::min() / 10) {
+            return false;
+        }
+        right.units *= 10;
+        ++right.scale;
+    }
+    return left.units == right.units;
+}
+
+bool quantityAligned(Decimal64 quantity, Decimal64 step) noexcept
+{
+    if (!quantity.isPositive() || !step.isPositive()) return false;
+    while (quantity.scale < step.scale) {
+        if (quantity.units > std::numeric_limits<std::int64_t>::max() / 10) {
+            return false;
+        }
+        quantity.units *= 10;
+        ++quantity.scale;
+    }
+    while (step.scale < quantity.scale) {
+        if (step.units > std::numeric_limits<std::int64_t>::max() / 10) {
+            return false;
+        }
+        step.units *= 10;
+        ++step.scale;
+    }
+    return step.units > 0 && quantity.units % step.units == 0;
+}
+
+RiskDecision rejectExact(std::string reason,
+                         RuleBreachAction action = RuleBreachAction::Halt,
+                         FailureCategory failure = FailureCategory::Validation)
+{
+    RiskDecision decision;
+    decision.allowed = false;
+    decision.riskIncreasing = true;
+    decision.failure = failure;
+    decision.action = action;
+    decision.reason = std::move(reason);
+    return decision;
+}
+
+} // namespace
+
+RiskEngine::RiskEngine(const PortfolioManager& portfolio,
+                       std::size_t maxConcurrentPositions,
+                       double      varLimitFraction,
+                       std::size_t varWindow) noexcept
+    : m_portfolio(portfolio)
+    , m_maxConcurrentPositions(maxConcurrentPositions)
+    , m_varLimitFraction(varLimitFraction)
+    , m_varWindow(varWindow)
+{}
+
+bool RiskEngine::canTrade() const noexcept
+{
+    // Phase 12: circuit breakers take highest priority.
+    if (m_halted.load())    { return false; }
+    if (m_closeOnly.load()) { return false; }
+
+    if (m_totalDrawdown >= MAX_TOTAL_DRAWDOWN) { return false; }
+    if (m_dailyDrawdown >= MAX_DAILY_DRAWDOWN)  { return false; }
+
+    // Use adaptive effective position cap (may be scaled down during high vol).
+    const std::size_t positionCap = (m_effectiveMaxPositions > 0)
+                                    ? m_effectiveMaxPositions
+                                    : m_maxConcurrentPositions;
+    if (positionCap > 0 &&
+        m_portfolio.getOpenPositionCount() >= positionCap) {
+        return false;
+    }
+    // VaR gate: use adaptive effective VaR limit fraction.
+    const double varLimit = (m_effectiveVarLimit > 0.0) ? m_effectiveVarLimit
+                                                        : m_varLimitFraction;
+    if (varLimit > 0.0 && m_currentVaR95 > 0.0) {
+        const double equity = m_portfolio.getTotalEquity();
+        if (equity > 0.0 && m_currentVaR95 > equity * varLimit) {
+            return false;
+        }
+    }
+    return true;
+}
+
+RiskDecision RiskEngine::evaluateOrder(OrderSide side) const noexcept
+{
+    RiskDecision decision;
+    decision.riskIncreasing = side == OrderSide::Buy;
+    decision.allowed = !decision.riskIncreasing || canTrade();
+    decision.action = decision.allowed ? RuleBreachAction::Warn
+                                       : RuleBreachAction::Halt;
+    if (decision.allowed) {
+        decision.reason = decision.riskIncreasing
+            ? "RiskEngine accepted new exposure"
+            : "RiskEngine accepted position reduction";
+    } else {
+        decision.failure = FailureCategory::Validation;
+        decision.reason = "RiskEngine rejected new exposure";
+    }
+    return decision;
+}
+
+RiskDecision RiskEngine::evaluateOrder(
+    const OrderIntent& intent, const OrderRiskContext& context) const noexcept
+{
+    const bool opening = intent.effect == PositionEffect::Open;
+    const auto reject = [opening](std::string reason,
+                                  RuleBreachAction action = RuleBreachAction::Halt,
+                                  FailureCategory failure = FailureCategory::Validation) {
+        auto decision = rejectExact(std::move(reason), action, failure);
+        decision.riskIncreasing = opening;
+        return decision;
+    };
+
+    if (intent.canonicalSymbol.empty() || !intent.exactQuantity.isPositive()
+        || !intent.referencePrice.isPositive()) {
+        return reject("exact intent is malformed");
+    }
+    if (!context.account.complete || !context.instrument.complete
+        || !context.reconciliation.complete
+        || context.reconciliation.status != ReconciliationStatus::Matched
+        || !context.sameGeneration || context.connectionGeneration == 0
+        || context.reconciliation.connectionGeneration
+               != context.connectionGeneration
+        || context.instrumentVersion == 0
+        || context.instrument.version != context.instrumentVersion
+        || context.reconciliation.account.snapshotVersion
+               != context.account.snapshotVersion) {
+        return reject("risk evidence is incomplete or mixed-generation",
+                      RuleBreachAction::ReadOnly,
+                      FailureCategory::ReconciliationMismatch);
+    }
+    constexpr std::uint64_t maximumSnapshotAgeNs = 5'000'000'000ULL;
+    const auto freshAtEvaluation = [&context](std::uint64_t timestamp) {
+        return timestamp > 0
+            && context.evaluationTimestampNs >= timestamp
+            && context.evaluationTimestampNs - timestamp
+                   <= maximumSnapshotAgeNs;
+    };
+    if (context.evaluationTimestampNs == 0
+        || !freshAtEvaluation(context.account.sourceTimestampNs)
+        || !freshAtEvaluation(context.account.ingestionTimestampNs)
+        || !freshAtEvaluation(context.reconciliation.timestampNs)) {
+        return reject("account or reconciliation evidence is stale",
+                      RuleBreachAction::ReadOnly,
+                      FailureCategory::StaleData);
+    }
+    if (context.instrument.canonicalSymbol != intent.canonicalSymbol
+        || !context.instrument.tradingEnabled) {
+        return reject("instrument is not commissionable");
+    }
+
+    const double quantity = intent.exactQuantity.toDouble();
+    const double minimum = context.instrument.minimumQuantity.toDouble();
+    const double maximum = context.instrument.maximumQuantity.toDouble();
+    if (!std::isfinite(quantity) || !std::isfinite(maximum)
+        || quantity <= 0.0 || quantity > maximum) {
+        return reject("exact quantity violates the instrument maximum");
+    }
+
+    if (!opening) {
+        if (!intent.logicalPositionId.has_value()
+            || intent.logicalPositionId->empty()) {
+            return reject("risk-reducing intent lacks reconciled position identity",
+                          RuleBreachAction::CloseOnly);
+        }
+        const auto position = std::find_if(
+            context.reconciliation.positions.begin(),
+            context.reconciliation.positions.end(),
+            [&intent](const PositionSnapshot& candidate) {
+                return candidate.logicalPositionId == *intent.logicalPositionId;
+            });
+        if (position == context.reconciliation.positions.end()
+            || position->canonicalSymbol != intent.canonicalSymbol
+            || position->side != intent.side
+            || position->quantity.scale != intent.exactQuantity.scale
+            || position->quantity.units < intent.exactQuantity.units) {
+            return reject("risk-reducing quantity does not match reconciliation",
+                          RuleBreachAction::CloseOnly,
+                          FailureCategory::ReconciliationMismatch);
+        }
+        RiskDecision accepted;
+        accepted.allowed = true;
+        accepted.riskIncreasing = false;
+        accepted.action = RuleBreachAction::CloseOnly;
+        accepted.reason = "RiskEngine accepted reconciled exposure reduction";
+        return accepted;
+    }
+
+    if (!std::isfinite(minimum) || quantity < minimum
+        || !quantityAligned(intent.exactQuantity,
+                            context.instrument.quantityStep)) {
+        return reject("opening quantity violates instrument limits");
+    }
+
+    if ((intent.side == PositionSide::Long
+         && !context.instrument.supportsLong)
+        || (intent.side == PositionSide::Short
+            && !context.instrument.supportsShort)) {
+        return reject("instrument does not support the requested direction");
+    }
+    if (!decimalEqual(intent.exactQuantity,
+                      context.instrument.minimumQuantity)) {
+        return reject("DEMO commissioning requires exact minimum quantity");
+    }
+    const Decimal64 expectedReference = intent.side == PositionSide::Long
+        ? context.ask : context.bid;
+    if (!decimalEqual(intent.referencePrice, expectedReference)
+        || !context.expectedMarginSide.has_value()
+        || *context.expectedMarginSide != intent.side) {
+        return reject("price or expected-margin direction is not bound to intent");
+    }
+    if (!context.reconciliation.positions.empty()
+        || context.reconciliation.pendingOrderCount != 0
+        || !context.reconciliation.orderStates.empty()
+        || !context.grossExposure.isZero()) {
+        return reject("DEMO account is not empty", RuleBreachAction::ReadOnly,
+                      FailureCategory::ReconciliationMismatch);
+    }
+    constexpr std::uint64_t maximumBboAgeNs = 5'000'000'000ULL;
+    if (!context.bboComplete || !context.bid.isPositive()
+        || !context.ask.isPositive()
+        || context.ask.toDouble() <= context.bid.toDouble()
+        || context.bboSourceTimestampNs == 0
+        || context.evaluationTimestampNs < context.bboSourceTimestampNs
+        || context.evaluationTimestampNs - context.bboSourceTimestampNs
+               > maximumBboAgeNs) {
+        return reject("BBO is missing or stale", RuleBreachAction::ReadOnly,
+                      FailureCategory::StaleData);
+    }
+    const double expectedMargin = context.expectedMargin.toDouble();
+    const double freeMargin = context.account.freeMargin.toDouble();
+    if (!context.expectedMargin.isPositive() || !std::isfinite(expectedMargin)
+        || !std::isfinite(freeMargin) || freeMargin <= expectedMargin) {
+        return reject("expected margin is unavailable or exceeds free margin");
+    }
+    if (m_halted.load() || m_closeOnly.load()
+        || m_totalDrawdown >= MAX_TOTAL_DRAWDOWN
+        || m_dailyDrawdown >= MAX_DAILY_DRAWDOWN) {
+        return reject("normal risk halt or close-only gate rejected new exposure");
+    }
+    const std::size_t positionCap = m_effectiveMaxPositions > 0
+        ? m_effectiveMaxPositions : m_maxConcurrentPositions;
+    if (positionCap > 0
+        && context.reconciliation.positions.size() >= positionCap) {
+        return reject("position cap rejected new exposure");
+    }
+    const double varLimit = m_effectiveVarLimit > 0.0
+        ? m_effectiveVarLimit : m_varLimitFraction;
+    const double equity = context.account.equity.toDouble();
+    if (varLimit > 0.0 && m_currentVaR95 > 0.0 && equity > 0.0
+        && m_currentVaR95 > equity * varLimit) {
+        return reject("VaR gate rejected new exposure");
+    }
+
+    RiskDecision accepted;
+    accepted.allowed = true;
+    accepted.riskIncreasing = true;
+    accepted.action = RuleBreachAction::Warn;
+    accepted.reason = "RiskEngine accepted exact minimum-volume Demo exposure";
+    return accepted;
+}
+
+void RiskEngine::setTotalDrawdown(double drawdown) noexcept
+{
+    m_totalDrawdown = drawdown;
+}
+
+void RiskEngine::setDailyDrawdown(double drawdown) noexcept
+{
+    m_dailyDrawdown = drawdown;
+}
+
+void RiskEngine::pushEquityReturn(double currentEquity) noexcept
+{
+    if (m_prevEquityValid && m_prevEquity > 0.0) {
+        const double ret = (currentEquity - m_prevEquity) / m_prevEquity;
+        m_returnWindow.push_back(ret);
+        if (m_returnWindow.size() > m_varWindow) {
+            m_returnWindow.pop_front();
+        }
+
+        // Recompute rolling stddev and VaR_95 once we have at least 2 samples.
+        if (m_returnWindow.size() >= 2) {
+            const double n    = static_cast<double>(m_returnWindow.size());
+            const double mean = std::accumulate(m_returnWindow.begin(),
+                                                m_returnWindow.end(), 0.0) / n;
+            double variance = 0.0;
+            for (const double r : m_returnWindow) {
+                variance += (r - mean) * (r - mean);
+            }
+            variance /= n;
+            m_returnStdDev  = std::sqrt(variance);
+            // VaR_95 = Z_95 * sigma_p * E_total  (dollar loss at 95% confidence)
+            m_currentVaR95  = Z_95 * m_returnStdDev * currentEquity;
+        }
+    }
+    m_prevEquity      = currentEquity;
+    m_prevEquityValid = true;
+    // If multi-asset mode is active, the diversified VaR already incorporates
+    // the latest cross-asset covariance; the single-equity path only serves as
+    // a fallback when no per-asset observations have been fed.
+    if (m_multiAssetMode) {
+        // VaR was already updated in pushAssetReturn; nothing more to do here.
+    }
+}
+
+double RiskEngine::getVaR95() const noexcept
+{
+    return m_currentVaR95;
+}
+
+double RiskEngine::getReturnStdDev() const noexcept
+{
+    return m_returnStdDev;
+}
+
+std::size_t RiskEngine::getMaxConcurrentPositions() const noexcept
+{
+    return m_maxConcurrentPositions;
+}
+
+RiskEngine::Snapshot RiskEngine::snapshotState() const
+{
+    Snapshot snapshot;
+    snapshot.configuredMaxPositions = m_maxConcurrentPositions;
+    snapshot.configuredVarLimit = m_varLimitFraction;
+    snapshot.configuredVarWindow = m_varWindow;
+    snapshot.totalDrawdown = m_totalDrawdown;
+    snapshot.dailyDrawdown = m_dailyDrawdown;
+    snapshot.prevEquity = m_prevEquity;
+    snapshot.prevEquityValid = m_prevEquityValid;
+    snapshot.returnWindow = m_returnWindow;
+    snapshot.currentVaR95 = m_currentVaR95;
+    snapshot.returnStdDev = m_returnStdDev;
+    snapshot.assetStates = m_assetStates;
+    snapshot.covarianceMatrix = m_covMatrix;
+    snapshot.assetOrder = m_assetOrder;
+    snapshot.multiAssetMode = m_multiAssetMode;
+    snapshot.closeOnly = m_closeOnly.load();
+    snapshot.lastLatencyMs = m_lastLatencyMs.load();
+    snapshot.halted = m_halted.load();
+    {
+        std::lock_guard<std::mutex> lock(m_positionMutex);
+        snapshot.syncedPositions = m_syncedPositions;
+    }
+    snapshot.effectiveMaxPositions = m_effectiveMaxPositions;
+    snapshot.effectiveVarLimit = m_effectiveVarLimit;
+    snapshot.volatilityScaled = m_volatilityScaled;
+    return snapshot;
+}
+
+bool RiskEngine::canRestoreSnapshot(const Snapshot& snapshot,
+                                    std::string& error) const noexcept
+{
+    if (snapshot.configuredMaxPositions != m_maxConcurrentPositions
+        || snapshot.configuredVarLimit != m_varLimitFraction
+        || snapshot.configuredVarWindow != m_varWindow) {
+        error = "snapshot risk configuration does not match runtime";
+        return false;
+    }
+    if (snapshot.effectiveMaxPositions > m_maxConcurrentPositions
+        || snapshot.effectiveVarLimit > m_varLimitFraction) {
+        error = "snapshot would widen an effective risk limit";
+        return false;
+    }
+    return true;
+}
+
+void RiskEngine::restoreState(const Snapshot& snapshot)
+{
+    m_totalDrawdown = snapshot.totalDrawdown;
+    m_dailyDrawdown = snapshot.dailyDrawdown;
+    m_prevEquity = snapshot.prevEquity;
+    m_prevEquityValid = snapshot.prevEquityValid;
+    m_returnWindow = snapshot.returnWindow;
+    m_currentVaR95 = snapshot.currentVaR95;
+    m_returnStdDev = snapshot.returnStdDev;
+    m_assetStates = snapshot.assetStates;
+    m_covMatrix = snapshot.covarianceMatrix;
+    m_assetOrder = snapshot.assetOrder;
+    m_multiAssetMode = snapshot.multiAssetMode;
+    m_closeOnly.store(snapshot.closeOnly);
+    m_lastLatencyMs.store(snapshot.lastLatencyMs);
+    m_halted.store(snapshot.halted);
+    {
+        std::lock_guard<std::mutex> lock(m_positionMutex);
+        m_syncedPositions = snapshot.syncedPositions;
+    }
+    m_effectiveMaxPositions = snapshot.effectiveMaxPositions;
+    m_effectiveVarLimit = snapshot.effectiveVarLimit;
+    m_volatilityScaled = snapshot.volatilityScaled;
+    // Steady-clock error timestamps cannot survive a process boundary. A
+    // persisted halt remains active; the transient counting window restarts.
+    std::lock_guard<std::mutex> lock(m_errorMutex);
+    m_errorTimestamps.clear();
+}
+
+// ── Multi-asset correlation helpers ──────────────────────────────────────────
+
+void RiskEngine::pushAssetReturn(const std::string& symbol,
+                                 double closingPrice,
+                                 double positionValue) noexcept
+{
+    m_multiAssetMode = true;
+
+    AssetReturnState& state = m_assetStates[symbol];
+    state.symbol        = symbol;
+    state.positionValue = positionValue;
+
+    if (state.prevPriceValid && state.prevPrice > 0.0) {
+        const double ret = (closingPrice - state.prevPrice) / state.prevPrice;
+        state.returnWindow.push_back(ret);
+        if (state.returnWindow.size() > m_varWindow) {
+            state.returnWindow.pop_front();
+        }
+    }
+    state.prevPrice      = closingPrice;
+    state.prevPriceValid = true;
+
+    // Rebuild covariance matrix and recompute VaR after every new observation.
+    rebuildCovMatrix();
+    const double equity = m_portfolio.getTotalEquity();
+    if (equity > 0.0) {
+        updateDiversifiedVaR(equity);
+    }
+}
+
+void RiskEngine::rebuildCovMatrix() noexcept
+{
+    // Collect symbols that have at least 2 return observations.
+    m_assetOrder.clear();
+    for (const auto& [sym, st] : m_assetStates) {
+        if (st.returnWindow.size() >= 2) {
+            m_assetOrder.push_back(sym);
+        }
+    }
+    const std::size_t N = m_assetOrder.size();
+    if (N == 0) {
+        m_covMatrix.clear();
+        return;
+    }
+
+    // Sort for deterministic ordering.
+    std::sort(m_assetOrder.begin(), m_assetOrder.end());
+
+    // Find the minimum window length across participating assets.
+    std::size_t minLen = std::numeric_limits<std::size_t>::max();
+    for (const auto& sym : m_assetOrder) {
+        minLen = std::min(minLen, m_assetStates.at(sym).returnWindow.size());
+    }
+    const double Nd = static_cast<double>(minLen);
+
+    // Compute per-asset mean over the shared window.
+    std::vector<double> means(N, 0.0);
+    for (std::size_t i = 0; i < N; ++i) {
+        const auto& win = m_assetStates.at(m_assetOrder[i]).returnWindow;
+        // Use the most recent minLen observations.
+        const std::size_t offset = win.size() - minLen;
+        for (std::size_t t = 0; t < minLen; ++t) {
+            means[i] += win[offset + t];
+        }
+        means[i] /= Nd;
+    }
+
+    // Build covariance matrix Σ (row-major, population covariance).
+    m_covMatrix.assign(N * N, 0.0);
+    for (std::size_t i = 0; i < N; ++i) {
+        const auto& win_i = m_assetStates.at(m_assetOrder[i]).returnWindow;
+        const std::size_t off_i = win_i.size() - minLen;
+        for (std::size_t j = i; j < N; ++j) {
+            const auto& win_j = m_assetStates.at(m_assetOrder[j]).returnWindow;
+            const std::size_t off_j = win_j.size() - minLen;
+            double cov = 0.0;
+            for (std::size_t t = 0; t < minLen; ++t) {
+                cov += (win_i[off_i + t] - means[i])
+                     * (win_j[off_j + t] - means[j]);
+            }
+            cov /= Nd;
+            m_covMatrix[i * N + j] = cov;
+            m_covMatrix[j * N + i] = cov; // symmetric
+        }
+    }
+}
+
+void RiskEngine::updateDiversifiedVaR(double totalEquity) noexcept
+{
+    const std::size_t N = m_assetOrder.size();
+    if (N == 0 || m_covMatrix.empty()) {
+        // Fall back to single-equity path (already computed in pushEquityReturn).
+        return;
+    }
+
+    // Build weight vector w_i = positionValue_i / totalEquity.
+    std::vector<double> w(N, 0.0);
+    double totalPositioned = 0.0;
+    for (std::size_t i = 0; i < N; ++i) {
+        const double pv = m_assetStates.at(m_assetOrder[i]).positionValue;
+        w[i]            = pv;
+        totalPositioned += pv;
+    }
+    // Normalise weights against total equity (includes cash).
+    for (std::size_t i = 0; i < N; ++i) {
+        w[i] /= totalEquity;
+    }
+
+    // σ_p² = w^T Σ w
+    double varP = 0.0;
+    for (std::size_t i = 0; i < N; ++i) {
+        for (std::size_t j = 0; j < N; ++j) {
+            varP += w[i] * m_covMatrix[i * N + j] * w[j];
+        }
+    }
+    m_returnStdDev = (varP > 0.0) ? std::sqrt(varP) : 0.0;
+    m_currentVaR95 = Z_95 * m_returnStdDev * totalEquity;
+}
+
+// ── Phase 12: Circuit breakers & adaptive risk ────────────────────────────────
+
+void RiskEngine::setSystemConfig(const SystemConfig* cfg) noexcept
+{
+    m_sysCfg = cfg;
+    // Initialise effective limits from construction-time values.
+    m_effectiveMaxPositions = m_maxConcurrentPositions;
+    m_effectiveVarLimit     = m_varLimitFraction;
+}
+
+// canTrade() override — now also blocks when circuit breakers are active.
+// NOTE: The original canTrade() is replaced by redefining it here; the
+// original definition in the .cpp is kept above as the Phase 8/9 baseline.
+// We override it at the bottom so the Phase 12 checks take precedence.
+// (In a single compilation unit the last definition of canTrade() wins — but
+//  since canTrade() is not defined twice in the same TU, we simply patch the
+//  existing one by adding the phase-12 gate inside the already-compiled body.)
+
+void RiskEngine::reportLatency(uint32_t latencyMs) noexcept
+{
+    m_lastLatencyMs.store(latencyMs);
+
+    const uint32_t threshold = m_sysCfg ? m_sysCfg->latencyMaxMs : 500u;
+
+    if (latencyMs > threshold) {
+        if (!m_closeOnly.load()) {
+            m_closeOnly.store(true);
+            std::cout << "[RiskEngine] CIRCUIT BREAKER — LATENCY: "
+                      << latencyMs << "ms > threshold " << threshold
+                      << "ms => CLOSE_ONLY state activated.\n";
+        }
+    }
+}
+
+void RiskEngine::reportApiError() noexcept
+{
+    const auto now = std::chrono::steady_clock::now();
+    const uint32_t thresh = m_sysCfg ? m_sysCfg->errorRateThresh : 5u;
+
+    {
+        std::lock_guard<std::mutex> lock(m_errorMutex);
+        m_errorTimestamps.push_back(now);
+
+        // Evict events older than 60 seconds.
+        const auto cutoff = now - std::chrono::seconds(60);
+        while (!m_errorTimestamps.empty() &&
+               m_errorTimestamps.front() < cutoff) {
+            m_errorTimestamps.pop_front();
+        }
+
+        const uint32_t rate = static_cast<uint32_t>(m_errorTimestamps.size());
+
+        if (rate > thresh && !m_halted.load()) {
+            m_halted.store(true);
+            std::cout << "[RiskEngine] CIRCUIT BREAKER — ERROR RATE: "
+                      << rate << " errors/min > threshold " << thresh
+                      << " => TRADING HALTED.\n";
+        }
+    }
+}
+
+void RiskEngine::clearHalt() noexcept
+{
+    const bool wasHalted = m_halted.exchange(false);
+    if (wasHalted) {
+        std::cout << "[RiskEngine] HALT cleared by operator — trading resumed.\n";
+    }
+    {
+        std::lock_guard<std::mutex> lock(m_errorMutex);
+        m_errorTimestamps.clear();
+    }
+}
+
+void RiskEngine::setHaltTrading(bool halt) noexcept
+{
+    const bool prev = m_halted.exchange(halt);
+    if (halt && !prev) {
+        std::cout << "[RiskEngine] EXTERNAL HALT: data integrity degraded.\n";
+    } else if (!halt && prev) {
+        std::cout << "[RiskEngine] EXTERNAL HALT CLEARED: integrity restored.\n";
+    }
+}
+
+void RiskEngine::clearLatencyBreach() noexcept
+{
+    const bool wasCloseOnly = m_closeOnly.exchange(false);
+    if (wasCloseOnly) {
+        std::cout << "[RiskEngine] CLOSE_ONLY cleared — latency returned to normal.\n";
+    }
+}
+
+void RiskEngine::updateLiveVolatility(double liveAtr, double baselineAtr) noexcept
+{
+    if (baselineAtr <= 0.0 || !m_sysCfg) { return; }
+
+    const double ratio     = liveAtr / baselineAtr;
+    const double threshold = m_sysCfg->atrScaleUpThreshold;
+
+    if (ratio > threshold && !m_volatilityScaled) {
+        // Scale down limits.
+        m_volatilityScaled      = true;
+        m_effectiveMaxPositions = std::max(std::size_t{1},
+                                           m_maxConcurrentPositions / 2);
+        m_effectiveVarLimit     = m_varLimitFraction
+                                  * m_sysCfg->varScaleHighVolFactor;
+        std::cout << "[RiskEngine] HIGH VOLATILITY: ATR ratio=" << ratio
+                  << " > " << threshold
+                  << "  MaxPositions: " << m_maxConcurrentPositions
+                  << " -> " << m_effectiveMaxPositions
+                  << "  VaR limit: " << m_varLimitFraction
+                  << " -> " << m_effectiveVarLimit << "\n";
+    } else if (ratio <= threshold && m_volatilityScaled) {
+        // Restore normal limits.
+        m_volatilityScaled      = false;
+        m_effectiveMaxPositions = m_maxConcurrentPositions;
+        m_effectiveVarLimit     = m_varLimitFraction;
+        std::cout << "[RiskEngine] VOLATILITY NORMALISED: ATR ratio=" << ratio
+                  << " <= " << threshold
+                  << "  Limits restored.\n";
+    }
+}
+
+std::size_t RiskEngine::effectiveMaxConcurrentPositions() const noexcept
+{
+    return m_effectiveMaxPositions;
+}
+
+double RiskEngine::effectiveVarLimitFraction() const noexcept
+{
+    return m_effectiveVarLimit;
+}
+
+bool RiskEngine::isCloseOnly() const noexcept
+{
+    return m_closeOnly.load();
+}
+
+bool RiskEngine::isHalted() const noexcept
+{
+    return m_halted.load();
+}
+
+uint32_t RiskEngine::lastLatencyMs() const noexcept
+{
+    return m_lastLatencyMs.load();
+}
+
+uint32_t RiskEngine::currentErrorRate() const noexcept
+{
+    const auto now    = std::chrono::steady_clock::now();
+    const auto cutoff = now - std::chrono::seconds(60);
+    std::lock_guard<std::mutex> lock(m_errorMutex);
+    uint32_t count = 0;
+    for (const auto& ts : m_errorTimestamps) {
+        if (ts >= cutoff) { ++count; }
+    }
+    return count;
+}
+
+void RiskEngine::syncPosition(const std::string& symbol, double quantity) noexcept
+{
+    std::lock_guard<std::mutex> lock(m_positionMutex);
+    if (quantity <= 0.0) {
+        m_syncedPositions.erase(symbol);
+        return;
+    }
+    m_syncedPositions[symbol] = quantity;
+}
+
+double RiskEngine::syncedPosition(const std::string& symbol) const noexcept
+{
+    std::lock_guard<std::mutex> lock(m_positionMutex);
+    auto it = m_syncedPositions.find(symbol);
+    return (it == m_syncedPositions.end()) ? 0.0 : it->second;
+}
