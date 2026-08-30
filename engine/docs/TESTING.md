@@ -397,7 +397,8 @@ Benchmark executables are separate from tests:
 
 - `build/apply_bbo_microbench 10000`
 - `build/throughput_bench <tick-count>`
-- `build/phase18_burnin <tick-count> [replay-path]`
+- `build/phase18_burnin <tick-count> [replay-file]` — an optional replay file
+  name is resolved only inside `data/historical`; arbitrary paths are rejected.
 
 Benchmark output is not enough to accept behavior unless correctness tests also pass.
 

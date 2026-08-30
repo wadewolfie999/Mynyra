@@ -87,13 +87,21 @@ int main(int argc, char* argv[])
 {
     const std::size_t tickCount = parseTickCount(argc, argv);
     const bool userSuppliedReplay = argc >= 3;
-    const std::string replayPath = userSuppliedReplay
-        ? argv[2]
-        : "data/historical/BTCUSDT-L2-1M.bin";
+    std::filesystem::path replayPath = "data/historical/BTCUSDT-L2-1M.bin";
 
     if (userSuppliedReplay) {
+        const std::string replayName = argv[2];
+        if (replayName.empty() || replayName.find("..") != std::string::npos
+            || replayName.find('/') != std::string::npos
+            || replayName.find('\\') != std::string::npos) {
+            std::cerr << "[phase18_burnin] supplied replay must be a file name "
+                         "inside data/historical\n";
+            return 1;
+        }
+        replayPath = std::filesystem::path("data/historical") / replayName;
         if (!std::filesystem::is_regular_file(replayPath)) {
-            std::cerr << "[phase18_burnin] supplied replay must be an existing regular file\n";
+            std::cerr << "[phase18_burnin] supplied replay must name an existing "
+                         "regular file inside data/historical\n";
             return 1;
         }
     } else if (!ensureDefaultReplayDataset(tickCount)) {
@@ -101,7 +109,7 @@ int main(int argc, char* argv[])
     }
 
     LocalDataReplayAdapter replay;
-    if (!replay.loadFromPath(replayPath, "BTCUSDT")) {
+    if (!replay.loadFromPath(replayPath.string(), "BTCUSDT")) {
         std::cerr << "[phase18_burnin] replay load failed: " << replay.lastError() << "\n";
         return 1;
     }
