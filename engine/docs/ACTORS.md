@@ -1,4 +1,4 @@
-# Mynyra Actor Registry v1.0
+# Mynyra Actor Registry v1.1
 
 ## Purpose and Authority
 
@@ -18,15 +18,16 @@ A named actor is an actual recognized participant in Mynyra governance.
 
 Current named actors:
 
-- Wade
-- Bigi
+- Wade (also Vahid)
+- Bigi (also mahdibeigi / GitHub `mehdibeigiii`)
 - ChatGPT
 - Codex
 
-GitHub identity note: the repository currently lists `mehdibeigiii` with write
-access. Wade has not yet confirmed in repository governance that this account is
-Bigi, so access must not be treated as identity or expanded authority until he
-does.
+Identity aliases:
+
+- `Wade` and `Vahid` identify the same named actor.
+- `Bigi`, `mahdibeigi`, and GitHub account `mehdibeigiii` identify the same named actor.
+- These aliases are identity bindings only and do not expand either actor's authority beyond the applicable canonical role card and project governance.
 
 ### Actor Class
 
@@ -61,7 +62,7 @@ When a role card and generic actor class differ, the stricter applicable boundar
 
 ```text
 Actor:
-Wade
+Wade / Vahid
 
 Role:
 Founder, chief executive agent, project owner, and final approval authority for Mynyra.
@@ -98,7 +99,7 @@ High-risk approvals must be explicit, written, scoped, and tied to a specific ta
 
 ```text
 Actor:
-Bigi
+Bigi / mahdibeigi / GitHub: mehdibeigiii
 
 Role:
 Independent human operator-contributor supporting Wade across Mynyra strategy, research, architecture, implementation coordination, validation review, documentation, visual design, Codex/ChatGPT operation, and actor coordination.
@@ -234,11 +235,11 @@ Keep
 
 These mappings are conservative governance references only. They must not grant authority beyond the canonical role cards above.
 
-Wade
+Wade / Vahid
 
 - Operator
 
-Bigi
+Bigi / mahdibeigi / `mehdibeigiii`
 
 - Advisor
 - Research Agent
