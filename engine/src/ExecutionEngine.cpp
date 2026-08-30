@@ -147,8 +147,11 @@ void ExecutionEngine::drainOrderBus()
         request.positionEffect = node->event.isBuy
             ? PositionEffect::Open : PositionEffect::Close;
         request.type = BrokerOrderType::Market;
+        // OrderBusEvent quantities originate from a scale-8 Quantity. Recover
+        // that exact value after the fixed-point -> double hop; truncation can
+        // lose one unit on some standard libraries and strand residual state.
         request.quantity = Decimal64::fromDouble(
-            node->event.quantity, 8, DecimalRounding::TowardZero)
+            node->event.quantity, 8, DecimalRounding::RejectUnaligned)
             .value_or(Decimal64{});
         request.referencePrice = Decimal64::fromDouble(
             node->event.requestedPrice, 8,
