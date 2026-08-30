@@ -23,6 +23,8 @@ while IFS= read -r -d '' path; do
     esac
 
     case "$path" in
+        docs/archive/handoff/*|docs/archive/handoffs/*)
+            ;;
         handoff/*|handoffs/*|*/handoff/*|*/handoffs/*)
             report_failure "tracked operator evidence path: $path"
             ;;

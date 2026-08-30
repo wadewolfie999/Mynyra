@@ -281,7 +281,12 @@ void PortfolioManager::closePosition(const std::string& symbol, double netPrice,
 
     Financial::Quantity closeQuantity = current->second.m_quantity;
     if (explicitQuantity > 0.0) {
-        const auto normalizedQuantity = Financial::quantity(explicitQuantity);
+        // Confirmed quantities have already crossed the scale-8 boundary.
+        // Re-normalizing them toward zero can lose one unit after a
+        // decimal -> double -> decimal round trip on some standard libraries,
+        // leaving a phantom residual position after a full close.
+        const auto normalizedQuantity = Financial::quantity(
+            explicitQuantity, Financial::Rounding::RejectUnaligned);
         if (!normalizedQuantity.has_value() || !normalizedQuantity->isPositive()) {
             throw std::invalid_argument("PortfolioManager: invalid close quantity");
         }
