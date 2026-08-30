@@ -2,7 +2,7 @@
  * Design: Night Operations Manual — an offline field desk with evidence rails,
  * visible system boundaries, editorial hierarchy, and no implied live capability.
  */
-import { useState, type SyntheticEvent } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   Archive,
@@ -29,24 +29,24 @@ const panels: Record<
 > = {
   overview: {
     label: "Overview",
-    eyebrow: "00 / Local posture",
-    title: "A product shell with its boundaries intact.",
+    eyebrow: "00 / Demo milestone",
+    title: "Demo reached. The system remains default-off.",
     description:
-      "This screen is a static implementation foundation. It records intent and interface structure without connecting to a provider, account, market feed, or execution path.",
+      "The operator accepted the bounded Demo milestone on 2026-08-30. This screen remains a static repository view: it does not connect to a provider, account, market feed, or execution path.",
   },
   "system-map": {
     label: "System map",
     eyebrow: "01 / Ownership boundary",
-    title: "Mynyra is being shaped as the product home.",
+    title: "Mynyra is the product home.",
     description:
-      "TradeBot remains a separate source repository during this transition. No files, credentials, provider artifacts, or runtime behavior have been imported into this product shell.",
+      "The preserved engine lineage now lives under engine/. Credentials, account identifiers, provider traces, and generated runtime evidence are intentionally excluded.",
   },
   evidence: {
     label: "Evidence",
     eyebrow: "02 / Verification register",
     title: "Every future claim needs a named source and epoch.",
     description:
-      "The foundation provides a place to classify evidence. It does not manufacture account state, quotes, positions, orders, returns, or operational readiness.",
+      "Repository checks and operator acceptance are named separately. This surface does not manufacture current account state, quotes, positions, orders, returns, or operational readiness.",
   },
 };
 
@@ -61,10 +61,6 @@ const handleFoundationAction = (action: string) => {
     description:
       "This offline foundation contains no provider, credential, account, order, or deployment capability.",
   });
-};
-
-const hideManagedAssetOnError = (event: SyntheticEvent<HTMLImageElement>) => {
-  event.currentTarget.style.display = "none";
 };
 
 function EvidencePill({ children }: { children: React.ReactNode }) {
@@ -85,12 +81,6 @@ export default function Home() {
         <div className="rail-brand">
           <div className="brand-emblem">
             <span className="brand-fallback-mark" aria-hidden="true" />
-            <img
-              src="/manus-storage/mynyra-logo_e85fd754.png"
-              alt="Mynyra brand mark"
-              className="brand-mark"
-              onError={hideManagedAssetOnError}
-            />
           </div>
           <div>
             <p className="wordmark">Mynyra</p>
@@ -131,7 +121,7 @@ export default function Home() {
             Operating boundary
           </p>
           <p className="boundary-copy">
-            Offline-only foundation. No connection surface is present.
+            Static view. Demo-capable source remains default-off.
           </p>
           <button
             type="button"
@@ -142,20 +132,20 @@ export default function Home() {
           </button>
         </section>
 
-        <p className="rail-footnote">v0.1 · local interface scaffold</p>
+        <p className="rail-footnote">v1.0 · Demo milestone view</p>
       </aside>
 
       <main className="evidence-canvas">
         <header className="topline">
           <div className="topline-context">
             <span className="context-dot" />
-            <span>Product foundation</span>
+          <span>Demo milestone</span>
             <span className="context-divider">/</span>
-            <span>Static local state</span>
+          <span>Static repository state</span>
           </div>
           <div className="topline-state">
             <StatusDot tone="copper" />
-            <span>Non-trading mode</span>
+            <span>Default-off posture</span>
           </div>
         </header>
 
@@ -164,20 +154,15 @@ export default function Home() {
             <ShieldCheck size={18} strokeWidth={1.75} />
           </div>
           <p>
-            <strong>No provider connection is configured.</strong> This surface holds
-            product structure only; it does not read credentials, contact providers,
-            retrieve market data, or create orders.
+            <strong>No provider connection is active.</strong> The repository contains
+            a compile-time gated Demo adapter, but this surface does not read credentials,
+            contact providers, retrieve market data, or create orders.
           </p>
-          <EvidencePill>LOCAL SCAFFOLD</EvidencePill>
+          <EvidencePill>STATIC VIEW</EvidencePill>
         </section>
 
         <section className="hero-readout" aria-labelledby="readout-title">
-          <img
-            src="/manus-storage/mynyra-console-grid_7710f53f.jpg"
-            alt="Abstract midnight systems topology"
-            className="hero-art"
-            onError={hideManagedAssetOnError}
-          />
+          <div className="hero-art" aria-hidden="true" />
           <div className="hero-overlay" />
           <div className="registration registration--top" aria-hidden="true">
             <span />
@@ -207,11 +192,11 @@ export default function Home() {
           <div className="hero-meta" aria-label="Foundation status">
             <div>
               <p>Source posture</p>
-              <strong>Standalone shell</strong>
+              <strong>Consolidated repository</strong>
             </div>
             <div>
               <p>External state</p>
-              <strong>Not attached</strong>
+              <strong>Not observed</strong>
             </div>
           </div>
         </section>
@@ -233,10 +218,10 @@ export default function Home() {
               <div className="posture-marker"><StatusDot tone="copper" /></div>
               <div>
                 <p className="posture-label">Provider transport</p>
-                <h3>Not configured</h3>
-                <p>No API client, network call, callback, or provider artifact is included.</p>
+                <h3>Present but default-off</h3>
+                <p>The Demo adapter is compile-time gated and this control-room surface has no connection path.</p>
               </div>
-              <EvidencePill>ABSENT BY DESIGN</EvidencePill>
+              <EvidencePill>GATED BY DESIGN</EvidencePill>
             </article>
             <article className="posture-entry">
               <div className="posture-marker"><StatusDot /></div>
@@ -251,28 +236,23 @@ export default function Home() {
               <div className="posture-marker"><StatusDot tone="warn" /></div>
               <div>
                 <p className="posture-label">Execution capability</p>
-                <h3>Prohibited</h3>
-                <p>No order workflow, paper endpoint, live switch, or risk-limit mutation exists here.</p>
+                <h3>Demo-bounded</h3>
+                <p>The engine owns the canonical order path; LIVE support and UI-triggered execution remain absent.</p>
               </div>
-              <EvidencePill>NO ACTION PATH</EvidencePill>
+              <EvidencePill>NO UI ACTION PATH</EvidencePill>
             </article>
           </div>
         </section>
 
         <section className="split-zone" aria-label="System and evidence panels">
           <article className="system-card">
-            <img
-              src="/manus-storage/mynyra-architecture-schematic_b264a119.jpg"
-              alt="Abstract architectural pathways"
-              className="system-card-art"
-              onError={hideManagedAssetOnError}
-            />
+            <div className="system-card-art" aria-hidden="true" />
             <div className="system-card-shade" />
             <div className="system-card-content">
               <div className="section-heading-inline">
                 <div>
                   <p className="eyebrow">Ownership boundary</p>
-                  <h2>Source is not yet product.</h2>
+                  <h2>The lineage is now one product tree.</h2>
                 </div>
                 <GitBranch size={19} strokeWidth={1.6} />
               </div>
@@ -280,24 +260,24 @@ export default function Home() {
                 <div className="system-step is-current">
                   <span>01</span>
                   <div>
-                    <strong>Mynyra product shell</strong>
-                    <p>Current workspace for the future software-level control surface.</p>
+                    <strong>Mynyra product repository</strong>
+                    <p>GitHub-governed home for the control room, engine, evidence, and collaboration model.</p>
                   </div>
                 </div>
                 <div className="system-connector" />
                 <div className="system-step">
                   <span>02</span>
                   <div>
-                    <strong>TradeBot source repository</strong>
-                    <p>Existing implementation input; not copied or attached by this foundation.</p>
+                    <strong>Mynyra Engine</strong>
+                    <p>History-preserving engine source under engine/ with default-off provider boundaries.</p>
                   </div>
                 </div>
                 <div className="system-connector system-connector--dashed" />
                 <div className="system-step is-muted">
                   <span>03</span>
                   <div>
-                    <strong>Future governed integration</strong>
-                    <p>Requires a separately approved product, evidence, and risk design.</p>
+                    <strong>Methodical expansion</strong>
+                    <p>New collaborators and capabilities receive named roles, review boundaries, and explicit authority.</p>
                   </div>
                 </div>
               </div>
@@ -305,12 +285,7 @@ export default function Home() {
           </article>
 
           <article className="evidence-card">
-            <img
-              src="/manus-storage/mynyra-evidence-topography_6459bc0f.jpg"
-              alt="Abstract archival evidence texture"
-              className="evidence-art"
-              onError={hideManagedAssetOnError}
-            />
+            <div className="evidence-art" aria-hidden="true" />
             <div className="evidence-card-content">
               <div className="section-heading-inline">
                 <div>
@@ -322,15 +297,15 @@ export default function Home() {
               <dl className="evidence-list">
                 <div>
                   <dt>Interface state</dt>
-                  <dd><StatusDot tone="copper" /> Static local copy</dd>
+                  <dd><StatusDot tone="copper" /> Static repository view</dd>
                 </div>
                 <div>
-                  <dt>Provider evidence</dt>
-                  <dd><StatusDot /> Not imported</dd>
+                  <dt>Demo milestone</dt>
+                  <dd><StatusDot tone="copper" /> Operator accepted 2026-08-30</dd>
                 </div>
                 <div>
-                  <dt>Execution evidence</dt>
-                  <dd><StatusDot tone="warn" /> Not authorized</dd>
+                  <dt>Current runtime state</dt>
+                  <dd><StatusDot tone="warn" /> Not observed by this UI</dd>
                 </div>
               </dl>
               <button
@@ -345,12 +320,7 @@ export default function Home() {
         </section>
 
         <section className="handoff-band" aria-labelledby="handoff-title">
-          <img
-            src="/manus-storage/mynyra-quiet-surface_1a17cd0c.jpg"
-            alt="Abstract dark boundary texture"
-            className="handoff-art"
-            onError={hideManagedAssetOnError}
-          />
+          <div className="handoff-art" aria-hidden="true" />
           <div className="handoff-shade" />
           <div className="handoff-copy">
             <p className="eyebrow">Continuation package</p>
@@ -369,8 +339,8 @@ export default function Home() {
         </section>
 
         <footer className="canvas-footer">
-          <span>MYNYRA / PRODUCT FOUNDATION</span>
-          <span>Offline · Non-trading · No external state</span>
+          <span>MYNYRA / DEMO MILESTONE</span>
+          <span>Default-off · Evidence-aware · No live authority</span>
           <span><Sparkles size={13} /> Intent is visible.</span>
         </footer>
       </main>

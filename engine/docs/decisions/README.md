@@ -54,7 +54,7 @@ Use `0000-template.md`.
 
 - `0000-template.md`: ADR template.
 - `0001-deprecate-offline-mop-mor-ss.md`: Deprecate the old offline/intranet-era MOP/MOR/SS workflow.
-- `0002-github-as-system-of-record.md`: Establish GitHub as the system of record after local documentation cleanup is committed and pushed.
+- `0002-github-as-system-of-record.md`: Establish GitHub as the protected system of record for the consolidated repository.
 - `0003-workstream-i-integration-architecture.md`: Accepted broker-neutral Workstream I integration architecture.
 - `0004-ctrader-open-api-primary-integration.md`: Accepted sole cTrader Open API
   path, abandoned/non-controlling Algo Bridge, demo-only endpoint, staged OAuth
@@ -63,10 +63,11 @@ Use `0000-template.md`.
 - `0005-canonical-financial-value-contract.md`: Proposed scale-8 internal
   financial-value, checked-arithmetic, accounting, and snapshot-v13 contract;
   WP-2 implementation authorization does not constitute ADR acceptance.
-- `0006-mynyra-demo-runtime-and-ledger.md`: Proposed default-off cTrader DEMO
+- `0006-mynyra-demo-runtime-and-ledger.md`: Accepted default-off cTrader DEMO
   runtime, broker-mirrored leveraged-CFD ledger, side-effect-free strategy
   pipeline, native position close, and storage-neutral commissioning evidence;
-  external M1 acceptance and ADR acceptance remain pending.
+  accepted by the operator for the 2026-08-30 commissioning epoch; current
+  runtime state and a redacted evidence pointer remain unproven in-repository.
 
 ## Conflict Handling
 

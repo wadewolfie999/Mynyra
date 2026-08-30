@@ -2,10 +2,12 @@
 
 ## Status
 
-Proposed. The implementation candidate is authorized by
-`PLAN-20260824-mynyra-demo-m1`; external commissioning evidence and operator
-acceptance are still pending. This status does not authorize LIVE support,
-another Demo entry, a retry outside the plan, publication, or deployment.
+Accepted. Wade reported the bounded Demo commissioning milestone complete and
+accepted it on 2026-08-30. The repository does not currently contain a redacted
+external evidence pointer or digest for that commissioning epoch, so this ADR
+records the operator decision without claiming current provider, account,
+process, deployment, or node state. Acceptance does not authorize LIVE support,
+another Demo entry, a provider retry, credential access, or deployment.
 
 ## Context
 
@@ -40,9 +42,9 @@ remain Demo-only and must not contain a live endpoint or live-account path.
   position-close request, not an opposite market order.
 - Emit versioned, redacted console and NDJSON events through `IEventSink`.
   SQLite and process-crash recovery remain outside M1.
-- Treat the Demo phase as unstarted until one external commissioning process
-  emits `mynyra_demo_m1_succeeded` after final account-wide flat
-  reconciliation.
+- Treat the Demo milestone as complete only for the accepted 2026-08-30
+  commissioning epoch. Any later process must establish fresh authority and
+  fresh account-wide reconciliation evidence.
 
 ## Alternatives Considered
 
@@ -78,8 +80,10 @@ All live-account and live-endpoint support remains absent from this module.
   XAUUSD ingestion, and exactly one commissioning entry followed by controlled
   close and final flat reconciliation.
 
-Only the third external stage can validate the milestone. Offline test success
-does not change the ADR status or begin the Demo phase.
+Only the third external stage could validate the milestone. Offline test
+success did not establish that external result; the 2026-08-30 status change is
+based on Wade's operator acceptance. A future run must not reuse that acceptance
+as current runtime evidence or retry authority.
 
 ## Reversal Conditions
 

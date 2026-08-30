@@ -37,19 +37,14 @@ std::size_t parseTickCount(int argc, char* argv[]) noexcept
     return static_cast<std::size_t>(n);
 }
 
-std::string parseReplayPath(int argc, char* argv[])
+bool ensureDefaultReplayDataset(std::size_t tickCount)
 {
-    if (argc < 3) {
-        return "data/historical/BTCUSDT-L2-1M.bin";
-    }
-    return argv[2];
-}
-
-bool ensureReplayDataset(const std::string& path, std::size_t tickCount)
-{
+    constexpr const char* path = "data/historical/BTCUSDT-L2-1M.bin";
     if (std::filesystem::exists(path)) {
         return true;
     }
+
+    std::filesystem::create_directories("data/historical");
 
     std::vector<ReplayTick> ticks;
     ticks.reserve(tickCount);
@@ -91,9 +86,17 @@ bool ensureReplayDataset(const std::string& path, std::size_t tickCount)
 int main(int argc, char* argv[])
 {
     const std::size_t tickCount = parseTickCount(argc, argv);
-    const std::string replayPath = parseReplayPath(argc, argv);
+    const bool userSuppliedReplay = argc >= 3;
+    const std::string replayPath = userSuppliedReplay
+        ? argv[2]
+        : "data/historical/BTCUSDT-L2-1M.bin";
 
-    if (!ensureReplayDataset(replayPath, tickCount)) {
+    if (userSuppliedReplay) {
+        if (!std::filesystem::is_regular_file(replayPath)) {
+            std::cerr << "[phase18_burnin] supplied replay must be an existing regular file\n";
+            return 1;
+        }
+    } else if (!ensureDefaultReplayDataset(tickCount)) {
         return 1;
     }
 

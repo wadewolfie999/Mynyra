@@ -255,7 +255,9 @@ See `DEPENDENCY_POLICY.md`.
 
 ## Local Automation
 
-- `.github/` is retired and prohibited in the current engine tree.
+- GitHub workflows live at the repository root and invoke engine guardrails
+  through the preserved `engine/` layout. Engine-local `.github/` duplication
+  remains prohibited.
 - The tracked policy checker rejects credential-like tracked paths, private-key
   material, an enabled legacy LIVE runtime or Gate 6/Gate 7/DEMO target, and a
   non-`BACKTEST` default.

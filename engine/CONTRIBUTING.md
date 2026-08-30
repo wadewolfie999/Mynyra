@@ -1,4 +1,4 @@
-# Contributing To TradeBot
+# Contributing To Mynyra Engine
 
 ## Purpose And Authority
 
@@ -9,16 +9,11 @@
 
 ## Current Contribution Focus
 
-Current implementation work is locked to WP-0 through WP-8 in
-`docs/REPOSITORY_REMEDIATION_PROGRAM.md`. A contribution must identify exactly
-one controlling package, satisfy its predecessor and entry gates, and have an
-approved package slice before source mutation. Feature work, provider
-continuation, new strategies, optimization, deployment, later phases, and work
-that would create an implicit tenth package are not in the current queue.
-
-Package acceptance is non-transitive: it does not authorize the next package,
-commit, push, provider process, credential access, orders, risk-limit changes,
-release, deployment, or live trading.
+The Demo milestone is operator-accepted. Current work is repository
+stabilization, evidence hygiene, and task-scoped collaboration. A contribution
+must name its scope, acceptance criteria, tests, rollback, and affected network
+or financial boundary. Provider continuation, credentials, orders, deployment,
+risk changes, and LIVE work require separate explicit authority.
 
 ## Development Environments
 
@@ -34,7 +29,8 @@ Expected but not verified here:
 
 - Ubuntu or other Linux compute node with a C++20 compiler, CMake, and pthread support.
 
-Do not assume package-manager, registry, or forge-peer access is available. The project uses offline-first local verification and Radicle patch review.
+Do not assume package-manager or registry access is available. The project uses
+offline-first local verification and GitHub pull-request review.
 
 ## Repository Setup
 
@@ -106,10 +102,10 @@ build/apply_bbo_microbench 10000
 
 `throughput_bench` and `phase18_burnin` write generated CSVs under `data/results/`.
 
-## Local Validation And Radicle Review
+## Local Validation And GitHub Review
 
 Run repository-local guardrails and the relevant default-disabled CMake/CTest
-matrix before proposing a Radicle patch. The scripts do not enable Gate 6,
+matrix before proposing a GitHub pull request. The scripts do not enable Gate 6,
 Gate 7, or DEMO targets; they do not access secrets, contact provider endpoints,
 perform OAuth, or execute orders.
 

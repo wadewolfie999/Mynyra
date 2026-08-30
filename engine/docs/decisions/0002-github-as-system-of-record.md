@@ -6,17 +6,19 @@ Accepted
 
 ## Decision
 
-GitHub becomes the long-term system of record after local documentation cleanup is committed and pushed.
+GitHub repository `wadewolfie999/Mynyra` is the system of record. The protected
+`main` branch and its required `validate` check govern integration.
 
 ## Context
 
-The current environment may have intermittent or expensive global access.
-
-Local Git is the immediate working record until a planned VPN or global-access sync window is available.
+The repository must support auditable collaboration for the consolidated root
+control room and `engine/` layout. Historical Radicle records are preserved in
+archive directories but no longer define the collaboration topology.
 
 ## Consequences
 
-- Prepare commits locally in `~/TradeBot`.
-- Push during planned connectivity windows.
-- Do not assume remote state is current before sync.
+- Work from a fresh branch or worktree based on current GitHub state.
+- Use pull requests and protected checks for integration.
+- Do not assume local or remote state is current without refreshing it.
 - Keep active docs in the repository concise and current.
+- Do not revive a second forge without a new explicit architecture decision.

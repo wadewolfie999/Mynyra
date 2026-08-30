@@ -175,8 +175,9 @@ observed missing-close case.
 `scripts/ci_policy_checks.sh` validates tracked sensitive-looking paths,
 private-key material, the `BACKTEST` default, default-disabled legacy LIVE,
 Gate 6, Gate 7, and cTrader DEMO options, and the absence of retired `.github/`
-automation. `python3 scripts/validate_automation.py` validates skill metadata
-and the required local guardrail scripts.
+automation inside `engine/`. Root GitHub workflows invoke these same scripts for
+the consolidated layout. `python3 scripts/validate_automation.py` validates
+skill metadata and the required local guardrail scripts.
 
 `scripts/ci_validate.sh` runs the default-off configure/build/sequential CTest
 path; `scripts/ci_deep_validate.sh` runs its ASan/UBSan matrix. They do not

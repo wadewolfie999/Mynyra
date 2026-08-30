@@ -9,8 +9,13 @@
 
 #include <filesystem>
 #include <cstdio>
+#include <cerrno>
+#include <fcntl.h>
+#include <random>
 #include <stdexcept>
 #include <string>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <vector>
 
 namespace {
@@ -22,16 +27,38 @@ void require(bool cond, const char* msg)
     }
 }
 
+std::filesystem::path createSecureTempDirectory()
+{
+    std::random_device random;
+    const auto tempRoot = std::filesystem::temp_directory_path();
+    for (int attempt = 0; attempt < 64; ++attempt) {
+        const auto candidate = tempRoot /
+            ("mynyra_phase18_tests_" + std::to_string(random()));
+        if (::mkdir(candidate.c_str(), S_IRWXU) == 0) {
+            return candidate;
+        }
+        if (errno != EEXIST) {
+            break;
+        }
+    }
+    throw std::runtime_error("failed to create secure temporary directory");
+}
+
 void test_local_replay_csv_and_binary_roundtrip()
 {
-    const std::filesystem::path base = std::filesystem::path("/tmp") / "aiio_phase18_tests";
-    std::filesystem::create_directories(base);
+    const std::filesystem::path base = createSecureTempDirectory();
     const auto csvPath = (base / "replay_ticks.csv").string();
     const auto binPath = (base / "replay_ticks.bin").string();
 
     {
-        FILE* fp = std::fopen(csvPath.c_str(), "w");
-        require(fp != nullptr, "failed to open temporary CSV path");
+        const int fd = ::open(csvPath.c_str(), O_WRONLY | O_CREAT | O_EXCL,
+                              S_IRUSR | S_IWUSR);
+        require(fd >= 0, "failed to create temporary CSV path");
+        FILE* fp = ::fdopen(fd, "w");
+        if (fp == nullptr) {
+            ::close(fd);
+            throw std::runtime_error("failed to open temporary CSV path");
+        }
         std::fprintf(fp, "timestamp_ns,bid_px,bid_qty,ask_px,ask_qty,trade_px,trade_qty,symbol\n");
         std::fprintf(fp, "1710000000000000000,100.0,1.2,100.1,1.1,100.05,0.4,BTCUSDT\n");
         std::fprintf(fp, "1710000000001000000,100.1,1.1,100.2,1.0,100.15,0.6,BTCUSDT\n");
