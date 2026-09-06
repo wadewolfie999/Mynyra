@@ -68,7 +68,9 @@ function EvidencePill({ children }: { children: React.ReactNode }) {
 }
 
 function StatusDot({ tone = "quiet" }: { tone?: "quiet" | "copper" | "warn" }) {
-  return <span className={`status-dot status-dot--${tone}`} aria-hidden="true" />;
+  return (
+    <span className={`status-dot status-dot--${tone}`} aria-hidden="true" />
+  );
 }
 
 export default function Home() {
@@ -102,6 +104,7 @@ export default function Home() {
                 className={`rail-nav-item ${isActive ? "is-active" : ""}`}
                 onClick={() => setActivePanel(item.key)}
                 aria-current={isActive ? "page" : undefined}
+                aria-controls="control-room-reading-frame"
               >
                 <span className="nav-index">0{index + 1}</span>
                 <Icon size={15} strokeWidth={1.65} />
@@ -135,13 +138,13 @@ export default function Home() {
         <p className="rail-footnote">v1.0 · Demo milestone view</p>
       </aside>
 
-      <main className="evidence-canvas">
+      <main id="control-room-reading-frame" className="evidence-canvas">
         <header className="topline">
           <div className="topline-context">
-            <span className="context-dot" />
-          <span>Demo milestone</span>
+            <span className="context-dot" aria-hidden="true" />
+            <span>Demo milestone</span>
             <span className="context-divider">/</span>
-          <span>Static repository state</span>
+            <span>Static repository state</span>
           </div>
           <div className="topline-state">
             <StatusDot tone="copper" />
@@ -154,16 +157,17 @@ export default function Home() {
             <ShieldCheck size={18} strokeWidth={1.75} />
           </div>
           <p>
-            <strong>No provider connection is active.</strong> The repository contains
-            a compile-time gated Demo adapter, but this surface does not read credentials,
-            contact providers, retrieve market data, or create orders.
+            <strong>No provider connection is active.</strong> The repository
+            contains a compile-time gated Demo adapter, but this surface does
+            not read credentials, contact providers, retrieve market data, or
+            create orders.
           </p>
           <EvidencePill>STATIC VIEW</EvidencePill>
         </section>
 
         <section className="hero-readout" aria-labelledby="readout-title">
           <div className="hero-art" aria-hidden="true" />
-          <div className="hero-overlay" />
+          <div className="hero-overlay" aria-hidden="true" />
           <div className="registration registration--top" aria-hidden="true">
             <span />
             <span />
@@ -205,39 +209,57 @@ export default function Home() {
           <div className="section-intro">
             <div>
               <p className="eyebrow eyebrow--ink">Current posture</p>
-              <h2 id="posture-title">The controls that are intentionally absent.</h2>
+              <h2 id="posture-title">
+                The controls that are intentionally absent.
+              </h2>
             </div>
             <p>
-              The first useful control room makes absence auditable. These are static
-              declarations of the current product boundary, not live diagnostics.
+              The first useful control room makes absence auditable. These are
+              static declarations of the current product boundary, not live
+              diagnostics.
             </p>
           </div>
 
           <div className="posture-ledger">
             <article className="posture-entry">
-              <div className="posture-marker"><StatusDot tone="copper" /></div>
+              <div className="posture-marker">
+                <StatusDot tone="copper" />
+              </div>
               <div>
                 <p className="posture-label">Provider transport</p>
                 <h3>Present but default-off</h3>
-                <p>The Demo adapter is compile-time gated and this control-room surface has no connection path.</p>
+                <p>
+                  The Demo adapter is compile-time gated and this control-room
+                  surface has no connection path.
+                </p>
               </div>
               <EvidencePill>GATED BY DESIGN</EvidencePill>
             </article>
             <article className="posture-entry">
-              <div className="posture-marker"><StatusDot /></div>
+              <div className="posture-marker">
+                <StatusDot />
+              </div>
               <div>
                 <p className="posture-label">Financial account state</p>
                 <h3>Not represented</h3>
-                <p>No balances, positions, P&amp;L, quotes, symbols, or account identifiers are stored.</p>
+                <p>
+                  No balances, positions, P&amp;L, quotes, symbols, or account
+                  identifiers are stored.
+                </p>
               </div>
               <EvidencePill>NO DATA MODEL</EvidencePill>
             </article>
             <article className="posture-entry">
-              <div className="posture-marker"><StatusDot tone="warn" /></div>
+              <div className="posture-marker">
+                <StatusDot tone="warn" />
+              </div>
               <div>
                 <p className="posture-label">Execution capability</p>
                 <h3>Demo-bounded</h3>
-                <p>The engine owns the canonical order path; LIVE support and UI-triggered execution remain absent.</p>
+                <p>
+                  The engine owns the canonical order path; LIVE support and
+                  UI-triggered execution remain absent.
+                </p>
               </div>
               <EvidencePill>NO UI ACTION PATH</EvidencePill>
             </article>
@@ -247,7 +269,7 @@ export default function Home() {
         <section className="split-zone" aria-label="System and evidence panels">
           <article className="system-card">
             <div className="system-card-art" aria-hidden="true" />
-            <div className="system-card-shade" />
+            <div className="system-card-shade" aria-hidden="true" />
             <div className="system-card-content">
               <div className="section-heading-inline">
                 <div>
@@ -261,7 +283,10 @@ export default function Home() {
                   <span>01</span>
                   <div>
                     <strong>Mynyra product repository</strong>
-                    <p>GitHub-governed home for the control room, engine, evidence, and collaboration model.</p>
+                    <p>
+                      GitHub-governed home for the control room, engine,
+                      evidence, and collaboration model.
+                    </p>
                   </div>
                 </div>
                 <div className="system-connector" />
@@ -269,7 +294,10 @@ export default function Home() {
                   <span>02</span>
                   <div>
                     <strong>Mynyra Engine</strong>
-                    <p>History-preserving engine source under engine/ with default-off provider boundaries.</p>
+                    <p>
+                      History-preserving engine source under engine/ with
+                      default-off provider boundaries.
+                    </p>
                   </div>
                 </div>
                 <div className="system-connector system-connector--dashed" />
@@ -277,7 +305,10 @@ export default function Home() {
                   <span>03</span>
                   <div>
                     <strong>Methodical expansion</strong>
-                    <p>New collaborators and capabilities receive named roles, review boundaries, and explicit authority.</p>
+                    <p>
+                      New collaborators and capabilities receive named roles,
+                      review boundaries, and explicit authority.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -297,15 +328,21 @@ export default function Home() {
               <dl className="evidence-list">
                 <div>
                   <dt>Interface state</dt>
-                  <dd><StatusDot tone="copper" /> Static repository view</dd>
+                  <dd>
+                    <StatusDot tone="copper" /> Static repository view
+                  </dd>
                 </div>
                 <div>
                   <dt>Demo milestone</dt>
-                  <dd><StatusDot tone="copper" /> Operator accepted 2026-08-30</dd>
+                  <dd>
+                    <StatusDot tone="copper" /> Operator accepted 2026-08-30
+                  </dd>
                 </div>
                 <div>
                   <dt>Current runtime state</dt>
-                  <dd><StatusDot tone="warn" /> Not observed by this UI</dd>
+                  <dd>
+                    <StatusDot tone="warn" /> Not observed by this UI
+                  </dd>
                 </div>
               </dl>
               <button
@@ -321,27 +358,38 @@ export default function Home() {
 
         <section className="handoff-band" aria-labelledby="handoff-title">
           <div className="handoff-art" aria-hidden="true" />
-          <div className="handoff-shade" />
+          <div className="handoff-shade" aria-hidden="true" />
           <div className="handoff-copy">
             <p className="eyebrow">Continuation package</p>
             <h2 id="handoff-title">Built for a deliberate next reader.</h2>
             <p>
               The repository handoff separates scope, architecture, static data,
-              verification, and prohibited actions so a later Codex pass can resume
-              without inferring authority.
+              verification, and prohibited actions so a later Codex pass can
+              resume without inferring authority.
             </p>
           </div>
           <div className="handoff-files" aria-label="Handoff files">
-            <div><FileText size={17} /><span>README.md</span></div>
-            <div><Box size={17} /><span>ARCHITECTURE.md</span></div>
-            <div><BookOpenCheck size={17} /><span>HANDOFF.md</span></div>
+            <div>
+              <FileText size={17} />
+              <span>README.md</span>
+            </div>
+            <div>
+              <Box size={17} />
+              <span>ARCHITECTURE.md</span>
+            </div>
+            <div>
+              <BookOpenCheck size={17} />
+              <span>HANDOFF.md</span>
+            </div>
           </div>
         </section>
 
         <footer className="canvas-footer">
           <span>MYNYRA / DEMO MILESTONE</span>
           <span>Default-off · Evidence-aware · No live authority</span>
-          <span><Sparkles size={13} /> Intent is visible.</span>
+          <span>
+            <Sparkles size={13} /> Intent is visible.
+          </span>
         </footer>
       </main>
     </div>

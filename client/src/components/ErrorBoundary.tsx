@@ -24,34 +24,35 @@ class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
-            <AlertTriangle
-              size={48}
-              className="text-destructive mb-6 flex-shrink-0"
-            />
+        <main className="manual-state-page">
+          <section
+            className="manual-state-card manual-state-card--wide"
+            aria-labelledby="error-title"
+          >
+            <div className="manual-state-content">
+              <AlertTriangle className="manual-state-icon" aria-hidden="true" />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
+              <h1 id="error-title" className="manual-state-title">
+                An unexpected error occurred.
+              </h1>
 
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
+              <div className="manual-error-detail">
+                <pre>{this.state.error?.stack}</pre>
+              </div>
+
+              <button
+                onClick={() => window.location.reload()}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg",
+                  "manual-state-action"
+                )}
+              >
+                <RotateCcw size={16} />
+                Reload Page
+              </button>
             </div>
-
-            <button
-              onClick={() => window.location.reload()}
-              className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg",
-                "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
-              )}
-            >
-              <RotateCcw size={16} />
-              Reload Page
-            </button>
-          </div>
-        </div>
+          </section>
+        </main>
       );
     }
 
