@@ -22,7 +22,7 @@
     "react-dom": "^19.2.8",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.6.0",
-    "wouter": "^3.10.0"
+    "wouter": "^3.11.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
